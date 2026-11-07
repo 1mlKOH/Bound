@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { SubjectCard } from '../../src/components/SubjectCard';
+import { SearchIcon, CloseIcon, SubjectsIcon, PlusIcon } from '../../src/components/icons';
 
 export default function SubjectsScreen() {
   const router = useRouter();
@@ -30,7 +31,9 @@ export default function SubjectsScreen() {
 
       {/* Search Bar matching screenshot 3 */}
       <View className="mx-4 my-2 px-4 py-3 rounded-full bg-[#1B1C22] border border-[#282932] flex-row items-center">
-        <Text className="text-zinc-400 text-sm mr-2.5">🔍</Text>
+        <View className="mr-2.5">
+          <SearchIcon size={16} color="#71717A" />
+        </View>
         <TextInput
           placeholder="Search subjects or codes..."
           placeholderTextColor="#71717A"
@@ -39,8 +42,8 @@ export default function SubjectsScreen() {
           className="flex-1 text-sm text-white font-medium p-0"
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Text className="text-zinc-400 text-xs px-2">✕</Text>
+          <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1">
+            <CloseIcon size={14} color="#A1A1AA" />
           </TouchableOpacity>
         )}
       </View>
@@ -53,10 +56,13 @@ export default function SubjectsScreen() {
       >
         {filteredStats.length === 0 ? (
           <View className="mx-4 my-8 p-8 rounded-[28px] bg-[#1B1C22] border border-[#282932] items-center justify-center">
-            <Text className="text-3xl mb-2">📚</Text>
+            <View className="mb-3">
+              <SubjectsIcon size={40} color="#71717A" />
+            </View>
             <Text className="text-base font-bold text-white mb-1">
               No subjects found
             </Text>
+
             <Text className="text-xs text-zinc-400 text-center">
               {searchQuery
                 ? 'Try a different search term.'
@@ -86,11 +92,14 @@ export default function SubjectsScreen() {
           onPress={() => router.push('/modals/subject-editor')}
           className="flex-row items-center px-5 py-3.5 rounded-full bg-[#00BF63] shadow-xl"
         >
-          <Text className="text-base font-black text-[#06210F] mr-1.5">+</Text>
+          <View className="mr-2">
+            <PlusIcon size={16} color="#06210F" strokeWidth={2.8} />
+          </View>
           <Text className="text-sm font-extrabold text-[#06210F]">
             Add subject
           </Text>
         </TouchableOpacity>
+
       </View>
     </SafeAreaView>
   );

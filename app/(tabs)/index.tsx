@@ -7,6 +7,7 @@ import { TopHeader } from '../../src/components/TopHeader';
 import { DatePillSelector } from '../../src/components/DatePillSelector';
 import { HeroAttendanceCard } from '../../src/components/HeroAttendanceCard';
 import { ClassCard } from '../../src/components/ClassCard';
+import { PlusIcon, CalendarIcon } from '../../src/components/icons';
 
 export default function AttendanceScreen() {
   const router = useRouter();
@@ -94,7 +95,9 @@ export default function AttendanceScreen() {
               onPress={() => router.push('/modals/extra-class')}
               className="flex-row items-center px-3 py-1.5 rounded-full bg-[#1B1C22] border border-[#282932] mr-1.5"
             >
-              <Text className="text-xs mr-1 text-zinc-300">+</Text>
+              <View className="mr-1.5">
+                <PlusIcon size={12} color="#D4D4D8" strokeWidth={2.4} />
+              </View>
               <Text className="text-xs font-bold text-zinc-300">Extra</Text>
             </TouchableOpacity>
 
@@ -108,7 +111,12 @@ export default function AttendanceScreen() {
                   : 'bg-[#1B1C22] border-[#282932]'
               }`}
             >
-              <Text className="text-xs mr-1 text-zinc-300">🗓</Text>
+              <View className="mr-1.5">
+                <CalendarIcon
+                  size={12}
+                  color={isHoliday ? '#FFB020' : '#D4D4D8'}
+                />
+              </View>
               <Text
                 className={`text-xs font-bold ${
                   isHoliday ? 'text-[#FFB020]' : 'text-zinc-300'
@@ -123,10 +131,13 @@ export default function AttendanceScreen() {
         {/* Class Cards List */}
         {daySessions.length === 0 ? (
           <View className="mx-4 my-6 p-8 rounded-[28px] bg-[#1B1C22] border border-[#282932] items-center justify-center">
-            <Text className="text-3xl mb-2">🌴</Text>
+            <View className="mb-3">
+              <CalendarIcon size={38} color="#71717A" />
+            </View>
             <Text className="text-base font-bold text-white mb-1">
               No classes scheduled
             </Text>
+
             <Text className="text-xs text-zinc-400 text-center">
               Enjoy your free time, or tap '+ Extra' to log an unscheduled class.
             </Text>

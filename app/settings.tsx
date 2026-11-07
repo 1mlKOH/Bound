@@ -15,6 +15,13 @@ import { File, Paths } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { ThemePreference, CardLabelPreference } from '../src/types';
+import {
+  CloseIcon,
+  ExportIcon,
+  ImportIcon,
+  RefreshIcon,
+  TrashIcon,
+} from '../src/components/icons';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -191,8 +198,9 @@ export default function SettingsScreen() {
           onPress={() => router.back()}
           className="w-9 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center"
         >
-          <Text className="text-zinc-300 font-bold text-sm">✕</Text>
+          <CloseIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
         </TouchableOpacity>
+
       </View>
 
       <ScrollView
@@ -446,7 +454,7 @@ export default function SettingsScreen() {
             <Text className="text-xs font-bold text-white">
               Export Backup (JSON)
             </Text>
-            <Text className="text-zinc-400 text-xs">↗</Text>
+            <ExportIcon size={15} color="#A1A1AA" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -457,7 +465,7 @@ export default function SettingsScreen() {
             <Text className="text-xs font-bold text-white">
               Import Backup (JSON)
             </Text>
-            <Text className="text-zinc-400 text-xs">↙</Text>
+            <ImportIcon size={15} color="#A1A1AA" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -468,7 +476,7 @@ export default function SettingsScreen() {
             <Text className="text-xs font-bold text-white">
               Export Attendance Log (CSV)
             </Text>
-            <Text className="text-zinc-400 text-xs">↗</Text>
+            <ExportIcon size={15} color="#A1A1AA" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -479,7 +487,7 @@ export default function SettingsScreen() {
             <Text className="text-xs font-bold text-amber-400">
               Reset to Sample Demo Data
             </Text>
-            <Text className="text-amber-400 text-xs">↻</Text>
+            <RefreshIcon size={15} color="#FFB020" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -490,8 +498,9 @@ export default function SettingsScreen() {
             <Text className="text-xs font-bold text-[#FF6B72]">
               Clear All Attendance Records
             </Text>
-            <Text className="text-[#FF6B72] text-xs">🗑</Text>
+            <TrashIcon size={15} color="#FF6B72" />
           </TouchableOpacity>
+
         </View>
       </ScrollView>
     </SafeAreaView>

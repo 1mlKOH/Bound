@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
+import { CloseIcon } from '../../src/components/icons';
 
 export default function ExtraClassModal() {
   const router = useRouter();
@@ -39,8 +40,9 @@ export default function ExtraClassModal() {
           onPress={() => router.back()}
           className="w-9 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center"
         >
-          <Text className="text-zinc-300 font-bold text-sm">✕</Text>
+          <CloseIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
         </TouchableOpacity>
+
 
         <Text className="text-xl font-black text-white tracking-tight">
           Add Extra Class

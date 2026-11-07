@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 
 interface DatePillSelectorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -40,7 +41,7 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
         onPress={() => stepDay(-1)}
         className="w-10 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center mr-1"
       >
-        <Text className="text-zinc-300 font-bold text-base">‹</Text>
+        <ChevronLeftIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
       </TouchableOpacity>
 
       {/* Center Pill */}
@@ -60,8 +61,9 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
         onPress={() => stepDay(1)}
         className="w-10 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center ml-1"
       >
-        <Text className="text-zinc-300 font-bold text-base">›</Text>
+        <ChevronRightIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
       </TouchableOpacity>
     </View>
   );
 };
+

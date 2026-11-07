@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { timesOverlap } from '../../src/domain/attendance';
+import { CloseIcon, CheckIcon, PlusIcon } from '../../src/components/icons';
 
 const PALETTE = [
   '#1FB45A', // Emerald
@@ -199,8 +200,9 @@ export default function SubjectEditorModal() {
           onPress={() => router.back()}
           className="w-9 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center"
         >
-          <Text className="text-zinc-300 font-bold text-sm">✕</Text>
+          <CloseIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
         </TouchableOpacity>
+
 
         <Text className="text-xl font-black text-white tracking-tight">
           {existingSubject ? 'Edit Subject' : 'Add Subject'}
@@ -263,12 +265,13 @@ export default function SubjectEditorModal() {
                     isSelected ? 'border-2 border-white scale-110' : ''
                   }`}
                 >
-                  {isSelected && <Text className="text-white text-xs">✓</Text>}
+                  {isSelected && <CheckIcon size={14} color="#FFFFFF" strokeWidth={2.6} />}
                 </TouchableOpacity>
               );
             })}
           </View>
         </View>
+
 
         {/* Target & Baseline History Card */}
         <View className="p-5 my-2 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
@@ -328,10 +331,14 @@ export default function SubjectEditorModal() {
             </Text>
             <TouchableOpacity
               onPress={addSlot}
-              className="px-3 py-1.5 rounded-full bg-[#262730] border border-zinc-700"
+              className="flex-row items-center px-3 py-1.5 rounded-full bg-[#262730] border border-zinc-700"
             >
-              <Text className="text-xs font-bold text-[#3DDC84]">+ Add Slot</Text>
+              <View className="mr-1">
+                <PlusIcon size={12} color="#3DDC84" strokeWidth={2.4} />
+              </View>
+              <Text className="text-xs font-bold text-[#3DDC84]">Add Slot</Text>
             </TouchableOpacity>
+
           </View>
 
           {hasConflict && (

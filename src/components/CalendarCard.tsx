@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Session } from '../types';
+import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 
 interface CalendarCardProps {
   selectedDate: string; // YYYY-MM-DD
@@ -102,9 +103,9 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
         <TouchableOpacity
           onPress={prevMonth}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          className="p-1"
+          className="p-1 items-center justify-center"
         >
-          <Text className="text-zinc-400 text-lg font-bold">‹</Text>
+          <ChevronLeftIcon size={16} color="#A1A1AA" strokeWidth={2.4} />
         </TouchableOpacity>
         <Text className="text-base font-bold text-white tracking-wide">
           {MONTH_NAMES[currentMonth]} {currentYear}
@@ -112,10 +113,11 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
         <TouchableOpacity
           onPress={nextMonth}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          className="p-1"
+          className="p-1 items-center justify-center"
         >
-          <Text className="text-zinc-400 text-lg font-bold">›</Text>
+          <ChevronRightIcon size={16} color="#A1A1AA" strokeWidth={2.4} />
         </TouchableOpacity>
+
       </View>
 
       {/* Weekday Labels (M T W T F S S) */}
