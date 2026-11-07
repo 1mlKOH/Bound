@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { ThemePreference, CardLabelPreference } from '../src/types';
 
@@ -20,6 +21,7 @@ export default function SettingsScreen() {
   const {
     settings,
     updateSettings,
+    restoreFromBackup,
     resetToDemo,
     clearAllData,
     subjects,
@@ -29,6 +31,55 @@ export default function SettingsScreen() {
   } = useAttendanceStore();
 
   const [targetInput, setTargetInput] = useState(String(settings.globalTargetPct));
+
+  const handleImportJSON = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+
+      if (res.canceled || !res.assets || res.assets.length === 0) {
+        return;
+      }
+
+      const fileUri = res.assets[0].uri;
+      const fileContent = await FileSystem.readAsStringAsync(fileUri);
+      const parsed = JSON.parse(fileContent);
+
+      if (!parsed || parsed.version !== 1) {
+        Alert.alert(
+          'Invalid Backup',
+          'The selected file is not a compatible Bound schema version 1 backup.'
+        );
+        return;
+      }
+
+      Alert.alert(
+        'Confirm Restore',
+        `Restore data exported on ${new Date(
+          parsed.exportedAt
+        ).toLocaleString()}? This will replace your current attendance records.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Restore',
+            style: 'destructive',
+            onPress: () => {
+              const success = restoreFromBackup(parsed);
+              if (success) {
+                Alert.alert('Success', 'Attendance backup restored successfully.');
+              } else {
+                Alert.alert('Error', 'Failed to restore database from backup file.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (err: any) {
+      Alert.alert('Import Failed', err.message);
+    }
+  };
 
   const handleTargetChange = (text: string) => {
     setTargetInput(text);
@@ -395,6 +446,17 @@ export default function SettingsScreen() {
               Export Backup (JSON)
             </Text>
             <Text className="text-zinc-400 text-xs">↗</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleImportJSON}
+            className="py-3 px-4 rounded-xl bg-[#22232B] border border-[#282932] flex-row items-center justify-between my-1"
+          >
+            <Text className="text-xs font-bold text-white">
+              Import Backup (JSON)
+            </Text>
+            <Text className="text-zinc-400 text-xs">↙</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

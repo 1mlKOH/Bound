@@ -19,6 +19,7 @@ import {
   isSlotEffectiveOnDate,
   isSubjectActiveOnDate,
 } from '../domain/attendance';
+import { syncScheduledNotifications } from '../utils/notifications';
 
 interface AttendanceStoreState {
   subjects: Subject[];
@@ -64,6 +65,7 @@ interface AttendanceStoreState {
   archiveSubject: (id: string) => void;
   deleteSubject: (id: string) => void;
   updateSettings: (partial: Partial<Settings>) => void;
+  restoreFromBackup: (payload: any) => boolean;
   resetToDemo: () => void;
   clearAllData: () => void;
 
@@ -189,6 +191,9 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
       // Ensure sessions for selectedDate are generated
       get().getSessionsForDate(get().selectedDate);
+
+      // Reschedule reminders
+      syncScheduledNotifications(currentSettings, subjects, scheduleSlots);
     } catch (e) {
       console.error('Failed to initialize database:', e);
       set({ isLoading: false });
@@ -438,6 +443,107 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         updated.sundayDigestEnabled ? 1 : 0,
       ]
     );
+
+    // Sync notification schedules
+    syncScheduledNotifications(updated, get().subjects, get().scheduleSlots);
+  },
+
+  restoreFromBackup: (payload: any): boolean => {
+    try {
+      if (!payload || payload.version !== 1) {
+        return false;
+      }
+
+      expoDb.execSync(`
+        DELETE FROM sessions;
+        DELETE FROM schedule_slots;
+        DELETE FROM subjects;
+        DELETE FROM holidays;
+      `);
+
+      // Restore subjects
+      if (Array.isArray(payload.subjects)) {
+        for (const sub of payload.subjects) {
+          expoDb.runSync(
+            `INSERT INTO subjects (id, name, code, color, target_pct, baseline_present, baseline_absent, start_date, end_date, archived_at, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              sub.id,
+              sub.name,
+              sub.code,
+              sub.color,
+              sub.targetPct,
+              sub.baselinePresent,
+              sub.baselineAbsent,
+              sub.startDate,
+              sub.endDate,
+              sub.archivedAt,
+              sub.createdAt,
+            ]
+          );
+        }
+      }
+
+      // Restore slots
+      if (Array.isArray(payload.scheduleSlots)) {
+        for (const slot of payload.scheduleSlots) {
+          expoDb.runSync(
+            `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              slot.id,
+              slot.subjectId,
+              slot.weekday,
+              slot.startTime,
+              slot.endTime,
+              slot.effectiveFrom,
+              slot.effectiveTo,
+            ]
+          );
+        }
+      }
+
+      // Restore sessions
+      if (Array.isArray(payload.sessions)) {
+        for (const ses of payload.sessions) {
+          expoDb.runSync(
+            `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              ses.id,
+              ses.subjectId,
+              ses.slotId,
+              ses.date,
+              ses.startTime,
+              ses.endTime,
+              ses.status,
+              ses.markedAt,
+            ]
+          );
+        }
+      }
+
+      // Restore holidays
+      if (Array.isArray(payload.holidays)) {
+        for (const h of payload.holidays) {
+          expoDb.runSync(
+            'INSERT OR REPLACE INTO holidays (date, label) VALUES (?, ?)',
+            [h.date, h.label]
+          );
+        }
+      }
+
+      // Restore settings if present
+      if (payload.settings) {
+        get().updateSettings(payload.settings);
+      }
+
+      get().initialize();
+      return true;
+    } catch (e) {
+      console.error('Failed to restore backup:', e);
+      return false;
+    }
   },
 
   resetToDemo: () => {
