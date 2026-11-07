@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { ThemePreference, CardLabelPreference } from '../src/types';
@@ -44,7 +44,8 @@ export default function SettingsScreen() {
       }
 
       const fileUri = res.assets[0].uri;
-      const fileContent = await FileSystem.readAsStringAsync(fileUri);
+      const file = new File(fileUri);
+      const fileContent = await file.text();
       const parsed = JSON.parse(fileContent);
 
       if (!parsed || parsed.version !== 1) {
@@ -101,16 +102,16 @@ export default function SettingsScreen() {
         holidays,
       };
 
-      const fileUri = `${FileSystem.documentDirectory}bound_backup.json`;
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload, null, 2));
+      const file = new File(Paths.cache, 'bound_backup.json');
+      await file.write(JSON.stringify(payload, null, 2));
 
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
+        await Sharing.shareAsync(file.uri, {
           mimeType: 'application/json',
           dialogTitle: 'Export Bound Attendance Backup',
         });
       } else {
-        Alert.alert('Export Successful', `Saved to ${fileUri}`);
+        Alert.alert('Export Successful', `Saved to ${file.uri}`);
       }
     } catch (err: any) {
       Alert.alert('Export Failed', err.message);
@@ -127,16 +128,16 @@ export default function SettingsScreen() {
       });
 
       const csvContent = header + rows.join('\n');
-      const fileUri = `${FileSystem.documentDirectory}bound_sessions.csv`;
-      await FileSystem.writeAsStringAsync(fileUri, csvContent);
+      const file = new File(Paths.cache, 'bound_sessions.csv');
+      await file.write(csvContent);
 
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
+        await Sharing.shareAsync(file.uri, {
           mimeType: 'text/csv',
           dialogTitle: 'Export Bound Attendance CSV',
         });
       } else {
-        Alert.alert('Export Successful', `Saved to ${fileUri}`);
+        Alert.alert('Export Successful', `Saved to ${file.uri}`);
       }
     } catch (err: any) {
       Alert.alert('Export Failed', err.message);
