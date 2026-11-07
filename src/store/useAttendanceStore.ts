@@ -1,0 +1,548 @@
+import { create } from 'zustand';
+import * as Haptics from 'expo-haptics';
+import {
+  Subject,
+  ScheduleSlot,
+  Session,
+  Holiday,
+  Settings,
+  AttendanceStatus,
+  SubjectStats,
+  PooledStats,
+} from '../types';
+import { expoDb, initDatabase } from '../db/client';
+import { seedDemoData } from '../db/seed';
+import {
+  computeSubjectStats,
+  computePooledStats,
+  generateUUID,
+  isSlotEffectiveOnDate,
+  isSubjectActiveOnDate,
+} from '../domain/attendance';
+
+interface AttendanceStoreState {
+  subjects: Subject[];
+  scheduleSlots: ScheduleSlot[];
+  sessions: Session[];
+  holidays: Holiday[];
+  settings: Settings;
+  selectedDate: string;
+  statsFilter: 'month' | 'week';
+  isLoading: boolean;
+
+  // Actions
+  initialize: () => void;
+  setSelectedDate: (date: string) => void;
+  setStatsFilter: (filter: 'month' | 'week') => void;
+  markSession: (sessionId: string, status: AttendanceStatus) => void;
+  batchMarkDay: (dateStr: string) => void;
+  toggleHoliday: (dateStr: string, label?: string) => void;
+  addExtraClass: (
+    subjectId: string,
+    dateStr: string,
+    startTime: string,
+    endTime: string
+  ) => void;
+  saveSubject: (
+    subjectData: {
+      id?: string;
+      name: string;
+      code: string;
+      color: string;
+      targetPct: number | null;
+      baselinePresent: number;
+      baselineAbsent: number;
+      startDate: string;
+      endDate: string | null;
+    },
+    slots: {
+      weekday: number;
+      startTime: string;
+      endTime: string;
+    }[]
+  ) => void;
+  archiveSubject: (id: string) => void;
+  deleteSubject: (id: string) => void;
+  updateSettings: (partial: Partial<Settings>) => void;
+  resetToDemo: () => void;
+  clearAllData: () => void;
+
+  // Getters
+  getAllSubjectStats: () => SubjectStats[];
+  getPooledStats: () => PooledStats;
+  getSessionsForDate: (dateStr: string) => Session[];
+  isDateHoliday: (dateStr: string) => boolean;
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  id: 1,
+  globalTargetPct: 75,
+  theme: 'system',
+  primaryCardLabel: 'name',
+  dailyReminderEnabled: false,
+  dailyReminderTime: '18:00',
+  perClassReminderEnabled: true,
+  perClassReminderOffsetMinutes: 5,
+  sundayDigestEnabled: true,
+  hasSeededDemo: false,
+};
+
+// Default reference date matching screenshots
+const DEFAULT_DATE = '2026-11-07';
+
+export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
+  subjects: [],
+  scheduleSlots: [],
+  sessions: [],
+  holidays: [],
+  settings: DEFAULT_SETTINGS,
+  selectedDate: DEFAULT_DATE,
+  statsFilter: 'month',
+  isLoading: true,
+
+  initialize: () => {
+    try {
+      initDatabase();
+
+      // Read settings
+      const settingsRows = expoDb.getAllSync<any>('SELECT * FROM settings WHERE id = 1');
+      let currentSettings = DEFAULT_SETTINGS;
+      if (settingsRows.length > 0) {
+        const s = settingsRows[0];
+        currentSettings = {
+          id: s.id,
+          globalTargetPct: s.global_target_pct,
+          theme: s.theme,
+          primaryCardLabel: s.primary_card_label,
+          dailyReminderEnabled: Boolean(s.daily_reminder_enabled),
+          dailyReminderTime: s.daily_reminder_time,
+          perClassReminderEnabled: Boolean(s.per_class_reminder_enabled),
+          perClassReminderOffsetMinutes: s.per_class_reminder_offset_minutes,
+          sundayDigestEnabled: Boolean(s.sunday_digest_enabled),
+          hasSeededDemo: Boolean(s.has_seeded_demo),
+        };
+      }
+
+      // Check if demo data needs to be seeded on first launch
+      if (!currentSettings.hasSeededDemo) {
+        seedDemoData(DEFAULT_DATE);
+        currentSettings.hasSeededDemo = true;
+      }
+
+      // Load all tables into memory
+      const subjectsRaw = expoDb.getAllSync<any>(
+        'SELECT * FROM subjects ORDER BY created_at ASC'
+      );
+      const subjects: Subject[] = subjectsRaw.map((r) => ({
+        id: r.id,
+        name: r.name,
+        code: r.code,
+        color: r.color,
+        targetPct: r.target_pct,
+        baselinePresent: r.baseline_present,
+        baselineAbsent: r.baseline_absent,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        archivedAt: r.archived_at,
+        createdAt: r.created_at,
+      }));
+
+      const slotsRaw = expoDb.getAllSync<any>('SELECT * FROM schedule_slots');
+      const scheduleSlots: ScheduleSlot[] = slotsRaw.map((r) => ({
+        id: r.id,
+        subjectId: r.subject_id,
+        weekday: r.weekday,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        effectiveFrom: r.effective_from,
+        effectiveTo: r.effective_to,
+      }));
+
+      const sessionsRaw = expoDb.getAllSync<any>(
+        'SELECT * FROM sessions ORDER BY start_time ASC'
+      );
+      const sessions: Session[] = sessionsRaw.map((r) => ({
+        id: r.id,
+        subjectId: r.subject_id,
+        slotId: r.slot_id,
+        date: r.date,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        status: r.status as AttendanceStatus,
+        markedAt: r.marked_at,
+      }));
+
+      const holidaysRaw = expoDb.getAllSync<any>('SELECT * FROM holidays');
+      const holidays: Holiday[] = holidaysRaw.map((r) => ({
+        date: r.date,
+        label: r.label,
+      }));
+
+      set({
+        subjects,
+        scheduleSlots,
+        sessions,
+        holidays,
+        settings: currentSettings,
+        isLoading: false,
+      });
+
+      // Ensure sessions for selectedDate are generated
+      get().getSessionsForDate(get().selectedDate);
+    } catch (e) {
+      console.error('Failed to initialize database:', e);
+      set({ isLoading: false });
+    }
+  },
+
+  setSelectedDate: (date: string) => {
+    set({ selectedDate: date });
+    // Trigger session generation if needed
+    get().getSessionsForDate(date);
+  },
+
+  setStatsFilter: (filter: 'month' | 'week') => {
+    set({ statsFilter: filter });
+  },
+
+  markSession: (sessionId: string, newStatus: AttendanceStatus) => {
+    const { sessions } = get();
+    const existing = sessions.find((s) => s.id === sessionId);
+    if (!existing) return;
+
+    // Toggle back to null if tapped again
+    const finalStatus: AttendanceStatus =
+      existing.status === newStatus ? null : newStatus;
+    const markedAt = finalStatus ? new Date().toISOString() : null;
+
+    // Optimistic update
+    const updatedSessions = sessions.map((s) =>
+      s.id === sessionId ? { ...s, status: finalStatus, markedAt } : s
+    );
+    set({ sessions: updatedSessions });
+
+    // Haptics feedback
+    try {
+      if (finalStatus === 'present') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else if (finalStatus === 'absent') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } else {
+        Haptics.selectionAsync();
+      }
+    } catch {
+      // Haptics safe fallback
+    }
+
+    // Persist to SQLite
+    expoDb.runSync(
+      'UPDATE sessions SET status = ?, marked_at = ? WHERE id = ?',
+      [finalStatus, markedAt, sessionId]
+    );
+  },
+
+  batchMarkDay: (dateStr: string) => {
+    const daySessions = get().getSessionsForDate(dateStr);
+    const now = new Date().toISOString();
+    const { sessions } = get();
+
+    const idsToUpdate: string[] = [];
+    const updatedSessions = sessions.map((s) => {
+      if (s.date === dateStr && s.status === null) {
+        idsToUpdate.push(s.id);
+        return { ...s, status: 'present' as AttendanceStatus, markedAt: now };
+      }
+      return s;
+    });
+
+    if (idsToUpdate.length === 0) return;
+
+    set({ sessions: updatedSessions });
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
+
+    // Persist
+    for (const id of idsToUpdate) {
+      expoDb.runSync(
+        'UPDATE sessions SET status = "present", marked_at = ? WHERE id = ?',
+        [now, id]
+      );
+    }
+  },
+
+  toggleHoliday: (dateStr: string, label: string = 'Holiday') => {
+    const { holidays } = get();
+    const exists = holidays.some((h) => h.date === dateStr);
+
+    if (exists) {
+      set({ holidays: holidays.filter((h) => h.date !== dateStr) });
+      expoDb.runSync('DELETE FROM holidays WHERE date = ?', [dateStr]);
+    } else {
+      const newHoliday: Holiday = { date: dateStr, label };
+      set({ holidays: [...holidays, newHoliday] });
+      expoDb.runSync('INSERT INTO holidays (date, label) VALUES (?, ?)', [
+        dateStr,
+        label,
+      ]);
+    }
+  },
+
+  addExtraClass: (
+    subjectId: string,
+    dateStr: string,
+    startTime: string,
+    endTime: string
+  ) => {
+    const newSession: Session = {
+      id: generateUUID(),
+      subjectId,
+      slotId: null,
+      date: dateStr,
+      startTime,
+      endTime,
+      status: null,
+      markedAt: null,
+    };
+
+    set((state) => ({ sessions: [...state.sessions, newSession] }));
+
+    expoDb.runSync(
+      `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
+       VALUES (?, ?, NULL, ?, ?, ?, NULL, NULL)`,
+      [newSession.id, subjectId, dateStr, startTime, endTime]
+    );
+  },
+
+  saveSubject: (subjectData, slots) => {
+    const isEdit = Boolean(subjectData.id);
+    const subjectId = subjectData.id || generateUUID();
+    const now = new Date().toISOString();
+    const todayStr = get().selectedDate;
+
+    if (isEdit) {
+      // 1. Update Subject
+      expoDb.runSync(
+        `UPDATE subjects SET 
+          name = ?, code = ?, color = ?, target_pct = ?, 
+          baseline_present = ?, baseline_absent = ?, start_date = ?, end_date = ?
+         WHERE id = ?`,
+        [
+          subjectData.name,
+          subjectData.code,
+          subjectData.color,
+          subjectData.targetPct,
+          subjectData.baselinePresent,
+          subjectData.baselineAbsent,
+          subjectData.startDate,
+          subjectData.endDate,
+          subjectId,
+        ]
+      );
+
+      // 2. Non-destructive timetable versioning
+      // Close all currently active slots for this subject effective yesterday
+      const yesterday = new Date(todayStr);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+      expoDb.runSync(
+        `UPDATE schedule_slots 
+         SET effective_to = ? 
+         WHERE subject_id = ? AND (effective_to IS NULL OR effective_to >= ?)`,
+        [yesterdayStr, subjectId, todayStr]
+      );
+
+      // Insert new slots with effectiveFrom = today
+      for (const slot of slots) {
+        const newSlotId = generateUUID();
+        expoDb.runSync(
+          `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
+           VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+          [newSlotId, subjectId, slot.weekday, slot.startTime, slot.endTime, todayStr]
+        );
+      }
+    } else {
+      // Insert new Subject
+      expoDb.runSync(
+        `INSERT INTO subjects (id, name, code, color, target_pct, baseline_present, baseline_absent, start_date, end_date, archived_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+        [
+          subjectId,
+          subjectData.name,
+          subjectData.code,
+          subjectData.color,
+          subjectData.targetPct,
+          subjectData.baselinePresent,
+          subjectData.baselineAbsent,
+          subjectData.startDate,
+          subjectData.endDate,
+          now,
+        ]
+      );
+
+      // Insert slots
+      for (const slot of slots) {
+        const slotId = generateUUID();
+        expoDb.runSync(
+          `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
+           VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+          [slotId, subjectId, slot.weekday, slot.startTime, slot.endTime, subjectData.startDate]
+        );
+      }
+    }
+
+    // Refresh state
+    get().initialize();
+  },
+
+  archiveSubject: (id: string) => {
+    const now = new Date().toISOString();
+    expoDb.runSync('UPDATE subjects SET archived_at = ? WHERE id = ?', [now, id]);
+    set((state) => ({
+      subjects: state.subjects.map((s) =>
+        s.id === id ? { ...s, archivedAt: now } : s
+      ),
+    }));
+  },
+
+  deleteSubject: (id: string) => {
+    expoDb.runSync('DELETE FROM subjects WHERE id = ?', [id]);
+    set((state) => ({
+      subjects: state.subjects.filter((s) => s.id !== id),
+      scheduleSlots: state.scheduleSlots.filter((slot) => slot.subjectId !== id),
+      sessions: state.sessions.filter((ses) => ses.subjectId !== id),
+    }));
+  },
+
+  updateSettings: (partial: Partial<Settings>) => {
+    const current = get().settings;
+    const updated = { ...current, ...partial };
+    set({ settings: updated });
+
+    expoDb.runSync(
+      `UPDATE settings SET 
+        global_target_pct = ?, theme = ?, primary_card_label = ?,
+        daily_reminder_enabled = ?, daily_reminder_time = ?,
+        per_class_reminder_enabled = ?, per_class_reminder_offset_minutes = ?,
+        sunday_digest_enabled = ?
+       WHERE id = 1`,
+      [
+        updated.globalTargetPct,
+        updated.theme,
+        updated.primaryCardLabel,
+        updated.dailyReminderEnabled ? 1 : 0,
+        updated.dailyReminderTime,
+        updated.perClassReminderEnabled ? 1 : 0,
+        updated.perClassReminderOffsetMinutes,
+        updated.sundayDigestEnabled ? 1 : 0,
+      ]
+    );
+  },
+
+  resetToDemo: () => {
+    seedDemoData(DEFAULT_DATE);
+    get().initialize();
+  },
+
+  clearAllData: () => {
+    expoDb.execSync(`
+      DELETE FROM sessions;
+      DELETE FROM schedule_slots;
+      DELETE FROM subjects;
+      DELETE FROM holidays;
+    `);
+    get().initialize();
+  },
+
+  getAllSubjectStats: () => {
+    const { subjects, sessions, holidays, settings } = get();
+    const holidaysSet = new Set(holidays.map((h) => h.date));
+    return subjects
+      .filter((s) => !s.archivedAt)
+      .map((s) =>
+        computeSubjectStats(s, sessions, holidaysSet, settings.globalTargetPct)
+      );
+  },
+
+  getPooledStats: () => {
+    const statsList = get().getAllSubjectStats();
+    return computePooledStats(statsList, get().settings.globalTargetPct);
+  },
+
+  getSessionsForDate: (dateStr: string) => {
+    const { sessions, scheduleSlots, subjects } = get();
+    const activeSubjectsMap = new Map(
+      subjects.filter((s) => !s.archivedAt).map((s) => [s.id, s])
+    );
+
+    // Existing sessions for date
+    let daySessions = sessions.filter((s) => s.date === dateStr);
+
+    // Parse weekday (0 = Sun, 1 = Mon ... 6 = Sat)
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dayOfWeek = new Date(y, m - 1, d).getDay();
+
+    // Find slots that apply for this date
+    const slotsForDay = scheduleSlots.filter((slot) => {
+      const subject = activeSubjectsMap.get(slot.subjectId);
+      if (!subject) return false;
+      return (
+        slot.weekday === dayOfWeek &&
+        isSlotEffectiveOnDate(slot, dateStr) &&
+        isSubjectActiveOnDate(subject, dateStr)
+      );
+    });
+
+    const newSessionsToInsert: Session[] = [];
+
+    for (const slot of slotsForDay) {
+      const exists = daySessions.some(
+        (s) => s.slotId === slot.id && s.date === dateStr
+      );
+      if (!exists) {
+        const newSession: Session = {
+          id: generateUUID(),
+          subjectId: slot.subjectId,
+          slotId: slot.id,
+          date: dateStr,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          status: null,
+          markedAt: null,
+        };
+        newSessionsToInsert.push(newSession);
+      }
+    }
+
+    if (newSessionsToInsert.length > 0) {
+      // Idempotently persist newly generated sessions to SQLite
+      for (const ses of newSessionsToInsert) {
+        try {
+          expoDb.runSync(
+            `INSERT OR IGNORE INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
+             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
+            [
+              ses.id,
+              ses.subjectId,
+              ses.slotId,
+              ses.date,
+              ses.startTime,
+              ses.endTime,
+            ]
+          );
+        } catch {}
+      }
+
+      const allUpdatedSessions = [...sessions, ...newSessionsToInsert];
+      set({ sessions: allUpdatedSessions });
+      daySessions = allUpdatedSessions.filter((s) => s.date === dateStr);
+    }
+
+    return daySessions.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  },
+
+  isDateHoliday: (dateStr: string) => {
+    return get().holidays.some((h) => h.date === dateStr);
+  },
+}));
