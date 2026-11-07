@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, Platform, StyleSheet, Animated } from 'react-native';
 import { PooledStats } from '../types';
 
 interface HeroAttendanceCardProps {
@@ -11,16 +11,16 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
   const isWarning = stats.statusTier === 'warning';
 
   const badgeBg = isSafe
-    ? 'bg-emerald-500/20'
+    ? 'bg-emerald-500/15'
     : isWarning
-    ? 'bg-amber-500/20'
-    : 'bg-rose-500/20';
+    ? 'bg-amber-500/15'
+    : 'bg-rose-500/15';
 
   const badgeBorder = isSafe
-    ? 'border-emerald-500/40'
+    ? 'border-emerald-400/30'
     : isWarning
-    ? 'border-amber-500/40'
-    : 'border-rose-500/40';
+    ? 'border-amber-400/30'
+    : 'border-rose-400/30';
 
   const badgeText = isSafe
     ? 'text-[#3DDC84]'
@@ -36,7 +36,25 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
     ? '#FFB020'
     : '#FF6B72';
 
-  const progressWidth = `${Math.min(100, Math.max(0, stats.pooledPercentage))}%`;
+  const animatedPercent = useRef(
+    new Animated.Value(Math.min(100, Math.max(0, stats.pooledPercentage)))
+  ).current;
+
+  useEffect(() => {
+    Animated.spring(animatedPercent, {
+      toValue: Math.min(100, Math.max(0, stats.pooledPercentage)),
+      damping: 20,
+      stiffness: 150,
+      mass: 0.6,
+      useNativeDriver: false,
+    }).start();
+  }, [stats.pooledPercentage]);
+
+  const animatedWidth = animatedPercent.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
 
   const summarySubtitle =
     stats.subjectsBelowTarget === 0
@@ -47,47 +65,91 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
 
   return (
     <View
-      className="mx-4 my-2 p-5 rounded-[28px] border border-emerald-950/60"
-      style={{ backgroundColor: '#0B2317' }}
+      style={[
+        styles.cardContainer,
+        {
+          borderRadius: 28,
+          borderCurve: 'continuous',
+        },
+      ]}
+      className="mx-4 my-2 p-5"
     >
       {/* Top Row: Label & Status Badge */}
       <View className="flex-row items-center justify-between mb-2">
         <Text
-          className="text-xs font-semibold tracking-wider text-emerald-400/80 uppercase"
-          style={{ letterSpacing: 1 }}
+          style={[
+            styles.sfText,
+            { letterSpacing: 0.8 },
+          ]}
+          className="text-[11px] font-semibold text-emerald-400/80 uppercase"
         >
           OVERALL ATTENDANCE
         </Text>
         <View
-          className={`px-3 py-1 rounded-full border ${badgeBg} ${badgeBorder}`}
+          style={{ borderRadius: 12, borderCurve: 'continuous' }}
+          className={`px-3 py-1 border ${badgeBg} ${badgeBorder}`}
         >
-          <Text className={`text-xs font-bold ${badgeText}`}>
+          <Text
+            style={[styles.sfText, { letterSpacing: -0.1 }]}
+            className={`text-xs font-semibold ${badgeText}`}
+          >
             {badgeLabel}
           </Text>
         </View>
       </View>
 
-      {/* Hero Percentage Display */}
-      <Text className="text-5xl font-black text-white my-1 tracking-tight">
+      {/* Hero Percentage Display with Apple SF Optical Sizing */}
+      <Text
+        style={[
+          styles.heroNumber,
+          {
+            letterSpacing: -1.6,
+          },
+        ]}
+        className="text-[52px] font-bold text-white my-0.5 leading-none"
+      >
         {Math.round(stats.pooledPercentage)}%
       </Text>
 
-      {/* Progress Bar Track */}
+      {/* Progress Bar Track with Smooth Liquid Fill */}
       <View className="w-full h-2.5 bg-[#143D27] rounded-full overflow-hidden my-3">
-        <View
+        <Animated.View
           style={{
-            width: progressWidth as any,
+            width: animatedWidth,
             backgroundColor: progressColor,
             height: '100%',
             borderRadius: 999,
           }}
         />
+
       </View>
 
       {/* Target and Below-Target Counter */}
-      <Text className="text-xs font-medium text-emerald-200/70">
+      <Text
+        style={[styles.sfText, { letterSpacing: -0.1 }]}
+        className="text-[13px] font-normal text-emerald-200/75"
+      >
         {summarySubtitle}
       </Text>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    backgroundColor: '#0B2317',
+    borderWidth: 1,
+    borderColor: 'rgba(61, 220, 132, 0.18)',
+    borderTopColor: 'rgba(61, 220, 132, 0.40)', // Apple light catcher
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+  },
+  heroNumber: {
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+  sfText: {
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+});
