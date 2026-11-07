@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -25,7 +26,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="settings"
           options={{
-            presentation: 'modal',
+            presentation: Platform.OS === 'ios' ? 'pageSheet' : 'modal',
             headerShown: false,
             animation: 'slide_from_bottom',
           }}
@@ -33,7 +34,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="modals/subject-editor"
           options={{
-            presentation: 'modal',
+            presentation: Platform.OS === 'ios' ? 'pageSheet' : 'modal',
             headerShown: false,
             animation: 'slide_from_bottom',
           }}
@@ -41,7 +42,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="modals/extra-class"
           options={{
-            presentation: 'modal',
+            presentation: Platform.OS === 'ios' ? 'pageSheet' : 'modal',
             headerShown: false,
             animation: 'slide_from_bottom',
           }}

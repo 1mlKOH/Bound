@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { SubjectCard } from '../../src/components/SubjectCard';
@@ -29,21 +30,37 @@ export default function SubjectsScreen() {
       {/* Top Header */}
       <TopHeader title="Subjects" />
 
-      {/* Search Bar matching screenshot 3 */}
-      <View className="mx-4 my-2 px-4 py-3 rounded-full bg-[#1B1C22] border border-[#282932] flex-row items-center">
+      {/* Search Bar with Apple liquid glass styling */}
+      <View
+        style={[
+          styles.searchBar,
+          {
+            borderRadius: 20,
+            borderCurve: 'continuous',
+          },
+        ]}
+        className="mx-4 my-2 px-4 py-2.5 bg-white/[0.08] border border-white/[0.12] flex-row items-center"
+      >
         <View className="mr-2.5">
-          <SearchIcon size={16} color="#71717A" />
+          <SearchIcon size={16} color="rgba(255, 255, 255, 0.45)" />
         </View>
         <TextInput
           placeholder="Search subjects or codes..."
-          placeholderTextColor="#71717A"
+          placeholderTextColor="rgba(255, 255, 255, 0.35)"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          className="flex-1 text-sm text-white font-medium p-0"
+          style={styles.sfText}
+          className="flex-1 text-[14px] text-white font-medium p-0"
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1">
-            <CloseIcon size={14} color="#A1A1AA" />
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.selectionAsync();
+              setSearchQuery('');
+            }}
+            className="p-1"
+          >
+            <CloseIcon size={14} color="rgba(255, 255, 255, 0.6)" />
           </TouchableOpacity>
         )}
       </View>
@@ -55,15 +72,21 @@ export default function SubjectsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {filteredStats.length === 0 ? (
-          <View className="mx-4 my-8 p-8 rounded-[28px] bg-[#1B1C22] border border-[#282932] items-center justify-center">
+          <View
+            style={[
+              styles.emptyCard,
+              { borderRadius: 28, borderCurve: 'continuous' },
+            ]}
+            className="mx-4 my-8 p-8 bg-[#1B1C22] items-center justify-center"
+          >
             <View className="mb-3">
               <SubjectsIcon size={40} color="#71717A" />
             </View>
-            <Text className="text-base font-bold text-white mb-1">
+            <Text style={styles.sfText} className="text-base font-semibold text-white mb-1">
               No subjects found
             </Text>
 
-            <Text className="text-xs text-zinc-400 text-center">
+            <Text style={styles.sfText} className="text-xs text-white/50 text-center">
               {searchQuery
                 ? 'Try a different search term.'
                 : "Tap '+ Add subject' below to register your first course."}
@@ -85,22 +108,68 @@ export default function SubjectsScreen() {
         )}
       </ScrollView>
 
-      {/* Floating Action Button: + Add Subject (positioned above bottom nav) */}
+      {/* Floating Action Button: + Add Subject */}
       <View className="absolute bottom-24 right-5">
         <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push('/modals/subject-editor')}
-          className="flex-row items-center px-5 py-3.5 rounded-full bg-[#00BF63] shadow-xl"
+          activeOpacity={0.8}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push('/modals/subject-editor');
+          }}
+          style={[
+            styles.fab,
+            {
+              borderRadius: 24,
+              borderCurve: 'continuous',
+            },
+          ]}
+          className="flex-row items-center px-5 py-3.5 bg-[#00BF63]"
         >
           <View className="mr-2">
             <PlusIcon size={16} color="#06210F" strokeWidth={2.8} />
           </View>
-          <Text className="text-sm font-extrabold text-[#06210F]">
+          <Text
+            style={[
+              styles.sfText,
+              { letterSpacing: -0.2 },
+            ]}
+            className="text-[14px] font-bold text-[#06210F]"
+          >
             Add subject
           </Text>
         </TouchableOpacity>
-
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  searchBar: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+  },
+  fab: {
+    shadowColor: '#00BF63',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: 'rgba(255, 255, 255, 0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  sfText: {
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+});

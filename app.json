@@ -12,10 +12,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bound.attendance"
+      "bundleIdentifier": "com.bound.attendance",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "package": "com.bound.attendance",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0F1015"
       }

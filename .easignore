@@ -1,0 +1,36 @@
+# EAS Build Cloud Ignore File
+# Excludes unnecessary files and directories when packing project archive for EAS Cloud
+
+# Node modules & dependencies
+node_modules/
+
+# Local cache & Expo internals
+.expo/
+dist/
+web-build/
+*.orig.*
+
+# Version control & CI workflows
+.git/
+.github/
+
+# Environment files and credentials
+.env
+.env*.local
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Debug logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Project backups / test artifacts
+bound_backup.json
+bound_sessions.csv
+*.apk
+*.aab

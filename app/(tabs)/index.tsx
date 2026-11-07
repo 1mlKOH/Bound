@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { DatePillSelector } from '../../src/components/DatePillSelector';
@@ -74,7 +75,10 @@ export default function AttendanceScreen() {
 
         {/* Section Header: Today's Classes & Action Pills */}
         <View className="flex-row items-center justify-between px-5 mt-4 mb-2">
-          <Text className="text-lg font-bold text-white tracking-tight">
+          <Text
+            style={[styles.sfText, { letterSpacing: -0.3 }]}
+            className="text-[18px] font-bold text-white"
+          >
             Today's classes
           </Text>
 
@@ -82,44 +86,61 @@ export default function AttendanceScreen() {
             {/* Batch Mark Pill */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => batchMarkDay(selectedDate)}
-              className="flex-row items-center px-3 py-1.5 rounded-full bg-[#1B1C22] border border-[#282932] mr-1.5"
+              onPress={() => {
+                Haptics.selectionAsync();
+                batchMarkDay(selectedDate);
+              }}
+              style={[styles.pillButton, { borderRadius: 16, borderCurve: 'continuous' }]}
+              className="flex-row items-center px-3 py-1.5 bg-white/[0.08] border border-white/[0.12] mr-1.5"
             >
-              <Text className="text-xs mr-1 text-zinc-300">⎘</Text>
-              <Text className="text-xs font-bold text-zinc-300">Batch</Text>
+              <Text className="text-xs mr-1 text-white/80">⎘</Text>
+              <Text style={styles.sfText} className="text-xs font-semibold text-white/90">
+                Batch
+              </Text>
             </TouchableOpacity>
 
             {/* + Extra Class Pill */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => router.push('/modals/extra-class')}
-              className="flex-row items-center px-3 py-1.5 rounded-full bg-[#1B1C22] border border-[#282932] mr-1.5"
+              onPress={() => {
+                Haptics.selectionAsync();
+                router.push('/modals/extra-class');
+              }}
+              style={[styles.pillButton, { borderRadius: 16, borderCurve: 'continuous' }]}
+              className="flex-row items-center px-3 py-1.5 bg-white/[0.08] border border-white/[0.12] mr-1.5"
             >
               <View className="mr-1.5">
-                <PlusIcon size={12} color="#D4D4D8" strokeWidth={2.4} />
+                <PlusIcon size={12} color="rgba(255, 255, 255, 0.85)" strokeWidth={2.4} />
               </View>
-              <Text className="text-xs font-bold text-zinc-300">Extra</Text>
+              <Text style={styles.sfText} className="text-xs font-semibold text-white/90">
+                Extra
+              </Text>
             </TouchableOpacity>
 
             {/* Holiday Toggle Pill */}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => toggleHoliday(selectedDate)}
-              className={`flex-row items-center px-3 py-1.5 rounded-full border ${
+              onPress={() => {
+                Haptics.selectionAsync();
+                toggleHoliday(selectedDate);
+              }}
+              style={[styles.pillButton, { borderRadius: 16, borderCurve: 'continuous' }]}
+              className={`flex-row items-center px-3 py-1.5 border ${
                 isHoliday
-                  ? 'bg-amber-500/20 border-amber-500/50'
-                  : 'bg-[#1B1C22] border-[#282932]'
+                  ? 'bg-amber-500/20 border-amber-400/50'
+                  : 'bg-white/[0.08] border-white/[0.12]'
               }`}
             >
               <View className="mr-1.5">
                 <CalendarIcon
                   size={12}
-                  color={isHoliday ? '#FFB020' : '#D4D4D8'}
+                  color={isHoliday ? '#FFB020' : 'rgba(255, 255, 255, 0.85)'}
                 />
               </View>
               <Text
-                className={`text-xs font-bold ${
-                  isHoliday ? 'text-[#FFB020]' : 'text-zinc-300'
+                style={styles.sfText}
+                className={`text-xs font-semibold ${
+                  isHoliday ? 'text-[#FFB020]' : 'text-white/90'
                 }`}
               >
                 Holiday
@@ -130,11 +151,17 @@ export default function AttendanceScreen() {
 
         {/* Class Cards List */}
         {daySessions.length === 0 ? (
-          <View className="mx-4 my-6 p-8 rounded-[28px] bg-[#1B1C22] border border-[#282932] items-center justify-center">
+          <View
+            style={[
+              styles.emptyCard,
+              { borderRadius: 28, borderCurve: 'continuous' },
+            ]}
+            className="mx-4 my-6 p-8 bg-[#1B1C22] items-center justify-center"
+          >
             <View className="mb-3">
               <CalendarIcon size={38} color="#71717A" />
             </View>
-            <Text className="text-base font-bold text-white mb-1">
+            <Text style={styles.sfText} className="text-base font-semibold text-white mb-1">
               No classes scheduled
             </Text>
 
@@ -157,3 +184,26 @@ export default function AttendanceScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  pillButton: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    borderTopColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: 'rgba(255, 255, 255, 0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  sfText: {
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+});
+

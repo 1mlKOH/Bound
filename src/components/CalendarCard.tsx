@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Session } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 
@@ -153,16 +154,30 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
             <TouchableOpacity
               key={idx}
               activeOpacity={0.7}
-              onPress={() => onSelectDate(cellDateStr)}
+              onPress={() => {
+                Haptics.selectionAsync();
+                onSelectDate(cellDateStr);
+              }}
               className="w-[14.28%] h-12 items-center justify-center relative"
             >
               <View
-                className={`w-9 h-9 items-center justify-center rounded-xl ${
-                  isSelected ? 'border-2 border-[#3DDC84]' : ''
+                style={[
+                  isSelected && styles.selectedCell,
+                  {
+                    borderRadius: 12,
+                    borderCurve: 'continuous',
+                  },
+                ]}
+                className={`w-9 h-9 items-center justify-center ${
+                  isSelected ? 'border border-[#3DDC84] bg-emerald-500/15' : ''
                 }`}
               >
                 <Text
-                  className={`text-sm font-semibold ${
+                  style={[
+                    styles.sfText,
+                    { letterSpacing: -0.1 },
+                  ]}
+                  className={`text-[13px] font-semibold ${
                     isSunday
                       ? 'text-[#FF6B72]'
                       : isSelected
@@ -196,8 +211,38 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
   );
 
   return (
-    <View className="mx-4 my-2 p-5 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
+    <View
+      style={[
+        styles.cardContainer,
+        {
+          borderRadius: 28,
+          borderCurve: 'continuous',
+        },
+      ]}
+      className="mx-4 my-2 p-5 bg-[#1B1C22]"
+    >
       {renderMonthView()}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: 'rgba(255, 255, 255, 0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  selectedCell: {
+    shadowColor: '#3DDC84',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  sfText: {
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+});
