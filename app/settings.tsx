@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,25 +9,82 @@ import {
   Alert,
   Platform,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../src/utils/haptics';
 import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
-import { ThemePreference, CardLabelPreference } from '../src/types';
 import {
   CloseIcon,
   ExportIcon,
   ImportIcon,
   RefreshIcon,
   TrashIcon,
+  GaugeIcon,
+  BellIcon,
+  ChevronRightIcon,
 } from '../src/components/icons';
+import { useTheme } from '../src/utils/theme';
+import { SegmentedControl } from '../src/components/SegmentedControl';
+import { toast } from 'sonner-native';
+
+interface TactileCloseButtonProps {
+  onPress: () => void;
+}
+
+const TactileCloseButton: React.FC<TactileCloseButtonProps> = ({ onPress }) => {
+  const { colors } = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.timing(scale, {
+      toValue: 0.92,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }}
+        style={[
+          styles.closeButton,
+          {
+            backgroundColor: colors.glassBg,
+            shadowColor: colors.cardShadow,
+          },
+        ]}
+        className="w-9 h-9 rounded-full items-center justify-center"
+      >
+        <CloseIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const {
     settings,
     updateSettings,
@@ -59,10 +116,9 @@ export default function SettingsScreen() {
       const parsed = JSON.parse(fileContent);
 
       if (!parsed || parsed.version !== 1) {
-        Alert.alert(
-          'Invalid Backup',
-          'The selected file is not a compatible Bound schema version 1 backup.'
-        );
+        toast.error('Invalid Backup', {
+          description: 'Selected file is not a compatible Bound backup.',
+        });
         return;
       }
 
@@ -79,16 +135,16 @@ export default function SettingsScreen() {
             onPress: () => {
               const success = restoreFromBackup(parsed);
               if (success) {
-                Alert.alert('Success', 'Attendance backup restored successfully.');
+                toast.success('Backup restored successfully');
               } else {
-                Alert.alert('Error', 'Failed to restore database from backup file.');
+                toast.error('Failed to restore database from backup file');
               }
             },
           },
         ]
       );
     } catch (err: any) {
-      Alert.alert('Import Failed', err.message);
+      toast.error('Import Failed', { description: err.message });
     }
   };
 
@@ -121,10 +177,10 @@ export default function SettingsScreen() {
           dialogTitle: 'Export Bound Attendance Backup',
         });
       } else {
-        Alert.alert('Export Successful', `Saved to ${file.uri}`);
+        toast.success('Backup exported', { description: file.name });
       }
     } catch (err: any) {
-      Alert.alert('Export Failed', err.message);
+      toast.error('Export Failed', { description: err.message });
     }
   };
 
@@ -147,10 +203,10 @@ export default function SettingsScreen() {
           dialogTitle: 'Export Bound Attendance CSV',
         });
       } else {
-        Alert.alert('Export Successful', `Saved to ${file.uri}`);
+        toast.success('CSV exported', { description: file.name });
       }
     } catch (err: any) {
-      Alert.alert('Export Failed', err.message);
+      toast.error('Export Failed', { description: err.message });
     }
   };
 
@@ -165,7 +221,7 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: () => {
             resetToDemo();
-            Alert.alert('Done', 'Demo data loaded successfully.');
+            toast.success('Demo data loaded successfully');
           },
         },
       ]
@@ -183,7 +239,7 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: () => {
             clearAllData();
-            Alert.alert('Cleared', 'All attendance data has been erased.');
+            toast.info('All attendance data has been erased');
           },
         },
       ]
@@ -191,26 +247,25 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0F1015]" edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.canvas }}
+      edges={['top']}
+    >
       {/* Header */}
-      <View className="flex-row items-center justify-between px-5 pt-3 pb-3 border-b border-white/[0.06]">
+      <View
+        style={{ borderBottomColor: colors.divider }}
+        className="flex-row items-center justify-between px-5 pt-3 pb-3 border-b"
+      >
         <Text
-          style={[styles.sfText, { letterSpacing: -0.6 }]}
-          className="text-[26px] font-bold text-white"
+          style={[
+            styles.sfText,
+            { letterSpacing: -0.6, color: colors.text },
+          ]}
+          className="text-[26px] font-bold"
         >
           Settings
         </Text>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={styles.closeButton}
-          className="w-9 h-9 rounded-full bg-white/[0.08] border border-white/[0.14] items-center justify-center"
-        >
-          <CloseIcon size={16} color="rgba(255, 255, 255, 0.85)" strokeWidth={2.4} />
-        </TouchableOpacity>
+        <TactileCloseButton onPress={() => router.back()} />
       </View>
 
       <ScrollView
@@ -220,79 +275,132 @@ export default function SettingsScreen() {
       >
         {/* Card 1: Appearance */}
         <View
-          style={[styles.cardContainer, { borderRadius: 24, borderCurve: 'continuous' }]}
-          className="p-5 my-2 bg-[#1B1C22]"
+          style={[
+            styles.cardContainer,
+            {
+              borderRadius: 24,
+              borderCurve: 'continuous',
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2"
         >
           <Text
-            style={[styles.sfText, { letterSpacing: -0.3 }]}
-            className="text-[17px] font-semibold text-white mb-3"
+            style={[
+              styles.sfText,
+              { letterSpacing: -0.3, color: colors.text },
+            ]}
+            className="text-[17px] font-semibold mb-3"
           >
             Appearance
           </Text>
-          <View className="flex-row justify-between space-x-2">
-            {(['system', 'light', 'dark'] as ThemePreference[]).map((mode) => {
-              const isSelected = settings.theme === mode;
-              const label = mode.charAt(0).toUpperCase() + mode.slice(1);
-              return (
-                <TouchableOpacity
-                  key={mode}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    updateSettings({ theme: mode });
-                  }}
-                  style={{ borderRadius: 16, borderCurve: 'continuous' }}
-                  className={`flex-1 py-2.5 items-center justify-center border ${
-                    isSelected
-                      ? 'border-[#3DDC84] bg-emerald-500/15'
-                      : 'border-white/[0.08] bg-white/[0.06]'
-                  }`}
-                >
-                  <Text
-                    style={styles.sfText}
-                    className={`text-xs font-semibold ${
-                      isSelected ? 'text-[#3DDC84]' : 'text-zinc-300'
-                    }`}
-                  >
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <SegmentedControl
+            options={[
+              { label: 'System', value: 'system' },
+              { label: 'Light', value: 'light' },
+              { label: 'Dark', value: 'dark' },
+            ]}
+            selectedValue={settings.theme}
+            onSelect={(mode) => updateSettings({ theme: mode })}
+            containerClass="relative flex-row p-1 mb-1"
+          />
+
+          {/* Haptic Feedback Toggle */}
+          <View
+            style={{ borderTopColor: colors.divider }}
+            className="flex-row items-center justify-between pt-4 mt-4 border-t"
+          >
+            <View className="flex-1 pr-3">
+              <Text
+                style={[styles.sfText, { color: colors.text }]}
+                className="text-sm font-semibold"
+              >
+                Haptic Feedback
+              </Text>
+              <Text
+                style={[styles.sfText, { color: colors.textMuted }]}
+                className="text-xs mt-0.5"
+              >
+                Tactile vibrations on button taps, date changes, and actions
+              </Text>
+            </View>
+            <Switch
+              value={settings.hapticFeedbackEnabled}
+              onValueChange={(val) => {
+                updateSettings({ hapticFeedbackEnabled: val });
+                if (val) {
+                  Haptics.selectionAsync();
+                }
+              }}
+              trackColor={{
+                false: isDark ? '#3A3B45' : '#D1D5DB',
+                true: '#3DDC84',
+              }}
+              thumbColor="#FFFFFF"
+            />
           </View>
         </View>
 
         {/* Card 2: Attendance Target */}
         <View
-          style={[styles.cardContainer, { borderRadius: 24, borderCurve: 'continuous' }]}
-          className="p-5 my-2 bg-[#1B1C22]"
+          style={[
+            styles.cardContainer,
+            {
+              borderRadius: 24,
+              borderCurve: 'continuous',
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2"
         >
-          <Text
-            style={[styles.sfText, { letterSpacing: -0.3 }]}
-            className="text-[17px] font-semibold text-white mb-1"
-          >
-            Attendance Target
-          </Text>
+          <View className="flex-row items-center mb-1">
+            <GaugeIcon size={17} color={isDark ? '#3DDC84' : '#15803D'} />
+            <Text
+              style={[
+                styles.sfText,
+                { letterSpacing: -0.3, color: colors.text },
+              ]}
+              className="text-[17px] font-semibold ml-2"
+            >
+              Attendance Target
+            </Text>
+          </View>
           <View className="flex-row items-center justify-between mt-2">
             <View className="flex-1 pr-3">
-              <Text style={styles.sfText} className="text-sm font-semibold text-white">
+              <Text
+                style={[styles.sfText, { color: colors.text }]}
+                className="text-sm font-semibold"
+              >
                 Global Target %
               </Text>
-              <Text style={styles.sfText} className="text-xs text-white/50 mt-0.5">
+              <Text
+                style={[styles.sfText, { color: colors.textMuted }]}
+                className="text-xs mt-0.5"
+              >
                 Used as default threshold when calculating safe attendance
               </Text>
             </View>
             <View
-              style={{ borderRadius: 14, borderCurve: 'continuous' }}
-              className="w-16 h-11 bg-white/[0.08] border border-white/[0.14] items-center justify-center"
+              style={{
+                borderRadius: 14,
+                borderCurve: 'continuous',
+                backgroundColor: colors.inputBg,
+                borderColor: colors.inputBorder,
+              }}
+              className="w-16 h-11 border items-center justify-center"
             >
               <TextInput
                 value={targetInput}
                 onChangeText={handleTargetChange}
                 keyboardType="numeric"
                 maxLength={3}
-                style={styles.sfText}
-                className="text-base font-bold text-white text-center p-0"
+                style={[
+                  styles.sfText,
+                  { color: colors.text },
+                ]}
+                className="text-base font-bold text-center p-0"
               />
             </View>
           </View>
@@ -300,90 +408,86 @@ export default function SettingsScreen() {
 
         {/* Card 3: Class Card Labels */}
         <View
-          style={[styles.cardContainer, { borderRadius: 24, borderCurve: 'continuous' }]}
-          className="p-5 my-2 bg-[#1B1C22]"
+          style={[
+            styles.cardContainer,
+            {
+              borderRadius: 24,
+              borderCurve: 'continuous',
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2"
         >
           <Text
-            style={[styles.sfText, { letterSpacing: -0.3 }]}
-            className="text-[17px] font-semibold text-white mb-0.5"
+            style={[
+              styles.sfText,
+              { letterSpacing: -0.3, color: colors.text },
+            ]}
+            className="text-[17px] font-semibold mb-0.5"
           >
             Class Card Labels
           </Text>
-          <Text style={styles.sfText} className="text-xs text-white/50 mb-3">
+          <Text
+            style={[styles.sfText, { color: colors.textMuted }]}
+            className="text-xs mb-3"
+          >
             Choose what primary text to show on class cards
           </Text>
 
-          <View className="flex-row space-x-2">
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                updateSettings({ primaryCardLabel: 'name' });
-              }}
-              style={{ borderRadius: 16, borderCurve: 'continuous' }}
-              className={`flex-1 py-2.5 items-center justify-center border mr-1.5 ${
-                settings.primaryCardLabel === 'name'
-                  ? 'border-[#3DDC84] bg-emerald-500/15'
-                  : 'border-white/[0.08] bg-white/[0.06]'
-              }`}
-            >
-              <Text
-                style={styles.sfText}
-                className={`text-xs font-semibold ${
-                  settings.primaryCardLabel === 'name'
-                    ? 'text-[#3DDC84]'
-                    : 'text-zinc-300'
-                }`}
-              >
-                Subject Name
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                updateSettings({ primaryCardLabel: 'code' });
-              }}
-              style={{ borderRadius: 16, borderCurve: 'continuous' }}
-              className={`flex-1 py-2.5 items-center justify-center border ml-1.5 ${
-                settings.primaryCardLabel === 'code'
-                  ? 'border-[#3DDC84] bg-emerald-500/15'
-                  : 'border-white/[0.08] bg-white/[0.06]'
-              }`}
-            >
-              <Text
-                style={styles.sfText}
-                className={`text-xs font-semibold ${
-                  settings.primaryCardLabel === 'code'
-                    ? 'text-[#3DDC84]'
-                    : 'text-zinc-300'
-                }`}
-              >
-                Course Code
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <SegmentedControl
+            options={[
+              { label: 'Subject Name', value: 'name' },
+              { label: 'Course Code', value: 'code' },
+            ]}
+            selectedValue={settings.primaryCardLabel}
+            onSelect={(val) => updateSettings({ primaryCardLabel: val })}
+            containerClass="relative flex-row p-1"
+          />
         </View>
+
         {/* Card 4: Notifications & Reminders */}
         <View
-          style={[styles.cardContainer, { borderRadius: 24, borderCurve: 'continuous' }]}
-          className="p-5 my-2 bg-[#1B1C22]"
+          style={[
+            styles.cardContainer,
+            {
+              borderRadius: 24,
+              borderCurve: 'continuous',
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2"
         >
-          <Text
-            style={[styles.sfText, { letterSpacing: -0.3 }]}
-            className="text-[17px] font-semibold text-white mb-3"
-          >
-            Notifications & Reminders
-          </Text>
+          <View className="flex-row items-center mb-3">
+            <BellIcon size={17} color={isDark ? '#3DDC84' : '#15803D'} strokeWidth={2} />
+            <Text
+              style={[
+                styles.sfText,
+                { letterSpacing: -0.3, color: colors.text },
+              ]}
+              className="text-[17px] font-semibold ml-2"
+            >
+              Notifications & Reminders
+            </Text>
+          </View>
 
           {/* Daily Evening Alert */}
-          <View className="flex-row items-center justify-between py-2 border-b border-white/[0.06]">
+          <View
+            style={{ borderBottomColor: colors.divider }}
+            className="flex-row items-center justify-between py-2 border-b"
+          >
             <View className="flex-1 pr-3">
-              <Text style={styles.sfText} className="text-sm font-semibold text-white">
+              <Text
+                style={[styles.sfText, { color: colors.text }]}
+                className="text-sm font-semibold"
+              >
                 Daily Evening Alert
               </Text>
-              <Text style={styles.sfText} className="text-xs text-white/50 mt-0.5">
+              <Text
+                style={[styles.sfText, { color: colors.textMuted }]}
+                className="text-xs mt-0.5"
+              >
                 Reminds you to log classes on active weekdays
               </Text>
             </View>
@@ -393,19 +497,31 @@ export default function SettingsScreen() {
                 Haptics.selectionAsync();
                 updateSettings({ dailyReminderEnabled: val });
               }}
-              trackColor={{ false: '#3A3B45', true: '#3DDC84' }}
+              trackColor={{
+                false: isDark ? '#3A3B45' : '#D1D5DB',
+                true: '#3DDC84',
+              }}
               thumbColor="#FFFFFF"
             />
           </View>
 
           {/* Per-class Quick-Mark Alert */}
-          <View className="py-2.5 border-b border-white/[0.06]">
+          <View
+            style={{ borderBottomColor: colors.divider }}
+            className="py-2.5 border-b"
+          >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 pr-3">
-                <Text style={styles.sfText} className="text-sm font-semibold text-white">
+                <Text
+                  style={[styles.sfText, { color: colors.text }]}
+                  className="text-sm font-semibold"
+                >
                   Per-class Quick-Mark Alert
                 </Text>
-                <Text style={styles.sfText} className="text-xs text-white/50 mt-0.5">
+                <Text
+                  style={[styles.sfText, { color: colors.textMuted }]}
+                  className="text-xs mt-0.5"
+                >
                   Heads-up reminder before class starts or ends
                 </Text>
               </View>
@@ -415,7 +531,10 @@ export default function SettingsScreen() {
                   Haptics.selectionAsync();
                   updateSettings({ perClassReminderEnabled: val });
                 }}
-                trackColor={{ false: '#3A3B45', true: '#3DDC84' }}
+                trackColor={{
+                  false: isDark ? '#3A3B45' : '#D1D5DB',
+                  true: '#3DDC84',
+                }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -423,7 +542,10 @@ export default function SettingsScreen() {
             {/* Notify Timing Sub-options */}
             {settings.perClassReminderEnabled && (
               <View className="mt-3 pt-2">
-                <Text style={styles.sfText} className="text-xs font-medium text-white/50 mb-2">
+                <Text
+                  style={[styles.sfText, { color: colors.textMuted }]}
+                  className="text-xs font-medium mb-2"
+                >
                   Notify Timing
                 </Text>
                 <View className="flex-row space-x-2">
@@ -433,20 +555,27 @@ export default function SettingsScreen() {
                       Haptics.selectionAsync();
                       updateSettings({ perClassReminderOffsetMinutes: 5 });
                     }}
-                    style={{ borderRadius: 16, borderCurve: 'continuous' }}
-                    className={`flex-1 py-2 items-center justify-center border mr-1.5 ${
-                      settings.perClassReminderOffsetMinutes === 5
-                        ? 'border-[#3DDC84] bg-emerald-500/15'
-                        : 'border-white/[0.08] bg-white/[0.06]'
-                    }`}
+                    style={{
+                      borderRadius: 16,
+                      borderCurve: 'continuous',
+                      backgroundColor:
+                        settings.perClassReminderOffsetMinutes === 5
+                          ? colors.presentBadgeBg
+                          : colors.actionBg,
+                    }}
+                    className="flex-1 py-2 items-center justify-center mr-1.5"
                   >
                     <Text
-                      style={styles.sfText}
-                      className={`text-xs font-semibold ${
-                        settings.perClassReminderOffsetMinutes === 5
-                          ? 'text-[#3DDC84]'
-                          : 'text-zinc-300'
-                      }`}
+                      style={[
+                        styles.sfText,
+                        {
+                          color:
+                            settings.perClassReminderOffsetMinutes === 5
+                              ? colors.presentBadgeText
+                              : colors.textSecondary,
+                        },
+                      ]}
+                      className="text-xs font-semibold"
                     >
                       5 min prior
                     </Text>
@@ -458,20 +587,27 @@ export default function SettingsScreen() {
                       Haptics.selectionAsync();
                       updateSettings({ perClassReminderOffsetMinutes: 15 });
                     }}
-                    style={{ borderRadius: 16, borderCurve: 'continuous' }}
-                    className={`flex-1 py-2 items-center justify-center border ml-1.5 ${
-                      settings.perClassReminderOffsetMinutes === 15
-                        ? 'border-[#3DDC84] bg-emerald-500/15'
-                        : 'border-white/[0.08] bg-white/[0.06]'
-                    }`}
+                    style={{
+                      borderRadius: 16,
+                      borderCurve: 'continuous',
+                      backgroundColor:
+                        settings.perClassReminderOffsetMinutes === 15
+                          ? colors.presentBadgeBg
+                          : colors.actionBg,
+                    }}
+                    className="flex-1 py-2 items-center justify-center ml-1.5"
                   >
                     <Text
-                      style={styles.sfText}
-                      className={`text-xs font-semibold ${
-                        settings.perClassReminderOffsetMinutes === 15
-                          ? 'text-[#3DDC84]'
-                          : 'text-zinc-300'
-                      }`}
+                      style={[
+                        styles.sfText,
+                        {
+                          color:
+                            settings.perClassReminderOffsetMinutes === 15
+                              ? colors.presentBadgeText
+                              : colors.textSecondary,
+                        },
+                      ]}
+                      className="text-xs font-semibold"
                     >
                       15 min prior
                     </Text>
@@ -484,10 +620,16 @@ export default function SettingsScreen() {
           {/* Weekly Sunday Digest */}
           <View className="flex-row items-center justify-between py-2 mt-1">
             <View className="flex-1 pr-3">
-              <Text style={styles.sfText} className="text-sm font-semibold text-white">
+              <Text
+                style={[styles.sfText, { color: colors.text }]}
+                className="text-sm font-semibold"
+              >
                 Weekly Sunday Digest
               </Text>
-              <Text style={styles.sfText} className="text-xs text-white/50 mt-0.5">
+              <Text
+                style={[styles.sfText, { color: colors.textMuted }]}
+                className="text-xs mt-0.5"
+              >
                 Highlights low-attendance subjects every Sunday at 19:00
               </Text>
             </View>
@@ -497,7 +639,10 @@ export default function SettingsScreen() {
                 Haptics.selectionAsync();
                 updateSettings({ sundayDigestEnabled: val });
               }}
-              trackColor={{ false: '#3A3B45', true: '#3DDC84' }}
+              trackColor={{
+                false: isDark ? '#3A3B45' : '#D1D5DB',
+                true: '#3DDC84',
+              }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -505,12 +650,23 @@ export default function SettingsScreen() {
 
         {/* Card 5: Data & Backup */}
         <View
-          style={[styles.cardContainer, { borderRadius: 24, borderCurve: 'continuous' }]}
-          className="p-5 my-2 bg-[#1B1C22]"
+          style={[
+            styles.cardContainer,
+            {
+              borderRadius: 24,
+              borderCurve: 'continuous',
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2"
         >
           <Text
-            style={[styles.sfText, { letterSpacing: -0.3 }]}
-            className="text-[17px] font-semibold text-white mb-3"
+            style={[
+              styles.sfText,
+              { letterSpacing: -0.3, color: colors.text },
+            ]}
+            className="text-[17px] font-semibold mb-3"
           >
             Data & Backup
           </Text>
@@ -518,61 +674,133 @@ export default function SettingsScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleExportJSON}
-            style={{ borderRadius: 14, borderCurve: 'continuous' }}
-            className="py-3 px-4 bg-white/[0.06] border border-white/[0.08] flex-row items-center justify-between my-1"
+            style={{
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: colors.actionBg,
+            }}
+            className="py-3 px-4 flex-row items-center justify-between my-1"
           >
-            <Text style={styles.sfText} className="text-xs font-semibold text-white">
+            <Text
+              style={[styles.sfText, { color: colors.text }]}
+              className="text-xs font-semibold"
+            >
               Export Backup (JSON)
             </Text>
-            <ExportIcon size={15} color="#A1A1AA" />
+            <ExportIcon size={15} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleImportJSON}
-            style={{ borderRadius: 14, borderCurve: 'continuous' }}
-            className="py-3 px-4 bg-white/[0.06] border border-white/[0.08] flex-row items-center justify-between my-1"
+            style={{
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: colors.actionBg,
+            }}
+            className="py-3 px-4 flex-row items-center justify-between my-1"
           >
-            <Text style={styles.sfText} className="text-xs font-semibold text-white">
+            <Text
+              style={[styles.sfText, { color: colors.text }]}
+              className="text-xs font-semibold"
+            >
               Import Backup (JSON)
             </Text>
-            <ImportIcon size={15} color="#A1A1AA" />
+            <ImportIcon size={15} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleExportCSV}
-            style={{ borderRadius: 14, borderCurve: 'continuous' }}
-            className="py-3 px-4 bg-white/[0.06] border border-white/[0.08] flex-row items-center justify-between my-1"
+            style={{
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: colors.actionBg,
+            }}
+            className="py-3 px-4 flex-row items-center justify-between my-1"
           >
-            <Text style={styles.sfText} className="text-xs font-semibold text-white">
+            <Text
+              style={[styles.sfText, { color: colors.text }]}
+              className="text-xs font-semibold"
+            >
               Export Attendance Log (CSV)
             </Text>
-            <ExportIcon size={15} color="#A1A1AA" />
+            <ExportIcon size={15} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/onboarding');
+            }}
+            style={{
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: isDark
+                ? 'rgba(61, 220, 132, 0.12)'
+                : 'rgba(13, 138, 51, 0.08)',
+            }}
+            className="py-3 px-4 flex-row items-center justify-between my-1"
+          >
+            <Text
+              style={[
+                styles.sfText,
+                { color: isDark ? '#3DDC84' : '#0D8A33' },
+              ]}
+              className="text-xs font-semibold"
+            >
+              Review Welcome Tour & Cutoffs
+            </Text>
+            <ChevronRightIcon size={15} color={isDark ? '#3DDC84' : '#0D8A33'} />
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={confirmResetDemo}
-            style={{ borderRadius: 14, borderCurve: 'continuous' }}
-            className="py-3 px-4 bg-white/[0.06] border border-white/[0.08] flex-row items-center justify-between my-1"
+            style={{
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: isDark
+                ? 'rgba(245, 158, 11, 0.10)'
+                : 'rgba(245, 158, 11, 0.08)',
+            }}
+            className="py-3 px-4 flex-row items-center justify-between my-1"
           >
-            <Text style={styles.sfText} className="text-xs font-semibold text-amber-400">
+            <Text
+              style={[
+                styles.sfText,
+                { color: isDark ? '#FFB020' : '#D97706' },
+              ]}
+              className="text-xs font-semibold"
+            >
               Reset to Sample Demo Data
             </Text>
-            <RefreshIcon size={15} color="#FFB020" />
+            <RefreshIcon size={15} color={isDark ? '#FFB020' : '#D97706'} />
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={confirmClearAll}
-            style={{ borderRadius: 14, borderCurve: 'continuous' }}
-            className="py-3 px-4 bg-rose-500/10 border border-rose-500/30 flex-row items-center justify-between my-1"
+            style={{
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: isDark
+                ? 'rgba(244, 63, 94, 0.10)'
+                : 'rgba(244, 63, 94, 0.08)',
+            }}
+            className="py-3 px-4 flex-row items-center justify-between my-1"
           >
-            <Text style={styles.sfText} className="text-xs font-semibold text-[#FF6B72]">
+            <Text
+              style={[
+                styles.sfText,
+                { color: isDark ? '#FF6B72' : '#DC2626' },
+              ]}
+              className="text-xs font-semibold"
+            >
               Clear All Attendance Records
             </Text>
-            <TrashIcon size={15} color="#FF6B72" />
+            <TrashIcon size={15} color={isDark ? '#FF6B72' : '#DC2626'} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -582,20 +810,16 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderTopColor: 'rgba(255, 255, 255, 0.18)',
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.12,
     shadowRadius: 10,
+    elevation: 2,
   },
   closeButton: {
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    borderTopColor: 'rgba(255, 255, 255, 0.25)',
+    elevation: 2,
   },
   sfText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,

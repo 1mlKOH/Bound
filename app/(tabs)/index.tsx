@@ -1,17 +1,81 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useMemo, useState, useRef } from 'react';
+import { View, Text, ScrollView, FlatList, TouchableOpacity, Platform, StyleSheet, Animated } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../../src/utils/haptics';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { DatePillSelector } from '../../src/components/DatePillSelector';
 import { HeroAttendanceCard } from '../../src/components/HeroAttendanceCard';
 import { ClassCard } from '../../src/components/ClassCard';
-import { PlusIcon, CalendarIcon } from '../../src/components/icons';
+import {
+  PlusIcon,
+  CalendarIcon,
+  MoreHorizontalIcon,
+  CopyCheckIcon,
+  CalendarSparklesIcon,
+  CalendarOffIcon,
+  CalendarPlusIcon,
+} from '../../src/components/icons';
+import { DropdownMenu } from '../../src/components/DropdownMenu';
+import { useTheme } from '../../src/utils/theme';
+import { toast } from 'sonner-native';
+
+interface TactilePillProps {
+  onPress: () => void;
+  style?: any;
+  className?: string;
+  children: React.ReactNode;
+}
+
+const TactilePill: React.FC<TactilePillProps> = ({ onPress, style, className = '', children }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.timing(scale, {
+      toValue: 0.95,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], justifyContent: 'center', alignItems: 'center' }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={onPress}
+        style={style}
+        className={className}
+      >
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+import {
+  WORST_CASE_SUBJECTS,
+  WORST_CASE_SESSIONS,
+  WORST_CASE_POOLED_STATS,
+  EMPTY_FIXTURE,
+  ONE_FIXTURE,
+  generateHugeFixture,
+} from '../../src/fixtures/worstCaseData';
 
 export default function AttendanceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const {
     subjects,
     selectedDate,
@@ -25,6 +89,8 @@ export default function AttendanceScreen() {
     settings,
   } = useAttendanceStore();
 
+  const scrollBottomPadding = Math.max(insets.bottom, 16) + 70 + 24;
+
   const pooledStats = getPooledStats();
   const daySessions = getSessionsForDate(selectedDate);
   const isHoliday = isDateHoliday(selectedDate);
@@ -33,8 +99,51 @@ export default function AttendanceScreen() {
     return new Map(subjects.map((s) => [s.id, s]));
   }, [subjects]);
 
+  // Dev-only data boundary switch for adversarial testing
+  const [dataMode, setDataMode] = useState<'demo' | 'worst' | 'empty' | 'one' | 'huge'>('demo');
+
+  const { activePooledStats, activeDaySessions, activeSubjectMap } = useMemo(() => {
+    if (dataMode === 'worst') {
+      return {
+        activePooledStats: WORST_CASE_POOLED_STATS,
+        activeDaySessions: WORST_CASE_SESSIONS,
+        activeSubjectMap: new Map(WORST_CASE_SUBJECTS.map((s) => [s.id, s])),
+      };
+    }
+    if (dataMode === 'empty') {
+      return {
+        activePooledStats: EMPTY_FIXTURE.pooledStats,
+        activeDaySessions: EMPTY_FIXTURE.sessions,
+        activeSubjectMap: new Map(),
+      };
+    }
+    if (dataMode === 'one') {
+      return {
+        activePooledStats: ONE_FIXTURE.pooledStats,
+        activeDaySessions: ONE_FIXTURE.sessions,
+        activeSubjectMap: new Map(ONE_FIXTURE.subjects.map((s) => [s.id, s])),
+      };
+    }
+    if (dataMode === 'huge') {
+      const huge = generateHugeFixture();
+      return {
+        activePooledStats: huge.pooledStats,
+        activeDaySessions: huge.sessions,
+        activeSubjectMap: new Map(huge.subjects.map((s) => [s.id, s])),
+      };
+    }
+    return {
+      activePooledStats: pooledStats,
+      activeDaySessions: daySessions,
+      activeSubjectMap: subjectMap,
+    };
+  }, [dataMode, pooledStats, daySessions, subjectMap]);
+
   return (
-    <SafeAreaView className="flex-1 bg-[#0F1015]" edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.canvas }}
+      edges={['top']}
+    >
       {/* Top Header */}
       <TopHeader title="Attendance" />
 
@@ -45,165 +154,351 @@ export default function AttendanceScreen() {
         onSelectDate={setSelectedDate}
       />
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 110 }}
+      <FlatList
+        data={activeDaySessions}
+        keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Hero Card */}
-        <HeroAttendanceCard stats={pooledStats} />
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
+        initialNumToRender={8}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        ListHeaderComponent={
+          <>
+            {/* Hero Card */}
+            <HeroAttendanceCard stats={activePooledStats} />
 
-        {/* Holiday Banner if day is marked as Holiday */}
-        {isHoliday && (
-          <View className="mx-4 my-2 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex-row items-center justify-between">
-            <View className="flex-1 pr-2">
-              <Text className="text-sm font-bold text-[#FFB020]">
-                Holiday Marked
-              </Text>
-              <Text className="text-xs text-zinc-400 mt-0.5">
-                Classes on this day are excluded from attendance counts.
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => toggleHoliday(selectedDate)}
-              className="px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/40"
-            >
-              <Text className="text-xs font-bold text-[#FFB020]">Undo</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Section Header: Today's Classes & Action Pills */}
-        <View className="flex-row items-center justify-between px-5 mt-4 mb-2">
-          <Text
-            style={[styles.sfText, { letterSpacing: -0.3 }]}
-            className="text-[18px] font-bold text-white"
-          >
-            Today's classes
-          </Text>
-
-          <View className="flex-row items-center space-x-2">
-            {/* Batch Mark Pill */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                batchMarkDay(selectedDate);
-              }}
-              style={[styles.pillButton, { borderRadius: 16, borderCurve: 'continuous' }]}
-              className="flex-row items-center px-3 py-1.5 bg-white/[0.08] border border-white/[0.12] mr-1.5"
-            >
-              <Text className="text-xs mr-1 text-white/80">⎘</Text>
-              <Text style={styles.sfText} className="text-xs font-semibold text-white/90">
-                Batch
-              </Text>
-            </TouchableOpacity>
-
-            {/* + Extra Class Pill */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.push('/modals/extra-class');
-              }}
-              style={[styles.pillButton, { borderRadius: 16, borderCurve: 'continuous' }]}
-              className="flex-row items-center px-3 py-1.5 bg-white/[0.08] border border-white/[0.12] mr-1.5"
-            >
-              <View className="mr-1.5">
-                <PlusIcon size={12} color="rgba(255, 255, 255, 0.85)" strokeWidth={2.4} />
+            {/* Holiday Banner if day is marked as Holiday */}
+            {isHoliday && (
+              <View
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.12)'
+                    : 'rgba(245, 158, 11, 0.14)',
+                }}
+                className="mx-4 my-2 p-4 rounded-2xl flex-row items-center justify-between"
+              >
+                <View className="flex-1 pr-2">
+                  <View className="flex-row items-center mb-0.5">
+                    <CalendarSparklesIcon
+                      size={16}
+                      color={isDark ? '#FFB020' : '#D97706'}
+                      strokeWidth={2}
+                    />
+                    <Text
+                      style={{ color: isDark ? '#FFB020' : '#D97706' }}
+                      className="text-sm font-bold ml-1.5"
+                    >
+                      Holiday Marked
+                    </Text>
+                  </View>
+                  <Text
+                    style={{ color: colors.textMuted }}
+                    className="text-xs mt-0.5"
+                  >
+                    Classes on this day are excluded from attendance counts.
+                  </Text>
+                </View>
+                <TactilePill
+                  onPress={() => toggleHoliday(selectedDate)}
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(245, 158, 11, 0.20)'
+                      : 'rgba(245, 158, 11, 0.18)',
+                  }}
+                  className="px-3 py-1.5 rounded-full"
+                >
+                  <Text
+                    style={{ color: isDark ? '#FFB020' : '#D97706' }}
+                    className="text-xs font-bold"
+                  >
+                    Undo
+                  </Text>
+                </TactilePill>
               </View>
-              <Text style={styles.sfText} className="text-xs font-semibold text-white/90">
-                Extra
-              </Text>
-            </TouchableOpacity>
+            )}
 
-            {/* Holiday Toggle Pill */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                toggleHoliday(selectedDate);
-              }}
-              style={[styles.pillButton, { borderRadius: 16, borderCurve: 'continuous' }]}
-              className={`flex-row items-center px-3 py-1.5 border ${
-                isHoliday
-                  ? 'bg-amber-500/20 border-amber-400/50'
-                  : 'bg-white/[0.08] border-white/[0.12]'
-              }`}
-            >
-              <View className="mr-1.5">
-                <CalendarIcon
-                  size={12}
-                  color={isHoliday ? '#FFB020' : 'rgba(255, 255, 255, 0.85)'}
+            {/* Section Header: Today's Classes & Action Pills */}
+            <View className="flex-row items-center justify-between px-5 mt-4 mb-2">
+              <Text
+                style={[
+                  styles.sfText,
+                  { letterSpacing: -0.3, color: colors.text, flexShrink: 0 },
+                ]}
+                className="text-[18px] font-bold mr-2"
+              >
+                Today's classes
+              </Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                {/* Batch Mark Pill */}
+                <TactilePill
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    batchMarkDay(selectedDate);
+                    toast.success('All classes marked Present');
+                  }}
+                  style={[
+                    styles.pillButton,
+                    {
+                      paddingHorizontal: 12,
+                      backgroundColor: colors.glassBg,
+                      shadowColor: colors.cardShadow,
+                      flexDirection: 'row',
+                    },
+                  ]}
+                >
+                  <View style={{ marginRight: 5 }}>
+                    <CopyCheckIcon
+                      size={13.5}
+                      color={colors.textSecondary}
+                      strokeWidth={2}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.sfText,
+                      {
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: '600',
+                        includeFontPadding: false,
+                      },
+                    ]}
+                  >
+                    Batch
+                  </Text>
+                </TactilePill>
+
+                {/* Dropdown Menu (Extra Class & Holiday) */}
+                <DropdownMenu
+                  items={[
+                    {
+                      key: 'extra-class',
+                      label: 'Add Extra Class',
+                      description: 'Log an unscheduled or makeup lecture',
+                      icon: (
+                        <CalendarPlusIcon
+                          size={16}
+                          color={colors.textSecondary}
+                          strokeWidth={2}
+                        />
+                      ),
+                      onSelect: () => {
+                        router.push('/modals/extra-class');
+                      },
+                    },
+                    {
+                      key: 'holiday-toggle',
+                      label: isHoliday ? 'Remove Holiday' : 'Mark as Holiday',
+                      description: isHoliday
+                        ? 'Resume attendance tracking for today'
+                        : 'Exclude today from attendance counts',
+                      active: isHoliday,
+                      badge: isHoliday ? 'Active' : undefined,
+                      separatorBefore: true,
+                      icon: isHoliday ? (
+                        <CalendarOffIcon
+                          size={16}
+                          color={isDark ? '#FFB020' : '#D97706'}
+                          strokeWidth={2}
+                        />
+                      ) : (
+                        <CalendarSparklesIcon
+                          size={16}
+                          color={colors.textSecondary}
+                          strokeWidth={2}
+                        />
+                      ),
+                      onSelect: () => {
+                        const willBeHoliday = !isHoliday;
+                        toggleHoliday(selectedDate);
+                        if (willBeHoliday) {
+                          toast.info('Marked as Holiday', {
+                            description: 'Classes excluded from attendance statistics',
+                          });
+                        } else {
+                          toast.info('Holiday removed');
+                        }
+                      },
+                    },
+                  ]}
+                  trigger={({ open }) => (
+                    <TactilePill
+                      onPress={open}
+                      style={[
+                        styles.pillButton,
+                        {
+                          width: 32,
+                          backgroundColor: isHoliday
+                            ? isDark
+                              ? 'rgba(245, 158, 11, 0.20)'
+                              : 'rgba(245, 158, 11, 0.15)'
+                            : colors.glassBg,
+                          shadowColor: colors.cardShadow,
+                        },
+                      ]}
+                    >
+                      <MoreHorizontalIcon
+                        size={16}
+                        color={
+                          isHoliday
+                            ? isDark
+                              ? '#FFB020'
+                              : '#D97706'
+                            : colors.textSecondary
+                        }
+                      />
+                    </TactilePill>
+                  )}
                 />
               </View>
-              <Text
-                style={styles.sfText}
-                className={`text-xs font-semibold ${
-                  isHoliday ? 'text-[#FFB020]' : 'text-white/90'
-                }`}
-              >
-                Holiday
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Class Cards List */}
-        {daySessions.length === 0 ? (
+            </View>
+          </>
+        }
+        ListEmptyComponent={
           <View
             style={[
               styles.emptyCard,
-              { borderRadius: 28, borderCurve: 'continuous' },
+              {
+                borderRadius: 28,
+                borderCurve: 'continuous',
+                backgroundColor: colors.card,
+                shadowColor: colors.cardShadow,
+              },
             ]}
-            className="mx-4 my-6 p-8 bg-[#1B1C22] items-center justify-center"
+            className="mx-4 my-6 p-8 items-center justify-center"
           >
-            <View className="mb-3">
-              <CalendarIcon size={38} color="#71717A" />
+            <View
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.07)'
+                  : 'rgba(0, 0, 0, 0.05)',
+                borderRadius: 22,
+                borderCurve: 'continuous',
+              }}
+              className="w-16 h-16 items-center justify-center mb-3"
+            >
+              <CalendarIcon size={32} color={colors.textMuted} />
             </View>
-            <Text style={styles.sfText} className="text-base font-semibold text-white mb-1">
+            <Text
+              style={[styles.sfText, { color: colors.text }]}
+              className="text-base font-semibold mb-1"
+            >
               No classes scheduled
             </Text>
 
-            <Text className="text-xs text-zinc-400 text-center">
+            <Text
+              style={{ color: colors.textMuted }}
+              className="text-xs text-center"
+            >
               Enjoy your free time, or tap '+ Extra' to log an unscheduled class.
             </Text>
           </View>
-        ) : (
-          daySessions.map((session) => (
-            <ClassCard
-              key={session.id}
-              session={session}
-              subject={subjectMap.get(session.subjectId)}
-              primaryLabel={settings.primaryCardLabel}
-              onMark={(status) => markSession(session.id, status)}
-            />
-          ))
+        }
+        renderItem={({ item: session }) => (
+          <ClassCard
+            session={session}
+            subject={activeSubjectMap.get(session.subjectId)}
+            primaryLabel={settings.primaryCardLabel}
+            onMark={(status) => markSession(session.id, status)}
+          />
         )}
-      </ScrollView>
+      />
+
+      {/* Dev-only break-ui adversarial dataset toggle */}
+      {__DEV__ && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 78,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+          pointerEvents="box-none"
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              backgroundColor: isDark ? 'rgba(30, 32, 40, 0.95)' : 'rgba(235, 238, 242, 0.95)',
+              padding: 3,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+              elevation: 8,
+            }}
+          >
+            {(['demo', 'worst', 'empty', 'one', 'huge'] as const).map((mode) => {
+              const labels: Record<string, string> = {
+                demo: 'Demo',
+                worst: 'Worst case',
+                empty: 'Empty',
+                one: 'One',
+                huge: '1,000',
+              };
+              const active = dataMode === mode;
+              return (
+                <TouchableOpacity
+                  key={mode}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setDataMode(mode);
+                  }}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 14,
+                    backgroundColor: active
+                      ? (isDark ? '#FFFFFF' : '#0F172A')
+                      : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: active ? '700' : '500',
+                      color: active
+                        ? (isDark ? '#000000' : '#FFFFFF')
+                        : colors.textMuted,
+                    }}
+                  >
+                    {labels[mode]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   pillButton: {
-    shadowColor: '#000000',
+    height: 32,
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 3,
-    borderTopColor: 'rgba(255, 255, 255, 0.22)',
+    elevation: 2,
   },
   emptyCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderTopColor: 'rgba(255, 255, 255, 0.18)',
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.14,
     shadowRadius: 8,
+    elevation: 2,
   },
   sfText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
 });
-

@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../utils/haptics';
 import { SettingsIcon, SunIcon } from './icons';
+import { useTheme } from '../utils/theme';
 
 interface TopHeaderProps {
   title: string;
@@ -18,6 +19,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onRightActionPress,
 }) => {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -35,9 +37,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           styles.largeTitle,
           {
             letterSpacing: -0.8,
+            color: colors.text,
           },
         ]}
-        className="text-[32px] font-bold text-white leading-tight"
+        className="text-[32px] font-bold leading-tight"
       >
         {title}
       </Text>
@@ -46,13 +49,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handlePress}
-          style={styles.actionButton}
-          className="w-10 h-10 rounded-full bg-white/[0.08] border border-white/[0.14] items-center justify-center"
+          style={[
+            styles.actionButton,
+            {
+              backgroundColor: colors.glassBg,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="w-10 h-10 rounded-full items-center justify-center"
         >
           {rightAction === 'sun' ? (
-            <SunIcon size={18} color="rgba(255, 255, 255, 0.85)" />
+            <SunIcon size={18} color={colors.textSecondary} />
           ) : (
-            <SettingsIcon size={18} color="rgba(255, 255, 255, 0.85)" />
+            <SettingsIcon size={18} color={colors.textSecondary} />
           )}
         </TouchableOpacity>
       )}
@@ -65,11 +74,9 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
   actionButton: {
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    borderTopColor: 'rgba(255, 255, 255, 0.25)',
+    elevation: 2,
   },
 });
-

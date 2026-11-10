@@ -1,17 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useMemo, useRef } from 'react';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Platform, StyleSheet, Animated } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../../src/utils/haptics';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { SubjectCard } from '../../src/components/SubjectCard';
-import { SearchIcon, CloseIcon, SubjectsIcon, PlusIcon } from '../../src/components/icons';
+import { SearchIcon, CloseIcon, SubjectsIcon, BookPlusIcon } from '../../src/components/icons';
+import { useTheme } from '../../src/utils/theme';
 
 export default function SubjectsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const { getAllSubjectStats } = useAttendanceStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const statsList = getAllSubjectStats();
 
@@ -25,32 +29,67 @@ export default function SubjectsScreen() {
     );
   }, [statsList, searchQuery]);
 
+  // Position FAB safely above the 70px FloatingBottomNav
+  const fabBottom = Math.max(insets.bottom, 16) + 70 + 16;
+
+  const fabScale = useRef(new Animated.Value(1)).current;
+
+  const onFabPressIn = () => {
+    Animated.timing(fabScale, {
+      toValue: 0.94,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onFabPressOut = () => {
+    Animated.spring(fabScale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-[#0F1015]" edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.canvas }}
+      edges={['top']}
+    >
       {/* Top Header */}
       <TopHeader title="Subjects" />
 
-      {/* Search Bar with Apple liquid glass styling */}
+      {/* Search Bar with Apple liquid glass styling and subtle focus highlight */}
       <View
         style={[
           styles.searchBar,
           {
             borderRadius: 20,
             borderCurve: 'continuous',
+            backgroundColor: colors.glassBg,
+            borderColor: isSearchFocused
+              ? colors.textSecondary
+              : isDark
+              ? 'rgba(255, 255, 255, 0.08)'
+              : 'rgba(0, 0, 0, 0.06)',
+            borderWidth: 1.5,
+            shadowColor: colors.cardShadow,
           },
         ]}
-        className="mx-4 my-2 px-4 py-2.5 bg-white/[0.08] border border-white/[0.12] flex-row items-center"
+        className="mx-4 my-2 px-4 py-2.5 flex-row items-center"
       >
         <View className="mr-2.5">
-          <SearchIcon size={16} color="rgba(255, 255, 255, 0.45)" />
+          <SearchIcon size={16} color={isSearchFocused ? colors.text : colors.textMuted} />
         </View>
         <TextInput
           placeholder="Search subjects or codes..."
-          placeholderTextColor="rgba(255, 255, 255, 0.35)"
+          placeholderTextColor={colors.placeholderText}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          style={styles.sfText}
-          className="flex-1 text-[14px] text-white font-medium p-0"
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+          style={[styles.sfText, { color: colors.text }]}
+          className="flex-1 text-[14px] font-medium p-0"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity
@@ -60,7 +99,7 @@ export default function SubjectsScreen() {
             }}
             className="p-1"
           >
-            <CloseIcon size={14} color="rgba(255, 255, 255, 0.6)" />
+            <CloseIcon size={14} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
@@ -68,25 +107,45 @@ export default function SubjectsScreen() {
       {/* Subjects Cards List */}
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 120, paddingTop: 4 }}
+        contentContainerStyle={{ paddingBottom: fabBottom + 64, paddingTop: 4 }}
         showsVerticalScrollIndicator={false}
       >
         {filteredStats.length === 0 ? (
           <View
             style={[
               styles.emptyCard,
-              { borderRadius: 28, borderCurve: 'continuous' },
+              {
+                borderRadius: 28,
+                borderCurve: 'continuous',
+                backgroundColor: colors.card,
+                shadowColor: colors.cardShadow,
+              },
             ]}
-            className="mx-4 my-8 p-8 bg-[#1B1C22] items-center justify-center"
+            className="mx-4 my-8 p-8 items-center justify-center"
           >
-            <View className="mb-3">
-              <SubjectsIcon size={40} color="#71717A" />
+            <View
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.07)'
+                  : 'rgba(0, 0, 0, 0.05)',
+                borderRadius: 22,
+                borderCurve: 'continuous',
+              }}
+              className="w-16 h-16 items-center justify-center mb-3"
+            >
+              <SubjectsIcon size={32} color={colors.textMuted} />
             </View>
-            <Text style={styles.sfText} className="text-base font-semibold text-white mb-1">
+            <Text
+              style={[styles.sfText, { color: colors.text }]}
+              className="text-base font-semibold mb-1"
+            >
               No subjects found
             </Text>
 
-            <Text style={styles.sfText} className="text-xs text-white/50 text-center">
+            <Text
+              style={[styles.sfText, { color: colors.textMuted }]}
+              className="text-xs text-center"
+            >
               {searchQuery
                 ? 'Try a different search term.'
                 : "Tap '+ Add subject' below to register your first course."}
@@ -108,10 +167,19 @@ export default function SubjectsScreen() {
         )}
       </ScrollView>
 
-      {/* Floating Action Button: + Add Subject */}
-      <View className="absolute bottom-24 right-5">
+      {/* Floating Action Button: + Add Subject (with spring press feedback) */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          bottom: fabBottom,
+          right: 20,
+          transform: [{ scale: fabScale }],
+        }}
+      >
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.88}
+          onPressIn={onFabPressIn}
+          onPressOut={onFabPressOut}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             router.push('/modals/subject-editor');
@@ -126,7 +194,7 @@ export default function SubjectsScreen() {
           className="flex-row items-center px-5 py-3.5 bg-[#00BF63]"
         >
           <View className="mr-2">
-            <PlusIcon size={16} color="#06210F" strokeWidth={2.8} />
+            <BookPlusIcon size={18} color="#06210F" strokeWidth={2} />
           </View>
           <Text
             style={[
@@ -138,18 +206,17 @@ export default function SubjectsScreen() {
             Add subject
           </Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   searchBar: {
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 3,
-    borderTopColor: 'rgba(255, 255, 255, 0.20)',
+    elevation: 2,
   },
   fab: {
     shadowColor: '#00BF63',
@@ -157,17 +224,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   emptyCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderTopColor: 'rgba(255, 255, 255, 0.18)',
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
+    elevation: 2,
   },
   sfText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,

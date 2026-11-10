@@ -8,19 +8,23 @@ import {
   Animated,
   LayoutChangeEvent,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../utils/haptics';
+import { useTheme } from '../utils/theme';
 
 interface SegmentedControlProps {
   options: { label: string; value: string }[];
   selectedValue: string;
   onSelect: (value: any) => void;
+  containerClass?: string;
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   options,
   selectedValue,
   onSelect,
+  containerClass = 'relative flex-row mx-4 my-2 p-1',
 }) => {
+  const { colors, isDark } = useTheme();
   const [troughWidth, setTroughWidth] = useState(0);
   const translateX = useRef(new Animated.Value(0)).current;
   const isInitialRender = useRef(true);
@@ -73,9 +77,13 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         {
           borderRadius: 24,
           borderCurve: 'continuous',
+          backgroundColor: isDark
+            ? 'rgba(21, 22, 28, 0.85)'
+            : 'rgba(0, 0, 0, 0.06)',
+          shadowColor: colors.cardShadow,
         },
       ]}
-      className="relative flex-row mx-4 my-2 p-1 bg-[#15161C]/85 border border-white/[0.08]"
+      className={containerClass}
     >
       {/* Sliding Active Pill Indicator */}
       {segmentWidth > 0 && (
@@ -87,6 +95,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               transform: [{ translateX }],
               borderRadius: 20,
               borderCurve: 'continuous',
+              backgroundColor: isDark
+                ? 'rgba(255, 255, 255, 0.14)'
+                : '#FFFFFF',
+              shadowColor: colors.cardShadow,
             },
           ]}
         />
@@ -109,13 +121,12 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               style={[
                 styles.label,
                 {
-                  color: isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
+                  color: isSelected ? colors.text : colors.textMuted,
                   letterSpacing: -0.1,
+                  fontWeight: isSelected ? '600' : '500',
                 },
               ]}
-              className={`text-[13px] ${
-                isSelected ? 'font-semibold' : 'font-medium'
-              }`}
+              className="text-[13px]"
             >
               {opt.label}
             </Text>
@@ -128,27 +139,22 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 
 const styles = StyleSheet.create({
   trough: {
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
+    elevation: 2,
   },
   activeIndicator: {
     position: 'absolute',
     top: 4,
     bottom: 4,
     left: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    borderTopColor: 'rgba(255, 255, 255, 0.28)',
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
+    elevation: 3,
   },
   label: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
 });
-

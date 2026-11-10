@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../utils/haptics';
 import {
   Subject,
   ScheduleSlot,
@@ -65,6 +65,12 @@ interface AttendanceStoreState {
   archiveSubject: (id: string) => void;
   deleteSubject: (id: string) => void;
   updateSettings: (partial: Partial<Settings>) => void;
+  completeOnboarding: (options: {
+    targetPct: number;
+    loadSampleData: boolean;
+    enableReminders: boolean;
+  }) => Promise<void>;
+  resetOnboarding: () => void;
   restoreFromBackup: (payload: any) => boolean;
   resetToDemo: () => void;
   clearAllData: () => void;
@@ -86,7 +92,9 @@ const DEFAULT_SETTINGS: Settings = {
   perClassReminderEnabled: true,
   perClassReminderOffsetMinutes: 5,
   sundayDigestEnabled: true,
+  hapticFeedbackEnabled: true,
   hasSeededDemo: false,
+  hasOnboarded: false,
 };
 
 // Default reference date matching screenshots
@@ -99,7 +107,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   holidays: [],
   settings: DEFAULT_SETTINGS,
   selectedDate: DEFAULT_DATE,
-  statsFilter: 'month',
+  statsFilter: 'week',
   isLoading: true,
 
   initialize: () => {
@@ -121,14 +129,10 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
           perClassReminderEnabled: Boolean(s.per_class_reminder_enabled),
           perClassReminderOffsetMinutes: s.per_class_reminder_offset_minutes,
           sundayDigestEnabled: Boolean(s.sunday_digest_enabled),
+          hapticFeedbackEnabled: s.haptic_feedback_enabled !== undefined ? Boolean(s.haptic_feedback_enabled) : true,
           hasSeededDemo: Boolean(s.has_seeded_demo),
+          hasOnboarded: Boolean(s.has_onboarded),
         };
-      }
-
-      // Check if demo data needs to be seeded on first launch
-      if (!currentSettings.hasSeededDemo) {
-        seedDemoData(DEFAULT_DATE);
-        currentSettings.hasSeededDemo = true;
       }
 
       // Load all tables into memory
@@ -430,7 +434,8 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         global_target_pct = ?, theme = ?, primary_card_label = ?,
         daily_reminder_enabled = ?, daily_reminder_time = ?,
         per_class_reminder_enabled = ?, per_class_reminder_offset_minutes = ?,
-        sunday_digest_enabled = ?
+        sunday_digest_enabled = ?, haptic_feedback_enabled = ?,
+        has_seeded_demo = ?, has_onboarded = ?
        WHERE id = 1`,
       [
         updated.globalTargetPct,
@@ -441,11 +446,59 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         updated.perClassReminderEnabled ? 1 : 0,
         updated.perClassReminderOffsetMinutes,
         updated.sundayDigestEnabled ? 1 : 0,
+        updated.hapticFeedbackEnabled ? 1 : 0,
+        updated.hasSeededDemo ? 1 : 0,
+        updated.hasOnboarded ? 1 : 0,
       ]
     );
 
     // Sync notification schedules
     syncScheduledNotifications(updated, get().subjects, get().scheduleSlots);
+  },
+
+  completeOnboarding: async (options: {
+    targetPct: number;
+    loadSampleData: boolean;
+    enableReminders: boolean;
+  }) => {
+    if (options.loadSampleData) {
+      seedDemoData(DEFAULT_DATE);
+    } else {
+      expoDb.execSync(`
+        DELETE FROM sessions;
+        DELETE FROM schedule_slots;
+        DELETE FROM subjects;
+        DELETE FROM holidays;
+      `);
+    }
+
+    expoDb.runSync(
+      `UPDATE settings SET 
+        global_target_pct = ?, 
+        has_seeded_demo = ?, 
+        has_onboarded = 1,
+        per_class_reminder_enabled = ?,
+        daily_reminder_enabled = ?
+       WHERE id = 1`,
+      [
+        options.targetPct,
+        options.loadSampleData ? 1 : 0,
+        options.enableReminders ? 1 : 0,
+        options.enableReminders ? 1 : 0,
+      ]
+    );
+
+    get().initialize();
+  },
+
+  resetOnboarding: () => {
+    expoDb.runSync('UPDATE settings SET has_onboarded = 0 WHERE id = 1');
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        hasOnboarded: false,
+      },
+    }));
   },
 
   restoreFromBackup: (payload: any): boolean => {

@@ -69,10 +69,42 @@ export function initDatabase() {
       per_class_reminder_enabled INTEGER NOT NULL DEFAULT 1,
       per_class_reminder_offset_minutes INTEGER NOT NULL DEFAULT 5,
       sunday_digest_enabled INTEGER NOT NULL DEFAULT 1,
-      has_seeded_demo INTEGER NOT NULL DEFAULT 0
+      haptic_feedback_enabled INTEGER NOT NULL DEFAULT 1,
+      has_seeded_demo INTEGER NOT NULL DEFAULT 0,
+      has_onboarded INTEGER NOT NULL DEFAULT 0
     );
-
-    INSERT OR IGNORE INTO settings (id, global_target_pct, theme, primary_card_label, daily_reminder_enabled, daily_reminder_time, per_class_reminder_enabled, per_class_reminder_offset_minutes, sunday_digest_enabled, has_seeded_demo)
-    VALUES (1, 75.0, 'system', 'name', 0, '18:00', 1, 5, 1, 0);
   `);
+
+  // Migrate existing settings table if columns are missing
+  try {
+    const tableInfo = expoDb.getAllSync<any>('PRAGMA table_info(settings)');
+    const columnNames = new Set(tableInfo.map((col) => col.name));
+    if (!columnNames.has('haptic_feedback_enabled')) {
+      expoDb.execSync('ALTER TABLE settings ADD COLUMN haptic_feedback_enabled INTEGER NOT NULL DEFAULT 1;');
+    }
+    if (!columnNames.has('has_onboarded')) {
+      const subjectCount = expoDb.getFirstSync<{ count: number }>('SELECT COUNT(*) as count FROM subjects')?.count ?? 0;
+      const initialValue = subjectCount > 0 ? 1 : 0;
+      expoDb.execSync(`ALTER TABLE settings ADD COLUMN has_onboarded INTEGER NOT NULL DEFAULT ${initialValue};`);
+    }
+  } catch {
+    // Ignore migration error
+  }
+
+  // Insert default row 1 into settings if not present
+  try {
+    expoDb.execSync(`
+      INSERT OR IGNORE INTO settings (id, global_target_pct, theme, primary_card_label, daily_reminder_enabled, daily_reminder_time, per_class_reminder_enabled, per_class_reminder_offset_minutes, sunday_digest_enabled, haptic_feedback_enabled, has_seeded_demo, has_onboarded)
+      VALUES (1, 75.0, 'system', 'name', 0, '18:00', 1, 5, 1, 1, 0, 0);
+    `);
+  } catch {
+    try {
+      expoDb.execSync(`
+        INSERT OR IGNORE INTO settings (id, global_target_pct, theme, primary_card_label, daily_reminder_enabled, daily_reminder_time, per_class_reminder_enabled, per_class_reminder_offset_minutes, sunday_digest_enabled, has_seeded_demo)
+        VALUES (1, 75.0, 'system', 'name', 0, '18:00', 1, 5, 1, 0);
+      `);
+    } catch {
+      // Ignore
+    }
+  }
 }

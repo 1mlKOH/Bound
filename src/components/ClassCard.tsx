@@ -9,8 +9,17 @@ import {
   UIManager,
   Animated,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../utils/haptics';
 import { Session, Subject, AttendanceStatus } from '../types';
+import { useTheme } from '../utils/theme';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CircleCheckIcon,
+  CircleXIcon,
+  CircleMinusIcon,
+} from './icons';
+import { SubjectDuotoneIcon } from './icons/SubjectDuotoneIcon';
 
 if (
   Platform.OS === 'android' &&
@@ -21,18 +30,20 @@ if (
 
 interface ActionPressButtonProps {
   onPress: () => void;
-  selectedClass: string;
-  textClass: string;
   label: string;
+  buttonStyle: any;
+  textStyle: any;
   marginClass?: string;
+  icon?: React.ReactNode;
 }
 
 const ActionPressButton: React.FC<ActionPressButtonProps> = ({
   onPress,
-  selectedClass,
-  textClass,
   label,
+  buttonStyle,
+  textStyle,
   marginClass = '',
+  icon,
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -69,12 +80,14 @@ const ActionPressButton: React.FC<ActionPressButtonProps> = ({
             borderRadius: 16,
             borderCurve: 'continuous',
           },
+          buttonStyle,
         ]}
-        className={`py-2.5 items-center justify-center ${selectedClass}`}
+        className="py-2.5 flex-row items-center justify-center"
       >
+        {icon && <View className="mr-1.5">{icon}</View>}
         <Text
-          style={styles.sfText}
-          className={`text-xs font-semibold ${textClass}`}
+          style={[styles.sfText, textStyle]}
+          className="text-xs font-semibold"
         >
           {label}
         </Text>
@@ -96,6 +109,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   primaryLabel = 'name',
   onMark,
 }) => {
+  const { colors, isDark } = useTheme();
   const [isExpanded, setIsExpanded] = useState(session.status === null);
 
   const title =
@@ -114,101 +128,185 @@ export const ClassCard: React.FC<ClassCardProps> = ({
     if (session.status === 'present') {
       return (
         <View
-          style={{ borderRadius: 12, borderCurve: 'continuous' }}
-          className="flex-row items-center space-x-1.5 px-3 py-1.5 border border-emerald-400/40 bg-emerald-500/15"
+          style={{
+            borderRadius: 12,
+            borderCurve: 'continuous',
+            backgroundColor: colors.presentBadgeBg,
+          }}
+          className="flex-row items-center px-2.5 py-1"
         >
-          <Text style={styles.sfText} className="text-xs font-semibold text-[#3DDC84]">
+          <View className="mr-1.5">
+            <CircleCheckIcon size={12} color={colors.presentBadgeText} />
+          </View>
+          <Text
+            style={[styles.sfText, { color: colors.presentBadgeText }]}
+            className="text-xs font-semibold"
+          >
             Present
           </Text>
-          <Text className="text-xs text-[#3DDC84]">⌄</Text>
         </View>
       );
     }
     if (session.status === 'absent') {
       return (
         <View
-          style={{ borderRadius: 12, borderCurve: 'continuous' }}
-          className="flex-row items-center space-x-1.5 px-3 py-1.5 border border-rose-400/40 bg-[#D6336C]"
+          style={{
+            borderRadius: 12,
+            borderCurve: 'continuous',
+            backgroundColor: colors.absentBadgeBg,
+          }}
+          className="flex-row items-center px-2.5 py-1"
         >
-          <Text style={styles.sfText} className="text-xs font-semibold text-white">
+          <View className="mr-1.5">
+            <CircleXIcon size={12} color={colors.absentBadgeText} />
+          </View>
+          <Text
+            style={[styles.sfText, { color: colors.absentBadgeText }]}
+            className="text-xs font-semibold"
+          >
             Absent
           </Text>
-          <Text className="text-xs text-white">⌄</Text>
         </View>
       );
     }
     if (session.status === 'cancelled') {
       return (
         <View
-          style={{ borderRadius: 12, borderCurve: 'continuous' }}
-          className="flex-row items-center space-x-1.5 px-3 py-1.5 bg-white/[0.10] border border-white/[0.08]"
+          style={{
+            borderRadius: 12,
+            borderCurve: 'continuous',
+            backgroundColor: colors.cancelledBadgeBg,
+          }}
+          className="flex-row items-center px-2.5 py-1"
         >
-          <Text style={styles.sfText} className="text-xs font-semibold text-zinc-400">
+          <View className="mr-1.5">
+            <CircleMinusIcon size={12} color={colors.cancelledBadgeText} />
+          </View>
+          <Text
+            style={[styles.sfText, { color: colors.cancelledBadgeText }]}
+            className="text-xs font-semibold"
+          >
             Cancelled
           </Text>
-          <Text className="text-xs text-zinc-400">⌄</Text>
         </View>
       );
     }
     return (
-      <View className="flex-row items-center space-x-1.5">
-        <Text style={styles.sfText} className="text-xs font-medium text-white/50">
+      <View className="flex-row items-center space-x-1">
+        <Text
+          style={[styles.sfText, { color: colors.textMuted }]}
+          className="text-xs font-medium mr-1"
+        >
           Tap to mark
         </Text>
-        <Text className="text-xs text-white/50">{isExpanded ? '⌃' : '⌄'}</Text>
+        {isExpanded ? (
+          <ChevronUpIcon size={14} color={colors.textMuted} />
+        ) : (
+          <ChevronDownIcon size={14} color={colors.textMuted} />
+        )}
       </View>
     );
   };
 
+  const headerScale = useRef(new Animated.Value(1)).current;
+
+  const onHeaderPressIn = () => {
+    Animated.timing(headerScale, {
+      toValue: 0.985,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onHeaderPressOut = () => {
+    Animated.spring(headerScale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const toggleExpand = () => {
+    Haptics.selectionAsync();
+    LayoutAnimation.configureNext({
+      duration: 200,
+      create: {
+        type: LayoutAnimation.Types.easeOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeOut,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    setIsExpanded(!isExpanded);
+  };
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.cardContainer,
         {
           borderRadius: 24,
           borderCurve: 'continuous',
+          backgroundColor: colors.card,
+          shadowColor: colors.cardShadow,
+          transform: [{ scale: headerScale }],
         },
       ]}
-      className="mx-4 my-1.5 p-4 bg-[#1B1C22]"
+      className="mx-4 my-1.5 p-4"
     >
       {/* Header Row */}
       <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => {
-          Haptics.selectionAsync();
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          setIsExpanded(!isExpanded);
-        }}
+        activeOpacity={0.85}
+        onPressIn={onHeaderPressIn}
+        onPressOut={onHeaderPressOut}
+        onPress={toggleExpand}
         className="flex-row items-center justify-between"
       >
         <View className="flex-row items-center space-x-3 flex-1">
-          {/* Subject Color Dot with subtle specular rim */}
+          {/* Subject Color Icon Badge */}
           <View
             style={{
               backgroundColor: subjectColor,
+              borderRadius: 14,
+              borderCurve: 'continuous',
               shadowColor: subjectColor,
               shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.5,
-              shadowRadius: 3,
+              shadowOpacity: 0.4,
+              shadowRadius: 4,
+              flexShrink: 0,
             }}
-            className="w-3.5 h-3.5 rounded-full mr-3"
-          />
-          <View>
+            className="w-10 h-10 items-center justify-center mr-3"
+          >
+            <SubjectDuotoneIcon
+              name={subject?.name || title}
+              code={subject?.code}
+              size={20}
+            />
+          </View>
+          <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
             <Text
               style={[
                 styles.titleText,
-                { letterSpacing: -0.2 },
+                { letterSpacing: -0.2, color: colors.text },
               ]}
-              className="text-[16px] font-semibold text-white"
+              className="text-[16px] font-semibold"
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
               {title}
             </Text>
             <Text
               style={[
                 styles.sfText,
-                { letterSpacing: 0.1 },
+                { letterSpacing: 0.1, color: colors.textMuted },
               ]}
-              className="text-[12px] text-white/50 mt-0.5"
+              className="text-[12px] mt-0.5"
             >
               {session.startTime} - {session.endTime}
             </Text>
@@ -216,76 +314,115 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         </View>
 
         {/* Right side Badge / Chevron */}
-        <View>{renderCollapsedBadge()}</View>
+        <View style={{ flexShrink: 0 }}>{renderCollapsedBadge()}</View>
       </TouchableOpacity>
 
       {/* Expanded Actions Row */}
       {isExpanded && (
-        <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-white/[0.08] space-x-2">
+        <View
+          style={{ borderTopColor: colors.divider }}
+          className="flex-row items-center justify-between mt-4 pt-3 border-t space-x-2"
+        >
           {/* Present Button */}
           <ActionPressButton
             label="Present"
+            icon={
+              <CircleCheckIcon
+                size={13}
+                color={
+                  session.status === 'present'
+                    ? colors.presentBadgeText
+                    : colors.textSecondary
+                }
+              />
+            }
             marginClass="mr-1.5"
             onPress={() => handleMark('present')}
-            selectedClass={
-              session.status === 'present'
-                ? 'bg-emerald-500/20 border border-emerald-400/50'
-                : 'bg-white/[0.06] border border-white/[0.08]'
-            }
-            textClass={
-              session.status === 'present' ? 'text-[#3DDC84]' : 'text-zinc-300'
-            }
+            buttonStyle={{
+              backgroundColor:
+                session.status === 'present'
+                  ? colors.presentBadgeBg
+                  : colors.actionBg,
+            }}
+            textStyle={{
+              color:
+                session.status === 'present'
+                  ? colors.presentBadgeText
+                  : colors.textSecondary,
+            }}
           />
 
           {/* Absent Button */}
           <ActionPressButton
             label="Absent"
+            icon={
+              <CircleXIcon
+                size={13}
+                color={
+                  session.status === 'absent'
+                    ? colors.absentBadgeText
+                    : colors.textSecondary
+                }
+              />
+            }
             marginClass="mx-1.5"
             onPress={() => handleMark('absent')}
-            selectedClass={
-              session.status === 'absent'
-                ? 'bg-[#D6336C] border border-rose-400/50'
-                : 'bg-white/[0.06] border border-white/[0.08]'
-            }
-            textClass={
-              session.status === 'absent' ? 'text-white' : 'text-zinc-300'
-            }
+            buttonStyle={{
+              backgroundColor:
+                session.status === 'absent'
+                  ? colors.absentBadgeBg
+                  : colors.actionBg,
+            }}
+            textStyle={{
+              color:
+                session.status === 'absent'
+                  ? colors.absentBadgeText
+                  : colors.textSecondary,
+            }}
           />
 
           {/* Cancelled Button */}
           <ActionPressButton
             label="Cancelled"
+            icon={
+              <CircleMinusIcon
+                size={13}
+                color={
+                  session.status === 'cancelled'
+                    ? colors.cancelledBadgeText
+                    : colors.textSecondary
+                }
+              />
+            }
             marginClass="ml-1.5"
             onPress={() => handleMark('cancelled')}
-            selectedClass={
-              session.status === 'cancelled'
-                ? 'bg-[#4A5568] border border-zinc-500/50'
-                : 'bg-white/[0.06] border border-white/[0.08]'
-            }
-            textClass={
-              session.status === 'cancelled' ? 'text-white' : 'text-zinc-300'
-            }
+            buttonStyle={{
+              backgroundColor:
+                session.status === 'cancelled'
+                  ? colors.cancelledBadgeBg
+                  : colors.actionBg,
+            }}
+            textStyle={{
+              color:
+                session.status === 'cancelled'
+                  ? colors.cancelledBadgeText
+                  : colors.textSecondary,
+            }}
           />
         </View>
       )}
-
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   cardContainer: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderTopColor: 'rgba(255, 255, 255, 0.18)', // Apple specular highlight
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.18,
     shadowRadius: 10,
+    elevation: 3,
   },
-  actionButton: {
-    borderTopColor: 'rgba(255, 255, 255, 0.20)',
-  },
+  actionButton: {},
   titleText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },

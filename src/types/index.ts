@@ -54,7 +54,9 @@ export interface Settings {
   perClassReminderEnabled: boolean;
   perClassReminderOffsetMinutes: number; // 5 or 15
   sundayDigestEnabled: boolean;
+  hapticFeedbackEnabled: boolean;
   hasSeededDemo: boolean;
+  hasOnboarded: boolean;
 }
 
 export interface SubjectStats {

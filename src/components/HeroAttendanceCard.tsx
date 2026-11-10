@@ -1,40 +1,51 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, Platform, StyleSheet, Animated } from 'react-native';
+import { NumberFlow } from 'number-flow-react-native';
 import { PooledStats } from '../types';
+import { useTheme } from '../utils/theme';
 
 interface HeroAttendanceCardProps {
   stats: PooledStats;
 }
 
 export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats }) => {
-  const isSafe = stats.statusTier === 'safe';
-  const isWarning = stats.statusTier === 'warning';
+  const { colors, isDark } = useTheme();
 
-  const badgeBg = isSafe
-    ? 'bg-emerald-500/15'
-    : isWarning
-    ? 'bg-amber-500/15'
-    : 'bg-rose-500/15';
+  // Tier-based chromatic atmosphere
+  const tierConfig = {
+    safe: {
+      cardBg: isDark ? '#0B2317' : '#EAF8F0',
+      labelColor: isDark ? 'rgba(61, 220, 132, 0.85)' : '#047857',
+      trackBg: isDark ? '#143D27' : '#C8EED9',
+      progressColor: isDark ? '#3DDC84' : '#1FB45A',
+      subtitleColor: isDark ? 'rgba(167, 243, 208, 0.80)' : '#047857',
+      badgeBg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+      badgeText: isDark ? '#3DDC84' : '#15803D',
+      badgeLabel: 'Safe',
+    },
+    warning: {
+      cardBg: isDark ? '#221607' : '#FEF9C3',
+      labelColor: isDark ? 'rgba(255, 176, 32, 0.85)' : '#B45309',
+      trackBg: isDark ? '#3D270E' : '#FDE68A',
+      progressColor: isDark ? '#FFB020' : '#D97706',
+      subtitleColor: isDark ? 'rgba(253, 230, 138, 0.80)' : '#92400E',
+      badgeBg: isDark ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.18)',
+      badgeText: isDark ? '#FFB020' : '#D97706',
+      badgeLabel: 'Close',
+    },
+    danger: {
+      cardBg: isDark ? '#240B12' : '#FFE4E6',
+      labelColor: isDark ? 'rgba(255, 107, 114, 0.85)' : '#BE123C',
+      trackBg: isDark ? '#3D121B' : '#FECDD3',
+      progressColor: isDark ? '#FF6B72' : '#E11D48',
+      subtitleColor: isDark ? 'rgba(254, 205, 211, 0.80)' : '#9F1239',
+      badgeBg: isDark ? 'rgba(244, 63, 94, 0.18)' : 'rgba(244, 63, 94, 0.18)',
+      badgeText: isDark ? '#FF6B72' : '#E11D48',
+      badgeLabel: 'Below',
+    },
+  };
 
-  const badgeBorder = isSafe
-    ? 'border-emerald-400/30'
-    : isWarning
-    ? 'border-amber-400/30'
-    : 'border-rose-400/30';
-
-  const badgeText = isSafe
-    ? 'text-[#3DDC84]'
-    : isWarning
-    ? 'text-[#FFB020]'
-    : 'text-[#FF6B72]';
-
-  const badgeLabel = isSafe ? 'Safe' : isWarning ? 'Close' : 'Below';
-
-  const progressColor = isSafe
-    ? '#3DDC84'
-    : isWarning
-    ? '#FFB020'
-    : '#FF6B72';
+  const currentTier = tierConfig[stats.statusTier] || tierConfig.safe;
 
   const animatedPercent = useRef(
     new Animated.Value(Math.min(100, Math.max(0, stats.pooledPercentage)))
@@ -55,13 +66,15 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
     outputRange: ['0%', '100%'],
   });
 
+  const isZeroState = stats.totalHeld === 0 && stats.totalAttended === 0 && stats.totalAbsent === 0;
 
-  const summarySubtitle =
-    stats.subjectsBelowTarget === 0
-      ? `Target ${stats.globalTarget}% · All subjects safe`
-      : `Target ${stats.globalTarget}% · ${stats.subjectsBelowTarget} ${
-          stats.subjectsBelowTarget === 1 ? 'subject' : 'subjects'
-        } below target`;
+  const summarySubtitle = isZeroState
+    ? `Target ${stats.globalTarget}% · No classes recorded yet`
+    : stats.subjectsBelowTarget === 0
+    ? `Target ${stats.globalTarget}% · All subjects safe`
+    : `Target ${stats.globalTarget}% · ${stats.subjectsBelowTarget} ${
+        stats.subjectsBelowTarget === 1 ? 'subject' : 'subjects'
+      } below target`;
 
   return (
     <View
@@ -70,6 +83,8 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
         {
           borderRadius: 28,
           borderCurve: 'continuous',
+          backgroundColor: currentTier.cardBg,
+          shadowColor: colors.cardShadow,
         },
       ]}
       className="mx-4 my-2 p-5"
@@ -79,55 +94,87 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
         <Text
           style={[
             styles.sfText,
-            { letterSpacing: 0.8 },
+            { letterSpacing: 0.8, color: currentTier.labelColor },
           ]}
-          className="text-[11px] font-semibold text-emerald-400/80 uppercase"
+          className="text-[11px] font-semibold uppercase"
         >
           OVERALL ATTENDANCE
         </Text>
         <View
-          style={{ borderRadius: 12, borderCurve: 'continuous' }}
-          className={`px-3 py-1 border ${badgeBg} ${badgeBorder}`}
+          style={{
+            borderRadius: 12,
+            borderCurve: 'continuous',
+            backgroundColor: currentTier.badgeBg,
+          }}
+          className="px-3 py-1"
         >
           <Text
-            style={[styles.sfText, { letterSpacing: -0.1 }]}
-            className={`text-xs font-semibold ${badgeText}`}
+            style={[
+              styles.sfText,
+              { letterSpacing: -0.1, color: currentTier.badgeText },
+            ]}
+            className="text-xs font-semibold"
           >
-            {badgeLabel}
+            {currentTier.badgeLabel}
           </Text>
         </View>
       </View>
 
-      {/* Hero Percentage Display with Apple SF Optical Sizing */}
-      <Text
-        style={[
-          styles.heroNumber,
-          {
-            letterSpacing: -1.6,
-          },
-        ]}
-        className="text-[52px] font-bold text-white my-0.5 leading-none"
-      >
-        {Math.round(stats.pooledPercentage)}%
-      </Text>
+      {/* Hero Percentage Display with Apple SF Optical Sizing & NumberFlow animation */}
+      {isZeroState ? (
+        <Text
+          style={[
+            styles.heroNumber,
+            {
+              letterSpacing: -1.6,
+              color: isDark ? '#FFFFFF' : '#0F172A',
+              fontSize: 52,
+              fontWeight: '700',
+              lineHeight: 58,
+            },
+          ]}
+          className="my-0.5"
+        >
+          —%
+        </Text>
+      ) : (
+        <View className="my-0.5">
+          <NumberFlow
+            value={Math.round(stats.pooledPercentage)}
+            suffix="%"
+            style={{
+              fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+              fontSize: 52,
+              fontWeight: '700',
+              letterSpacing: -1.6,
+              color: isDark ? '#FFFFFF' : '#0F172A',
+            }}
+          />
+        </View>
+      )}
 
       {/* Progress Bar Track with Smooth Liquid Fill */}
-      <View className="w-full h-2.5 bg-[#143D27] rounded-full overflow-hidden my-3">
+      <View
+        style={{ backgroundColor: currentTier.trackBg }}
+        className="w-full h-2.5 rounded-full overflow-hidden my-3"
+      >
         <Animated.View
           style={{
             width: animatedWidth,
-            backgroundColor: progressColor,
+            backgroundColor: currentTier.progressColor,
             height: '100%',
             borderRadius: 999,
           }}
         />
-
       </View>
 
       {/* Target and Below-Target Counter */}
       <Text
-        style={[styles.sfText, { letterSpacing: -0.1 }]}
-        className="text-[13px] font-normal text-emerald-200/75"
+        style={[
+          styles.sfText,
+          { letterSpacing: -0.1, color: currentTier.subtitleColor },
+        ]}
+        className="text-[13px] font-medium"
       >
         {summarySubtitle}
       </Text>
@@ -137,17 +184,14 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#0B2317',
-    borderWidth: 1,
-    borderColor: 'rgba(61, 220, 132, 0.18)',
-    borderTopColor: 'rgba(61, 220, 132, 0.40)', // Apple light catcher
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.25,
     shadowRadius: 14,
+    elevation: 4,
   },
   heroNumber: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontVariant: ['tabular-nums'],
   },
   sfText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,

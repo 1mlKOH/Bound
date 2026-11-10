@@ -161,3 +161,43 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+/**
+ * Returns Monday (YYYY-MM-DD) of the week containing dateStr (ISO-8601 Monday-start)
+ */
+export function getMondayOfDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const day = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(Date.UTC(y, m - 1, d + diff));
+  return monday.toISOString().slice(0, 10);
+}
+
+/**
+ * Returns array of 7 consecutive dates (YYYY-MM-DD) from Monday to Sunday
+ */
+export function getWeekDates(mondayStr: string): string[] {
+  const [y, m, d] = mondayStr.split('-').map(Number);
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(Date.UTC(y, m - 1, d + i));
+    dates.push(dt.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+/**
+ * Formats YYYY-MM-DD as "Tue, Nov 3, 2026"
+ */
+export function formatCardDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return `${days[date.getUTCDay()]}, ${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
+}
+

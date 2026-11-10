@@ -1,0 +1,392 @@
+import { Subject, Session, PooledStats, SubjectStats } from '../types';
+
+export const WORST_CASE_SUBJECTS: Subject[] = [
+  {
+    id: 'sub-worst-1',
+    name: 'Aleksandra Wiśniewska-Kowalczyk',
+    code: 'CS-ADV-999-PARALLEL-DISTRIBUTED-COMPUTING',
+    color: '#1E9BFF',
+    targetPct: 80,
+    baselinePresent: 1284,
+    baselineAbsent: 166,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  },
+  {
+    id: 'sub-worst-2',
+    name: 'Benachrichtigungseinstellungen und Rechnerarchitektur',
+    code: 'SYS-ARCH',
+    color: '#A25CF2',
+    targetPct: 75,
+    baselinePresent: 1,
+    baselineAbsent: 0,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  },
+  {
+    id: 'sub-worst-3',
+    name: 'J',
+    code: '',
+    color: '#FF8A1F',
+    targetPct: 75,
+    baselinePresent: 0,
+    baselineAbsent: 1,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  },
+  {
+    id: 'sub-worst-4',
+    name: '👩🏽‍💻 Đặng Thị Ngọc Hân & 王秀英 (Bioinformatics)',
+    code: 'BIO-401-🧬',
+    color: '#1FB45A',
+    targetPct: 75,
+    baselinePresent: 17,
+    baselineAbsent: 7,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  },
+  {
+    id: 'sub-worst-5',
+    name: 'Quantum Information Theory',
+    code: 'PHYS-900',
+    color: '#6C7BFF',
+    targetPct: 75,
+    baselinePresent: 0,
+    baselineAbsent: 0,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  },
+  {
+    id: 'sub-worst-6',
+    name: 'نور الهدى عبد الرحمن (Arabesque Studies)',
+    code: 'ARAB-101',
+    color: '#F2459B',
+    targetPct: 75,
+    baselinePresent: 999,
+    baselineAbsent: 1,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  },
+];
+
+export const WORST_CASE_SESSIONS: Session[] = [
+  {
+    id: 'sess-worst-1',
+    subjectId: 'sub-worst-1',
+    slotId: 'slot-1',
+    date: '2026-11-07',
+    startTime: '08:30',
+    endTime: '10:00',
+    status: null, // "Tap to mark" with chevron
+    markedAt: null,
+  },
+  {
+    id: 'sess-worst-2',
+    subjectId: 'sub-worst-2',
+    slotId: 'slot-2',
+    date: '2026-11-07',
+    startTime: '10:15',
+    endTime: '11:45',
+    status: 'present', // "Present" badge
+    markedAt: '2026-11-07T10:20:00Z',
+  },
+  {
+    id: 'sess-worst-3',
+    subjectId: 'sub-worst-3',
+    slotId: 'slot-3',
+    date: '2026-11-07',
+    startTime: '12:00',
+    endTime: '13:00',
+    status: 'absent', // "Absent" badge
+    markedAt: '2026-11-07T12:05:00Z',
+  },
+  {
+    id: 'sess-worst-4',
+    subjectId: 'sub-worst-4',
+    slotId: 'slot-4',
+    date: '2026-11-07',
+    startTime: '13:30',
+    endTime: '15:00',
+    status: 'cancelled', // "Cancelled" badge
+    markedAt: '2026-11-07T13:00:00Z',
+  },
+  {
+    id: 'sess-worst-5',
+    subjectId: 'sub-worst-5',
+    slotId: 'slot-5',
+    date: '2026-11-07',
+    startTime: '15:15',
+    endTime: '16:45',
+    status: null,
+    markedAt: null,
+  },
+  {
+    id: 'sess-worst-6',
+    subjectId: 'sub-worst-6',
+    slotId: 'slot-6',
+    date: '2026-11-07',
+    startTime: '17:00',
+    endTime: '18:30',
+    status: 'present',
+    markedAt: '2026-11-07T17:05:00Z',
+  },
+];
+
+export const WORST_CASE_POOLED_STATS: PooledStats = {
+  totalAttended: 2301,
+  totalAbsent: 175,
+  totalHeld: 2476,
+  pooledPercentage: 92.9,
+  globalTarget: 75,
+  subjectsBelowTarget: 1, // Tests singular "1 subject below target"
+  statusTier: 'safe',
+};
+
+export const WORST_CASE_SUBJECT_STATS: SubjectStats[] = [
+  {
+    subject: WORST_CASE_SUBJECTS[0],
+    attended: 1284,
+    absent: 166,
+    totalHeld: 1450,
+    percentage: 88.6,
+    effectiveTarget: 80,
+    isSafe: true,
+    isClose: false,
+    isBelow: false,
+    canMiss: 155,
+    mustAttend: 0,
+    statusLabel: 'Can miss 155',
+  },
+  {
+    subject: WORST_CASE_SUBJECTS[1],
+    attended: 1,
+    absent: 0,
+    totalHeld: 1,
+    percentage: 100,
+    effectiveTarget: 75,
+    isSafe: true,
+    isClose: false,
+    isBelow: false,
+    canMiss: 0,
+    mustAttend: 0,
+    statusLabel: 'Can miss 0',
+  },
+  {
+    subject: WORST_CASE_SUBJECTS[2],
+    attended: 0,
+    absent: 1,
+    totalHeld: 1,
+    percentage: 0,
+    effectiveTarget: 75,
+    isSafe: false,
+    isClose: false,
+    isBelow: true,
+    canMiss: 0,
+    mustAttend: 3,
+    statusLabel: 'Attend next 3',
+  },
+  {
+    subject: WORST_CASE_SUBJECTS[3],
+    attended: 17,
+    absent: 7,
+    totalHeld: 24,
+    percentage: 70.8,
+    effectiveTarget: 75,
+    isSafe: false,
+    isClose: false,
+    isBelow: true,
+    canMiss: 0,
+    mustAttend: 4,
+    statusLabel: 'Attend next 4',
+  },
+  {
+    subject: WORST_CASE_SUBJECTS[4],
+    attended: 0,
+    absent: 0,
+    totalHeld: 0,
+    percentage: 100,
+    effectiveTarget: 75,
+    isSafe: true,
+    isClose: false,
+    isBelow: false,
+    canMiss: 0,
+    mustAttend: 0,
+    statusLabel: 'Can miss 0',
+  },
+  {
+    subject: WORST_CASE_SUBJECTS[5],
+    attended: 999,
+    absent: 1,
+    totalHeld: 1000,
+    percentage: 99.9,
+    effectiveTarget: 75,
+    isSafe: true,
+    isClose: false,
+    isBelow: false,
+    canMiss: 331,
+    mustAttend: 0,
+    statusLabel: 'Can miss 331',
+  },
+];
+
+// Empty Fixture: 0 subjects, 0 sessions
+export const EMPTY_FIXTURE = {
+  subjects: [] as Subject[],
+  sessions: [] as Session[],
+  pooledStats: {
+    totalAttended: 0,
+    totalAbsent: 0,
+    totalHeld: 0,
+    pooledPercentage: 0,
+    globalTarget: 75,
+    subjectsBelowTarget: 0,
+    statusTier: 'safe' as const,
+  },
+  subjectStats: [] as SubjectStats[],
+};
+
+// One Fixture: Exactly 1 item
+export const ONE_FIXTURE = {
+  subjects: [
+    {
+      id: 'sub-one',
+      name: 'Jo',
+      code: 'J1',
+      color: '#1E9BFF',
+      targetPct: 75,
+      baselinePresent: 0,
+      baselineAbsent: 1,
+      startDate: '2026-08-01',
+      endDate: null,
+      archivedAt: null,
+      createdAt: '2026-08-01T00:00:00Z',
+    },
+  ],
+  sessions: [
+    {
+      id: 'sess-one',
+      subjectId: 'sub-one',
+      slotId: 'slot-one',
+      date: '2026-11-07',
+      startTime: '09:00',
+      endTime: '10:00',
+      status: 'absent' as const,
+      markedAt: '2026-11-07T09:05:00Z',
+    },
+  ],
+  pooledStats: {
+    totalAttended: 0,
+    totalAbsent: 1,
+    totalHeld: 1,
+    pooledPercentage: 0,
+    globalTarget: 75,
+    subjectsBelowTarget: 1,
+    statusTier: 'danger' as const,
+  },
+  subjectStats: [
+    {
+      subject: {
+        id: 'sub-one',
+        name: 'Jo',
+        code: 'J1',
+        color: '#1E9BFF',
+        targetPct: 75,
+        baselinePresent: 0,
+        baselineAbsent: 1,
+        startDate: '2026-08-01',
+        endDate: null,
+        archivedAt: null,
+        createdAt: '2026-08-01T00:00:00Z',
+      },
+      attended: 0,
+      absent: 1,
+      totalHeld: 1,
+      percentage: 0,
+      effectiveTarget: 75,
+      isSafe: false,
+      isClose: false,
+      isBelow: true,
+      canMiss: 0,
+      mustAttend: 3,
+      statusLabel: 'Attend next 3',
+    },
+  ],
+};
+
+// Huge Fixture: 1,000 unpaginated items
+export function generateHugeFixture() {
+  const subjects: Subject[] = [];
+  const sessions: Session[] = [];
+  const subjectStats: SubjectStats[] = [];
+
+  for (let i = 1; i <= 1000; i++) {
+    const id = `sub-huge-${i}`;
+    const sub: Subject = {
+      id,
+      name: `Course Module #${i} - Advanced Research Seminar`,
+      code: `MOD-${i}`,
+      color: '#1FB45A',
+      targetPct: 75,
+      baselinePresent: 10,
+      baselineAbsent: 2,
+      startDate: '2026-08-01',
+      endDate: null,
+      archivedAt: null,
+      createdAt: '2026-08-01T00:00:00Z',
+    };
+    subjects.push(sub);
+
+    sessions.push({
+      id: `sess-huge-${i}`,
+      subjectId: id,
+      slotId: `slot-${i}`,
+      date: '2026-11-07',
+      startTime: '09:00',
+      endTime: '10:00',
+      status: i % 2 === 0 ? 'present' : null,
+      markedAt: null,
+    });
+
+    subjectStats.push({
+      subject: sub,
+      attended: 10,
+      absent: 2,
+      totalHeld: 12,
+      percentage: 83.3,
+      effectiveTarget: 75,
+      isSafe: true,
+      isClose: false,
+      isBelow: false,
+      canMiss: 1,
+      mustAttend: 0,
+      statusLabel: 'Can miss 1',
+    });
+  }
+
+  return {
+    subjects,
+    sessions,
+    pooledStats: {
+      totalAttended: 10000,
+      totalAbsent: 2000,
+      totalHeld: 12000,
+      pooledPercentage: 83.3,
+      globalTarget: 75,
+      subjectsBelowTarget: 0,
+      statusTier: 'safe' as const,
+    },
+    subjectStats,
+  };
+}

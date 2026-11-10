@@ -1,34 +1,44 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { CalendarCard } from '../../src/components/CalendarCard';
 import { BySubjectBreakdownCard } from '../../src/components/BySubjectBreakdownCard';
+import { useTheme } from '../../src/utils/theme';
 
 export default function StatsScreen() {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     selectedDate,
     setSelectedDate,
     statsFilter,
     setStatsFilter,
     sessions,
+    subjects,
+    scheduleSlots,
+    getSessionsForDate,
     getAllSubjectStats,
   } = useAttendanceStore();
 
   const statsList = getAllSubjectStats();
+  const scrollBottomPadding = Math.max(insets.bottom, 16) + 70 + 24;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0F1015]" edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.canvas }}
+      edges={['top']}
+    >
       {/* Top Header */}
       <TopHeader title="Statistics" />
 
-      {/* Segmented Control: Month | Week */}
+      {/* Segmented Control: Week | Month (Week first matching reference design) */}
       <SegmentedControl
         options={[
-          { label: 'Month', value: 'month' },
           { label: 'Week', value: 'week' },
+          { label: 'Month', value: 'month' },
         ]}
         selectedValue={statsFilter}
         onSelect={(val) => setStatsFilter(val)}
@@ -36,13 +46,16 @@ export default function StatsScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Calendar Card */}
+        {/* Calendar Card (Month or Week with daily agenda overview) */}
         <CalendarCard
           selectedDate={selectedDate}
           sessions={sessions}
+          subjects={subjects}
+          scheduleSlots={scheduleSlots}
+          getSessionsForDate={getSessionsForDate}
           onSelectDate={setSelectedDate}
           viewMode={statsFilter}
         />

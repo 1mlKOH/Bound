@@ -1,12 +1,80 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  LayoutAnimation,
+  Animated,
+  Platform,
+  KeyboardAvoidingView,
+  Keyboard,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
-import { CloseIcon } from '../../src/components/icons';
+import { CloseIcon, CalendarPlusIcon } from '../../src/components/icons';
+import { useTheme } from '../../src/utils/theme';
+import { Haptics } from '../../src/utils/haptics';
+import { SubjectDuotoneIcon } from '../../src/components/icons/SubjectDuotoneIcon';
+import { toast } from 'sonner-native';
+
+function formatTimeInput(val: string): string {
+  const cleaned = val.replace(/[^0-9:]/g, '');
+  if (cleaned.length === 4 && !cleaned.includes(':')) {
+    return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+  }
+  return cleaned;
+}
+
+const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
+  const { colors } = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.timing(scale, {
+      toValue: 0.92,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }}
+        style={{
+          backgroundColor: colors.glassBg,
+        }}
+        className="w-9 h-9 rounded-full items-center justify-center"
+      >
+        <CloseIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export default function ExtraClassModal() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const { subjects, selectedDate, addExtraClass } = useAttendanceStore();
 
   const activeSubjects = subjects.filter((s) => !s.archivedAt);
@@ -18,63 +86,158 @@ export default function ExtraClassModal() {
   const [startTime, setStartTime] = useState('15:00');
   const [endTime, setEndTime] = useState('16:00');
 
+  const scrollViewRef = useRef<any>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const handleSave = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!selectedSubjectId) {
-      Alert.alert('Required', 'Please select a subject.');
+      toast.error('Please select a subject');
       return;
     }
     if (startTime >= endTime) {
-      Alert.alert('Invalid Time', 'End time must be after start time.');
+      toast.error('End time must be after start time');
       return;
     }
 
+    const sub = activeSubjects.find((s) => s.id === selectedSubjectId);
     addExtraClass(selectedSubjectId, date, startTime, endTime);
+    toast.success('Extra class added', {
+      description: `${sub?.name || 'Class'} (${startTime} - ${endTime})`,
+    });
     router.back();
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0F1015]" edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.canvas }}
+      edges={['top']}
+    >
       {/* Header */}
-      <View className="flex-row items-center justify-between px-5 pt-3 pb-3 border-b border-zinc-900">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-9 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center"
-        >
-          <CloseIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
-        </TouchableOpacity>
+      <View
+        style={{ borderBottomColor: colors.divider }}
+        className="flex-row items-center justify-between px-4 pt-3 pb-3 border-b"
+      >
+        <View className="w-16 items-start">
+          <TactileCloseButton onPress={() => router.back()} />
+        </View>
 
+        <View className="flex-1 flex-row items-center justify-center mx-1">
+          <CalendarPlusIcon
+            size={18}
+            color={colors.text}
+            strokeWidth={2}
+          />
+          <Text
+            style={[
+              styles.sfText,
+              { color: colors.text, letterSpacing: -0.3 },
+            ]}
+            numberOfLines={1}
+            className="text-[17px] font-bold tracking-tight ml-2"
+          >
+            Add Extra Class
+          </Text>
+        </View>
 
-        <Text className="text-xl font-black text-white tracking-tight">
-          Add Extra Class
-        </Text>
-
-        <TouchableOpacity
-          onPress={handleSave}
-          className="px-4 py-2 rounded-full bg-[#00BF63]"
-        >
-          <Text className="text-xs font-black text-[#06210F]">Save</Text>
-        </TouchableOpacity>
+        <View className="w-16 items-end">
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleSave}
+            className="px-4 py-2 rounded-full bg-[#00BF63]"
+          >
+            <Text className="text-xs font-bold text-[#06210F]">Save</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView className="flex-1 px-4 py-3" showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1 px-4 py-3"
+          contentContainerStyle={{
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 80,
+          }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
         {/* Subject Selection */}
-        <View className="p-5 my-2 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
-          <Text className="text-base font-bold text-white mb-2">Select Subject</Text>
+        <View
+          style={[
+            styles.cardContainer,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2 rounded-[28px]"
+        >
+          <Text
+            style={{ color: colors.text }}
+            className="text-base font-bold mb-2"
+          >
+            Select Subject
+          </Text>
           <View className="flex-row flex-wrap gap-2">
             {activeSubjects.map((sub) => {
               const isSelected = selectedSubjectId === sub.id;
               return (
                 <TouchableOpacity
                   key={sub.id}
-                  onPress={() => setSelectedSubjectId(sub.id)}
-                  style={{
-                    backgroundColor: isSelected ? sub.color : '#22232B',
-                    borderColor: isSelected ? '#FFFFFF' : '#282932',
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                    setSelectedSubjectId(sub.id);
                   }}
-                  className="px-4 py-2.5 rounded-full border mb-2 mr-1"
+                  style={{
+                    backgroundColor: isSelected ? sub.color : colors.inputBg,
+                    transform: [{ scale: isSelected ? 1.03 : 1 }],
+                  }}
+                  className="flex-row items-center px-3.5 py-2.5 rounded-full mb-2 mr-1.5"
                 >
+                  <View
+                    style={{
+                      backgroundColor: isSelected
+                        ? 'rgba(255, 255, 255, 0.22)'
+                        : sub.color,
+                    }}
+                    className="w-5 h-5 rounded-full items-center justify-center mr-2"
+                  >
+                    <SubjectDuotoneIcon
+                      name={sub.name}
+                      code={sub.code}
+                      size={12}
+                    />
+                  </View>
                   <Text
-                    style={{ color: isSelected ? '#FFFFFF' : '#D4D4D8' }}
+                    style={{
+                      color: isSelected ? '#FFFFFF' : colors.text,
+                    }}
                     className="text-xs font-bold"
                   >
                     {sub.name}
@@ -86,49 +249,159 @@ export default function ExtraClassModal() {
         </View>
 
         {/* Date & Time Settings */}
-        <View className="p-5 my-2 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
-          <Text className="text-base font-bold text-white mb-3">Time & Date</Text>
+        <View
+          style={[
+            styles.cardContainer,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2 rounded-[28px]"
+        >
+          <Text
+            style={{ color: colors.text }}
+            className="text-base font-bold mb-3"
+          >
+            Time & Date
+          </Text>
 
-          <Text className="text-xs font-semibold text-zinc-400 mb-1">
+          <Text
+            style={{ color: colors.textMuted }}
+            className="text-xs font-semibold mb-1"
+          >
             Date (YYYY-MM-DD)
           </Text>
           <TextInput
             value={date}
             onChangeText={setDate}
             placeholder="2026-11-07"
-            placeholderTextColor="#71717A"
-            className="p-3.5 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold mb-3"
+            placeholderTextColor={colors.placeholderText}
+            style={{
+              backgroundColor: colors.inputBg,
+              borderColor: colors.inputBorder,
+              color: colors.text,
+            }}
+            className="p-3.5 rounded-xl border text-sm font-semibold mb-3"
           />
 
           <View className="flex-row justify-between space-x-2">
             <View className="flex-1 mr-1.5">
-              <Text className="text-xs font-semibold text-zinc-400 mb-1">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs font-semibold mb-1"
+              >
                 Start Time
               </Text>
               <TextInput
                 value={startTime}
-                onChangeText={setStartTime}
+                onChangeText={(val) => setStartTime(formatTimeInput(val))}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 120);
+                }}
                 placeholder="15:00"
-                placeholderTextColor="#71717A"
-                className="p-3 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold text-center"
+                placeholderTextColor={colors.placeholderText}
+                keyboardType="numbers-and-punctuation"
+                returnKeyType="next"
+                style={{
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                }}
+                className="p-3 rounded-xl border text-sm font-semibold text-center"
               />
             </View>
 
             <View className="flex-1 ml-1.5">
-              <Text className="text-xs font-semibold text-zinc-400 mb-1">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs font-semibold mb-1"
+              >
                 End Time
               </Text>
               <TextInput
                 value={endTime}
-                onChangeText={setEndTime}
+                onChangeText={(val) => setEndTime(formatTimeInput(val))}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 120);
+                }}
                 placeholder="16:00"
-                placeholderTextColor="#71717A"
-                className="p-3 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold text-center"
+                placeholderTextColor={colors.placeholderText}
+                keyboardType="numbers-and-punctuation"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                style={{
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                }}
+                className="p-3 rounded-xl border text-sm font-semibold text-center"
               />
             </View>
           </View>
+
+          {/* Quick extra-class presets */}
+          <View className="flex-row flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-[rgba(0,0,0,0.04)] dark:border-[rgba(255,255,255,0.05)]">
+            {[
+              { start: '09:00', end: '10:00' },
+              { start: '11:00', end: '12:00' },
+              { start: '14:00', end: '15:00' },
+              { start: '15:00', end: '16:00' },
+              { start: '16:00', end: '17:00' },
+            ].map((preset) => {
+              const isActive =
+                startTime === preset.start && endTime === preset.end;
+              return (
+                <TouchableOpacity
+                  key={`${preset.start}-${preset.end}`}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setStartTime(preset.start);
+                    setEndTime(preset.end);
+                  }}
+                  style={{
+                    backgroundColor: isActive
+                      ? colors.statusSafe
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.05)',
+                    borderRadius: 8,
+                  }}
+                  className="px-2.5 py-1"
+                >
+                  <Text
+                    style={{
+                      color: isActive ? '#06210F' : colors.textSecondary,
+                      fontVariant: ['tabular-nums'],
+                    }}
+                    className="text-[11px] font-semibold"
+                  >
+                    {preset.start} - {preset.end}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  sfText: {
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+});

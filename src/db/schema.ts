@@ -60,5 +60,7 @@ export const settings = sqliteTable('settings', {
   perClassReminderEnabled: integer('per_class_reminder_enabled').notNull().default(1),
   perClassReminderOffsetMinutes: integer('per_class_reminder_offset_minutes').notNull().default(5),
   sundayDigestEnabled: integer('sunday_digest_enabled').notNull().default(1),
+  hapticFeedbackEnabled: integer('haptic_feedback_enabled').notNull().default(1),
   hasSeededDemo: integer('has_seeded_demo').notNull().default(0),
+  hasOnboarded: integer('has_onboarded').notNull().default(0),
 });

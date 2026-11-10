@@ -9,14 +9,21 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Haptics } from '../utils/haptics';
 import { HomeIcon, SubjectsIcon, StatsIcon } from './icons';
+import { useTheme } from '../utils/theme';
 
 interface NavTabItemProps {
   label: string;
   isActive: boolean;
   onPress: () => void;
   renderIcon: (color: string) => React.ReactNode;
+  activeBg: string;
+  activeBorder: string;
+  activeTextColor: string;
+  inactiveTextColor: string;
+  iconColor: string;
 }
 
 const NavTabItem: React.FC<NavTabItemProps> = ({
@@ -24,6 +31,11 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
   isActive,
   onPress,
   renderIcon,
+  activeBg,
+  activeBorder,
+  activeTextColor,
+  inactiveTextColor,
+  iconColor,
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -51,17 +63,20 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={onPress}
-        style={[styles.tabItem, isActive && styles.activeTab]}
-        className={`items-center justify-center px-6 py-2 rounded-full ${
-          isActive ? 'bg-white/[0.14]' : 'bg-transparent'
-        }`}
+        style={[
+          styles.tabItem,
+          {
+            backgroundColor: isActive ? activeBg : 'transparent',
+          },
+        ]}
+        className="items-center justify-center px-6 py-2 rounded-full"
       >
-        {renderIcon(isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)')}
+        {renderIcon(iconColor)}
         <Text
           style={[
             styles.tabLabel,
             {
-              color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.50)',
+              color: isActive ? activeTextColor : inactiveTextColor,
               letterSpacing: 0.2,
             },
           ]}
@@ -77,11 +92,15 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
 export const FloatingBottomNav: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   const isHome =
     pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/index';
   const isSubjects = pathname.includes('/subjects');
   const isStats = pathname.includes('/stats');
+
+  const bottomOffset = Math.max(insets.bottom, 16);
 
   const handleNavigate = (path: any) => {
     Haptics.selectionAsync();
@@ -89,7 +108,14 @@ export const FloatingBottomNav: React.FC = () => {
   };
 
   return (
-    <View className="absolute bottom-6 left-5 right-5">
+    <View
+      style={{
+        position: 'absolute',
+        bottom: bottomOffset,
+        left: 20,
+        right: 20,
+      }}
+    >
       <View
         style={[
           styles.container,
@@ -97,12 +123,13 @@ export const FloatingBottomNav: React.FC = () => {
             borderRadius: 36,
             borderCurve: 'continuous',
             overflow: 'hidden',
+            shadowColor: colors.cardShadow,
           },
         ]}
       >
         <BlurView
           intensity={Platform.OS === 'ios' ? 70 : 85}
-          tint="dark"
+          tint={colors.blurTint}
           style={StyleSheet.absoluteFill}
         />
         <View
@@ -111,15 +138,21 @@ export const FloatingBottomNav: React.FC = () => {
             {
               borderRadius: 36,
               borderCurve: 'continuous',
+              backgroundColor: colors.navBg,
             },
           ]}
-          className="h-[72px] px-3 flex-row items-center justify-around"
+          className="h-[70px] px-3 flex-row items-center justify-around"
         >
           {/* Home Tab */}
           <NavTabItem
             label="Home"
             isActive={isHome}
             onPress={() => handleNavigate('/(tabs)')}
+            activeBg={colors.navActiveBg}
+            activeBorder={colors.navActiveBorder}
+            activeTextColor={colors.navActiveText}
+            inactiveTextColor={colors.navInactiveText}
+            iconColor={isHome ? colors.navActiveIcon : colors.navInactiveIcon}
             renderIcon={(color) => (
               <HomeIcon size={21} color={color} strokeWidth={2} />
             )}
@@ -130,6 +163,11 @@ export const FloatingBottomNav: React.FC = () => {
             label="Subjects"
             isActive={isSubjects}
             onPress={() => handleNavigate('/(tabs)/subjects')}
+            activeBg={colors.navActiveBg}
+            activeBorder={colors.navActiveBorder}
+            activeTextColor={colors.navActiveText}
+            inactiveTextColor={colors.navInactiveText}
+            iconColor={isSubjects ? colors.navActiveIcon : colors.navInactiveIcon}
             renderIcon={(color) => (
               <SubjectsIcon size={21} color={color} strokeWidth={2} />
             )}
@@ -140,8 +178,13 @@ export const FloatingBottomNav: React.FC = () => {
             label="Stats"
             isActive={isStats}
             onPress={() => handleNavigate('/(tabs)/stats')}
+            activeBg={colors.navActiveBg}
+            activeBorder={colors.navActiveBorder}
+            activeTextColor={colors.navActiveText}
+            inactiveTextColor={colors.navInactiveText}
+            iconColor={isStats ? colors.navActiveIcon : colors.navInactiveIcon}
             renderIcon={(color) => (
-              <StatsIcon size={21} color={color} strokeWidth={2.2} />
+              <StatsIcon size={21} color={color} strokeWidth={2} />
             )}
           />
         </View>
@@ -150,31 +193,19 @@ export const FloatingBottomNav: React.FC = () => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
     elevation: 16,
   },
-  liquidLayer: {
-    backgroundColor: 'rgba(21, 22, 28, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    borderTopColor: 'rgba(255, 255, 255, 0.22)', // Apple specular light catcher
-  },
+  liquidLayer: {},
   tabItem: {
     borderRadius: 24,
     borderCurve: 'continuous',
-  },
-  activeTab: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
   tabLabel: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
 });
-

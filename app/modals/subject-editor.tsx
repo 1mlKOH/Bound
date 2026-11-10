@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,25 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  StyleSheet,
+  Platform,
+  LayoutAnimation,
+  Animated,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { timesOverlap } from '../../src/domain/attendance';
 import { CloseIcon, CheckIcon, PlusIcon } from '../../src/components/icons';
+import { useTheme } from '../../src/utils/theme';
+import { Haptics } from '../../src/utils/haptics';
+import {
+  SubjectDuotoneIcon,
+  detectSubjectCategory,
+} from '../../src/components/icons/SubjectDuotoneIcon';
+import { toast } from 'sonner-native';
 
 const PALETTE = [
   '#1FB45A', // Emerald
@@ -26,8 +39,59 @@ const PALETTE = [
 
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+function formatTimeInput(val: string): string {
+  const cleaned = val.replace(/[^0-9:]/g, '');
+  if (cleaned.length === 4 && !cleaned.includes(':')) {
+    return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+  }
+  return cleaned;
+}
+
+const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
+  const { colors } = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () => {
+    Animated.timing(scale, {
+      toValue: 0.92,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }}
+        style={{
+          backgroundColor: colors.glassBg,
+        }}
+        className="w-9 h-9 rounded-full items-center justify-center"
+      >
+        <CloseIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
 export default function SubjectEditorModal() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const { subjectId } = useLocalSearchParams<{ subjectId?: string }>();
   const { subjects, scheduleSlots, saveSubject, archiveSubject, deleteSubject, settings } =
     useAttendanceStore();
@@ -60,6 +124,11 @@ export default function SubjectEditorModal() {
     String(existingSubject?.baselineAbsent ?? 0)
   );
 
+  const detectedCategory = useMemo(
+    () => detectSubjectCategory(name, code),
+    [name, code]
+  );
+
   // Slots state
   const [slots, setSlots] = useState<
     { weekday: number; startTime: string; endTime: string }[]
@@ -74,14 +143,49 @@ export default function SubjectEditorModal() {
     return [{ weekday: 1, startTime: '09:00', endTime: '10:00' }];
   });
 
+  const scrollViewRef = useRef<any>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const scrollToSlot = (index?: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+  };
+
   const addSlot = () => {
+    Haptics.selectionAsync();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setSlots((prev) => [
       ...prev,
       { weekday: 1, startTime: '10:00', endTime: '11:00' },
     ]);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 150);
   };
 
   const removeSlot = (index: number) => {
+    Haptics.selectionAsync();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setSlots((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -116,7 +220,10 @@ export default function SubjectEditorModal() {
   }, [slots]);
 
   const handleSave = () => {
-    if (!name.trim()) {
+    const cleanName = name.replace(/[\r\n]+/g, ' ').trim();
+    const cleanCode = code.replace(/[\r\n]+/g, ' ').trim();
+
+    if (!cleanName) {
       Alert.alert('Required', 'Please enter a subject name.');
       return;
     }
@@ -139,8 +246,8 @@ export default function SubjectEditorModal() {
     saveSubject(
       {
         id: existingSubject?.id,
-        name: name.trim(),
-        code: code.trim(),
+        name: cleanName,
+        code: cleanCode,
         color,
         targetPct: parsedTarget,
         baselinePresent: parsedPresent,
@@ -151,6 +258,9 @@ export default function SubjectEditorModal() {
       slots
     );
 
+    toast.success(existingSubject ? 'Subject updated' : 'Subject added', {
+      description: cleanName,
+    });
     router.back();
   };
 
@@ -166,6 +276,7 @@ export default function SubjectEditorModal() {
           style: 'destructive',
           onPress: () => {
             archiveSubject(existingSubject.id);
+            toast.info(`"${existingSubject.name}" archived`);
             router.back();
           },
         },
@@ -185,6 +296,7 @@ export default function SubjectEditorModal() {
           style: 'destructive',
           onPress: () => {
             deleteSubject(existingSubject.id);
+            toast.info(`"${existingSubject.name}" deleted`);
             router.back();
           },
         },
@@ -193,64 +305,201 @@ export default function SubjectEditorModal() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0F1015]" edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.canvas }}
+      edges={['top']}
+    >
       {/* Modal Header */}
-      <View className="flex-row items-center justify-between px-5 pt-3 pb-3 border-b border-zinc-900">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-9 h-9 rounded-full bg-[#1B1C22] border border-[#282932] items-center justify-center"
+      <View
+        style={{ borderBottomColor: colors.divider }}
+        className="flex-row items-center justify-between px-4 pt-3 pb-3 border-b"
+      >
+        <View className="w-16 items-start">
+          <TactileCloseButton onPress={() => router.back()} />
+        </View>
+
+        <Text
+          style={[
+            styles.sfText,
+            { color: colors.text, letterSpacing: -0.3 },
+          ]}
+          numberOfLines={1}
+          className="text-[17px] font-bold tracking-tight text-center flex-1"
         >
-          <CloseIcon size={16} color="#D4D4D8" strokeWidth={2.4} />
-        </TouchableOpacity>
-
-
-        <Text className="text-xl font-black text-white tracking-tight">
           {existingSubject ? 'Edit Subject' : 'Add Subject'}
         </Text>
 
-        <TouchableOpacity
-          onPress={handleSave}
-          className="px-4 py-2 rounded-full bg-[#00BF63]"
-        >
-          <Text className="text-xs font-black text-[#06210F]">Save</Text>
-        </TouchableOpacity>
+        <View className="w-16 items-end">
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleSave}
+            className="px-4 py-2 rounded-full bg-[#00BF63]"
+          >
+            <Text className="text-xs font-bold text-[#06210F]">Save</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView
-        className="flex-1 px-4 py-3"
-        contentContainerStyle={{ paddingBottom: 60 }}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1 px-4 py-3"
+          contentContainerStyle={{
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 80,
+          }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
+        {/* Live Auto-Icon Preview Banner */}
+        <View
+          style={[
+            styles.cardContainer,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-4 my-2 rounded-[24px] flex-row items-center"
+        >
+          {/* Avatar Circle with Auto-Selected Duotone Icon */}
+          <View
+            style={{
+              backgroundColor: color,
+              shadowColor: color,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.4,
+              shadowRadius: 6,
+            }}
+            className="w-14 h-14 rounded-full items-center justify-center mr-3.5"
+          >
+            <SubjectDuotoneIcon name={name} code={code} size={28} />
+          </View>
+
+          {/* Synchronous Live Subject Details */}
+          <View className="flex-1">
+            <View
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'rgba(0, 0, 0, 0.05)',
+              }}
+              className="self-start px-2 py-0.5 rounded-md mb-1"
+            >
+              <Text
+                style={[styles.sfText, { color: colors.textDim }]}
+                className="text-[10px] font-bold tracking-wider uppercase"
+                numberOfLines={1}
+              >
+                Auto Icon • {detectedCategory.label}
+              </Text>
+            </View>
+
+            {/* Synchronous Subject Name */}
+            <Text
+              style={[
+                styles.sfText,
+                {
+                  color: name.trim() ? colors.text : colors.textMuted,
+                  letterSpacing: -0.3,
+                },
+              ]}
+              className="text-[17px] font-bold"
+              numberOfLines={1}
+            >
+              {name.trim() || (code.trim() ? code.trim() : 'Subject Name')}
+            </Text>
+
+            {/* Course Code or Guidance */}
+            <Text
+              style={[
+                styles.sfText,
+                { color: colors.textMuted, letterSpacing: 0.1 },
+              ]}
+              className="text-[12px] mt-0.5"
+              numberOfLines={1}
+            >
+              {code.trim()
+                ? code.trim()
+                : name.trim()
+                ? 'No course code'
+                : 'Type a subject name or code below'}
+            </Text>
+          </View>
+        </View>
+
         {/* Basic Details Card */}
-        <View className="p-5 my-2 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
-          <Text className="text-base font-bold text-white mb-3">Course Info</Text>
+        <View
+          style={[
+            styles.cardContainer,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2 rounded-[28px]"
+        >
+          <Text
+            style={{ color: colors.text }}
+            className="text-base font-bold mb-3"
+          >
+            Course Info
+          </Text>
 
           {/* Name Input */}
-          <Text className="text-xs font-semibold text-zinc-400 mb-1">
+          <Text
+            style={{ color: colors.textMuted }}
+            className="text-xs font-semibold mb-1"
+          >
             Subject Name *
           </Text>
           <TextInput
             placeholder="e.g. Data Structures"
-            placeholderTextColor="#71717A"
+            placeholderTextColor={colors.placeholderText}
             value={name}
             onChangeText={setName}
-            className="p-3.5 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold mb-3"
+            maxLength={60}
+            multiline={false}
+            style={{
+              backgroundColor: colors.inputBg,
+              borderColor: colors.inputBorder,
+              color: colors.text,
+            }}
+            className="p-3.5 rounded-xl border text-sm font-semibold mb-3"
           />
 
           {/* Course Code Input */}
-          <Text className="text-xs font-semibold text-zinc-400 mb-1">
+          <Text
+            style={{ color: colors.textMuted }}
+            className="text-xs font-semibold mb-1"
+          >
             Course Code (Optional)
           </Text>
           <TextInput
             placeholder="e.g. CS201"
-            placeholderTextColor="#71717A"
+            placeholderTextColor={colors.placeholderText}
             value={code}
             onChangeText={setCode}
-            className="p-3.5 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold mb-3"
+            maxLength={15}
+            multiline={false}
+            autoCapitalize="characters"
+            style={{
+              backgroundColor: colors.inputBg,
+              borderColor: colors.inputBorder,
+              color: colors.text,
+            }}
+            className="p-3.5 rounded-xl border text-sm font-semibold mb-3"
           />
 
           {/* Color Palette Selector */}
-          <Text className="text-xs font-semibold text-zinc-400 mb-2">
+          <Text
+            style={{ color: colors.textMuted }}
+            className="text-xs font-semibold mb-2"
+          >
             Subject Color Swatch
           </Text>
           <View className="flex-row justify-between mb-2">
@@ -259,11 +508,26 @@ export default function SubjectEditorModal() {
               return (
                 <TouchableOpacity
                   key={swatch}
-                  onPress={() => setColor(swatch)}
-                  style={{ backgroundColor: swatch }}
-                  className={`w-9 h-9 rounded-full items-center justify-center ${
-                    isSelected ? 'border-2 border-white scale-110' : ''
-                  }`}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                    setColor(swatch);
+                    Haptics.selectionAsync();
+                  }}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.swatchItem,
+                    {
+                      backgroundColor: swatch,
+                      transform: [{ scale: isSelected ? 1.14 : 1 }],
+                      borderWidth: isSelected ? 2.5 : 0,
+                      borderColor: '#FFFFFF',
+                      shadowColor: isSelected ? swatch : 'transparent',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: isSelected ? 0.45 : 0,
+                      shadowRadius: 5,
+                      elevation: isSelected ? 4 : 0,
+                    },
+                  ]}
                 >
                   {isSelected && <CheckIcon size={14} color="#FFFFFF" strokeWidth={2.6} />}
                 </TouchableOpacity>
@@ -272,81 +536,172 @@ export default function SubjectEditorModal() {
           </View>
         </View>
 
-
         {/* Target & Baseline History Card */}
-        <View className="p-5 my-2 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
-          <Text className="text-base font-bold text-white mb-1">
+        <View
+          style={[
+            styles.cardContainer,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2 rounded-[28px]"
+        >
+          <Text
+            style={{ color: colors.text }}
+            className="text-base font-bold mb-1"
+          >
             Target & Starting History
           </Text>
-          <Text className="text-xs text-zinc-400 mb-3">
+          <Text
+            style={{ color: colors.textMuted }}
+            className="text-xs mb-3"
+          >
             Backfill past attendance or override the global {settings.globalTargetPct}% target.
           </Text>
 
           <View className="flex-row justify-between space-x-2 mb-3">
             <View className="flex-1 mr-1">
-              <Text className="text-xs font-semibold text-zinc-400 mb-1">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs font-semibold mb-1"
+              >
                 Target % (Optional)
               </Text>
               <TextInput
                 placeholder={String(settings.globalTargetPct)}
-                placeholderTextColor="#71717A"
+                placeholderTextColor={colors.placeholderText}
                 value={targetPct}
                 onChangeText={setTargetPct}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 320, animated: true });
+                  }, 120);
+                }}
                 keyboardType="numeric"
-                className="p-3 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                style={{
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                }}
+                className="p-3 rounded-xl border text-sm font-semibold"
               />
             </View>
 
             <View className="flex-1 mx-1">
-              <Text className="text-xs font-semibold text-zinc-400 mb-1">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs font-semibold mb-1"
+              >
                 Attended So Far
               </Text>
               <TextInput
                 value={baselinePresent}
                 onChangeText={setBaselinePresent}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 320, animated: true });
+                  }, 120);
+                }}
                 keyboardType="numeric"
-                className="p-3 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                style={{
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                }}
+                className="p-3 rounded-xl border text-sm font-semibold"
               />
             </View>
 
             <View className="flex-1 ml-1">
-              <Text className="text-xs font-semibold text-zinc-400 mb-1">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs font-semibold mb-1"
+              >
                 Absent So Far
               </Text>
               <TextInput
                 value={baselineAbsent}
                 onChangeText={setBaselineAbsent}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollTo({ y: 320, animated: true });
+                  }, 120);
+                }}
                 keyboardType="numeric"
-                className="p-3 rounded-xl bg-[#22232B] border border-[#282932] text-white text-sm font-semibold"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                style={{
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                }}
+                className="p-3 rounded-xl border text-sm font-semibold"
               />
             </View>
           </View>
         </View>
 
         {/* Weekly Timetable Schedule Slots Card */}
-        <View className="p-5 my-2 rounded-[28px] bg-[#1B1C22] border border-[#282932]">
+        <View
+          style={[
+            styles.cardContainer,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.cardShadow,
+            },
+          ]}
+          className="p-5 my-2 rounded-[28px]"
+        >
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-base font-bold text-white">
+            <Text
+              style={{ color: colors.text }}
+              className="text-base font-bold"
+            >
               Weekly Schedule Slots
             </Text>
             <TouchableOpacity
               onPress={addSlot}
-              className="flex-row items-center px-3 py-1.5 rounded-full bg-[#262730] border border-zinc-700"
+              style={{
+                backgroundColor: colors.actionBg,
+              }}
+              className="flex-row items-center px-3 py-1.5 rounded-full"
             >
               <View className="mr-1">
-                <PlusIcon size={12} color="#3DDC84" strokeWidth={2.4} />
+                <PlusIcon size={12} color={colors.statusSafe} strokeWidth={2.4} />
               </View>
-              <Text className="text-xs font-bold text-[#3DDC84]">Add Slot</Text>
+              <Text
+                style={{ color: colors.statusSafe }}
+                className="text-xs font-bold"
+              >
+                Add Slot
+              </Text>
             </TouchableOpacity>
-
           </View>
 
           {hasConflict && (
-            <View className="p-3 mb-3 rounded-xl bg-amber-500/15 border border-amber-500/40">
-              <Text className="text-xs font-bold text-[#FFB020]">
+            <View
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(245, 158, 11, 0.12)',
+              }}
+              className="p-3 mb-3 rounded-xl"
+            >
+              <Text
+                style={{ color: isDark ? '#FFB020' : '#D97706' }}
+                className="text-xs font-bold"
+              >
                 ⚠️ Conflict Detected
               </Text>
-              <Text className="text-xs text-zinc-300 mt-0.5">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs mt-0.5"
+              >
                 Two slots on the same day overlap in time.
               </Text>
             </View>
@@ -355,26 +710,36 @@ export default function SubjectEditorModal() {
           {slots.map((slot, index) => (
             <View
               key={index}
-              className="p-3.5 mb-2.5 rounded-2xl bg-[#22232B] border border-[#282932]"
+              style={{
+                backgroundColor: colors.cardSubtle,
+                borderColor: colors.inputBorder,
+              }}
+              className="p-3.5 mb-2.5 rounded-2xl border"
             >
               {/* Day Chips */}
               <View className="flex-row justify-between mb-2">
-                {WEEKDAY_NAMES.map((name, dIdx) => {
+                {WEEKDAY_NAMES.map((dName, dIdx) => {
                   const isSelected = slot.weekday === dIdx;
                   return (
                     <TouchableOpacity
-                      key={name}
+                      key={dName}
                       onPress={() => updateSlot(index, 'weekday', dIdx)}
-                      className={`px-2 py-1 rounded-lg ${
-                        isSelected ? 'bg-[#3DDC84]' : 'bg-[#181920]'
-                      }`}
+                      style={{
+                        backgroundColor: isSelected
+                          ? colors.statusSafe
+                          : colors.inputBg,
+                      }}
+                      className="px-2 py-1 rounded-lg"
                     >
                       <Text
-                        className={`text-xs font-bold ${
-                          isSelected ? 'text-black' : 'text-zinc-400'
-                        }`}
+                        style={{
+                          color: isSelected
+                            ? '#06210F'
+                            : colors.textMuted,
+                        }}
+                        className="text-xs font-bold"
                       >
-                        {name.slice(0, 1)}
+                        {dName.slice(0, 1)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -384,31 +749,122 @@ export default function SubjectEditorModal() {
               {/* Time inputs and remove button */}
               <View className="flex-row items-center justify-between mt-1">
                 <View className="flex-row items-center space-x-2">
-                  <TextInput
-                    value={slot.startTime}
-                    onChangeText={(val) => updateSlot(index, 'startTime', val)}
-                    placeholder="09:00"
-                    placeholderTextColor="#71717A"
-                    className="w-20 p-2 rounded-lg bg-[#181920] border border-zinc-800 text-white text-xs font-bold text-center"
-                  />
-                  <Text className="text-zinc-400 text-xs px-1.5">to</Text>
-                  <TextInput
-                    value={slot.endTime}
-                    onChangeText={(val) => updateSlot(index, 'endTime', val)}
-                    placeholder="10:00"
-                    placeholderTextColor="#71717A"
-                    className="w-20 p-2 rounded-lg bg-[#181920] border border-zinc-800 text-white text-xs font-bold text-center"
-                  />
+                  <View>
+                    <Text
+                      style={{ color: colors.textMuted }}
+                      className="text-[10px] font-semibold mb-0.5"
+                    >
+                      Start
+                    </Text>
+                    <TextInput
+                      value={slot.startTime}
+                      onChangeText={(val) =>
+                        updateSlot(index, 'startTime', formatTimeInput(val))
+                      }
+                      onFocus={() => scrollToSlot(index)}
+                      placeholder="09:00"
+                      placeholderTextColor={colors.placeholderText}
+                      keyboardType="numbers-and-punctuation"
+                      returnKeyType="next"
+                      style={{
+                        backgroundColor: colors.inputBg,
+                        borderColor: colors.inputBorder,
+                        color: colors.text,
+                      }}
+                      className="w-20 p-2 rounded-lg border text-xs font-bold text-center"
+                    />
+                  </View>
+                  <Text
+                    style={{ color: colors.textMuted }}
+                    className="text-xs px-1 pt-3 font-semibold"
+                  >
+                    to
+                  </Text>
+                  <View>
+                    <Text
+                      style={{ color: colors.textMuted }}
+                      className="text-[10px] font-semibold mb-0.5"
+                    >
+                      End
+                    </Text>
+                    <TextInput
+                      value={slot.endTime}
+                      onChangeText={(val) =>
+                        updateSlot(index, 'endTime', formatTimeInput(val))
+                      }
+                      onFocus={() => scrollToSlot(index)}
+                      placeholder="10:00"
+                      placeholderTextColor={colors.placeholderText}
+                      keyboardType="numbers-and-punctuation"
+                      returnKeyType="done"
+                      onSubmitEditing={Keyboard.dismiss}
+                      style={{
+                        backgroundColor: colors.inputBg,
+                        borderColor: colors.inputBorder,
+                        color: colors.text,
+                      }}
+                      className="w-20 p-2 rounded-lg border text-xs font-bold text-center"
+                    />
+                  </View>
                 </View>
 
                 {slots.length > 1 && (
                   <TouchableOpacity
                     onPress={() => removeSlot(index)}
-                    className="p-2"
+                    className="p-2 pt-3"
                   >
-                    <Text className="text-rose-400 text-xs font-bold">Remove</Text>
+                    <Text
+                      style={{ color: isDark ? '#FF6B72' : '#DC2626' }}
+                      className="text-xs font-bold"
+                    >
+                      Remove
+                    </Text>
                   </TouchableOpacity>
                 )}
+              </View>
+
+              {/* Quick time preset chips for 1-tap standard scheduling */}
+              <View className="flex-row flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-[rgba(0,0,0,0.04)] dark:border-[rgba(255,255,255,0.05)]">
+                {[
+                  { start: '09:00', end: '10:00' },
+                  { start: '10:00', end: '11:00' },
+                  { start: '11:00', end: '12:00' },
+                  { start: '14:00', end: '15:00' },
+                  { start: '15:00', end: '16:00' },
+                ].map((preset) => {
+                  const isActive =
+                    slot.startTime === preset.start && slot.endTime === preset.end;
+                  return (
+                    <TouchableOpacity
+                      key={`${preset.start}-${preset.end}`}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        updateSlot(index, 'startTime', preset.start);
+                        updateSlot(index, 'endTime', preset.end);
+                      }}
+                      style={{
+                        backgroundColor: isActive
+                          ? colors.statusSafe
+                          : isDark
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.05)',
+                        borderRadius: 8,
+                      }}
+                      className="px-2 py-1"
+                    >
+                      <Text
+                        style={{
+                          color: isActive ? '#06210F' : colors.textSecondary,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                        className="text-[10px] font-semibold"
+                      >
+                        {preset.start} - {preset.end}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           ))}
@@ -420,9 +876,15 @@ export default function SubjectEditorModal() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleArchive}
-              className="flex-1 py-3.5 rounded-full bg-[#22232B] border border-zinc-700 items-center mr-1.5"
+              style={{
+                backgroundColor: colors.actionBg,
+              }}
+              className="flex-1 py-3.5 rounded-full items-center mr-1.5"
             >
-              <Text className="text-xs font-bold text-amber-400">
+              <Text
+                style={{ color: isDark ? '#FFB020' : '#D97706' }}
+                className="text-xs font-bold"
+              >
                 Archive Subject
               </Text>
             </TouchableOpacity>
@@ -430,15 +892,47 @@ export default function SubjectEditorModal() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleDelete}
-              className="flex-1 py-3.5 rounded-full bg-rose-950/20 border border-rose-900/40 items-center ml-1.5"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(244, 63, 94, 0.10)'
+                  : 'rgba(244, 63, 94, 0.08)',
+              }}
+              className="flex-1 py-3.5 rounded-full items-center ml-1.5"
             >
-              <Text className="text-xs font-bold text-[#FF6B72]">
+              <Text
+                style={{ color: isDark ? '#FF6B72' : '#DC2626' }}
+                className="text-xs font-bold"
+              >
                 Delete Subject
               </Text>
             </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  sfText: {
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Roboto',
+      default: undefined,
+    }),
+  },
+  swatchItem: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
