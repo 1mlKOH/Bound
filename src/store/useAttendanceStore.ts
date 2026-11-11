@@ -69,6 +69,7 @@ interface AttendanceStoreState {
     targetPct: number;
     loadSampleData: boolean;
     enableReminders: boolean;
+    sundayDigestEnabled?: boolean;
   }) => Promise<void>;
   resetOnboarding: () => void;
   restoreFromBackup: (payload: any) => boolean;
@@ -303,6 +304,14 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     startTime: string,
     endTime: string
   ) => {
+    const subjectExists = get().subjects.some(
+      (s) => s.id === subjectId && !s.archivedAt
+    );
+    if (!subjectExists) {
+      console.warn('Cannot add extra class: Subject does not exist or is archived:', subjectId);
+      return;
+    }
+
     const newSession: Session = {
       id: generateUUID(),
       subjectId,
@@ -316,11 +325,15 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
     set((state) => ({ sessions: [...state.sessions, newSession] }));
 
-    expoDb.runSync(
-      `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
-       VALUES (?, ?, NULL, ?, ?, ?, NULL, NULL)`,
-      [newSession.id, subjectId, dateStr, startTime, endTime]
-    );
+    try {
+      expoDb.runSync(
+        `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
+         VALUES (?, ?, NULL, ?, ?, ?, NULL, NULL)`,
+        [newSession.id, subjectId, dateStr, startTime, endTime]
+      );
+    } catch (err) {
+      console.error('Failed to insert extra class session into database:', err);
+    }
   },
 
   saveSubject: (subjectData, slots) => {
@@ -460,6 +473,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     targetPct: number;
     loadSampleData: boolean;
     enableReminders: boolean;
+    sundayDigestEnabled?: boolean;
   }) => {
     if (options.loadSampleData) {
       seedDemoData(DEFAULT_DATE);
@@ -472,23 +486,30 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       `);
     }
 
+    const sundayDigest = options.sundayDigestEnabled !== undefined
+      ? (options.sundayDigestEnabled ? 1 : 0)
+      : (options.enableReminders ? 1 : 0);
+
     expoDb.runSync(
       `UPDATE settings SET 
         global_target_pct = ?, 
         has_seeded_demo = ?, 
         has_onboarded = 1,
         per_class_reminder_enabled = ?,
+        sunday_digest_enabled = ?,
         daily_reminder_enabled = ?
        WHERE id = 1`,
       [
         options.targetPct,
         options.loadSampleData ? 1 : 0,
         options.enableReminders ? 1 : 0,
+        sundayDigest,
         options.enableReminders ? 1 : 0,
       ]
     );
 
     get().initialize();
+    syncScheduledNotifications(get().settings, get().subjects, get().scheduleSlots);
   },
 
   resetOnboarding: () => {

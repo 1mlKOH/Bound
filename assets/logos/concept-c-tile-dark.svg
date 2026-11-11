@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c-tile-dark">
+  <title id="title-c-tile-dark">Bound Concept C Dark Tile Icon</title>
+  <defs>
+    <linearGradient id="grad_border_c" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3A3E47"/>
+      <stop offset="100%" stop-color="#14161B"/>
+    </linearGradient>
+    <linearGradient id="grad_body_c" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#21242C"/>
+      <stop offset="100%" stop-color="#111317"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#grad_body_c)"/>
+  <rect x="9" y="9" width="238" height="238" rx="53" fill="none" stroke="url(#grad_border_c)" stroke-width="2"/>
+  
+  <g transform="translate(18, 16) scale(0.86)">
+    <path fill="#FFFFFF" fill-rule="evenodd" d="
+      M 68 40 C 52.5 40 40 52.5 40 68 L 40 188 C 40 203.5 52.5 216 68 216 L 134 216 C 183 216 216 182 216 133 C 216 84 183 40 134 40 Z
+      M 68 68 L 134 68 C 168 68 188 98 188 133 C 188 168 168 188 134 188 L 68 188 Z
+    "/>
+    <rect x="40" y="114" width="110" height="28" fill="#FFFFFF"/>
+    <circle cx="128" cy="88" r="16" fill="#3DDC84"/>
+  </g>
+</svg>

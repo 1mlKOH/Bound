@@ -169,3 +169,57 @@ test('Pooled attendance matches hero card (100/124 -> 81%, 1 below target)', () 
   assert.equal(pooled.subjectsBelowTarget, 1);
   assert.equal(pooled.statusTier, 'safe');
 });
+
+test('Pooled attendance with 0 subjects returns neutral tier and 0% percentage', () => {
+  const pooled = computePooledStats([], 75);
+  assert.equal(pooled.totalAttended, 0);
+  assert.equal(pooled.totalAbsent, 0);
+  assert.equal(pooled.totalHeld, 0);
+  assert.equal(pooled.pooledPercentage, 0);
+  assert.equal(pooled.subjectsBelowTarget, 0);
+  assert.equal(pooled.statusTier, 'neutral');
+});
+
+test('Pooled attendance with subjects but 0 classes held returns neutral tier', () => {
+  const subjects: Subject[] = [
+    {
+      id: 'sub-new',
+      name: 'New Subject',
+      code: 'NEW101',
+      color: '#1E9BFF',
+      targetPct: 75,
+      baselinePresent: 0,
+      baselineAbsent: 0,
+      startDate: '2026-08-01',
+      endDate: null,
+      archivedAt: null,
+      createdAt: '2026-08-01T00:00:00Z',
+    },
+  ];
+  const statsList = subjects.map((s) => computeSubjectStats(s, [], new Set(), 75));
+  const pooled = computePooledStats(statsList, 75);
+  assert.equal(pooled.totalHeld, 0);
+  assert.equal(pooled.pooledPercentage, 0);
+  assert.equal(pooled.statusTier, 'neutral');
+});
+
+test('Negative baseline inputs are clamped to non-negative values and do not corrupt math', () => {
+  const subject: Subject = {
+    id: 'sub-neg',
+    name: 'Negative Test',
+    code: 'NEG101',
+    color: '#1E9BFF',
+    targetPct: 75,
+    baselinePresent: -10 as any,
+    baselineAbsent: -5 as any,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  };
+
+  const stats = computeSubjectStats(subject, [], new Set(), 75);
+  assert.ok(stats.attended >= 0, 'Attended must be non-negative');
+  assert.ok(stats.absent >= 0, 'Absent must be non-negative');
+  assert.ok(stats.percentage >= 0 && stats.percentage <= 100, 'Percentage must be between 0 and 100');
+});

@@ -252,7 +252,7 @@ export const EMPTY_FIXTURE = {
     pooledPercentage: 0,
     globalTarget: 75,
     subjectsBelowTarget: 0,
-    statusTier: 'safe' as const,
+    statusTier: 'neutral' as const,
   },
   subjectStats: [] as SubjectStats[],
 };

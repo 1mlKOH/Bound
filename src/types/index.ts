@@ -81,5 +81,5 @@ export interface PooledStats {
   pooledPercentage: number;
   globalTarget: number;
   subjectsBelowTarget: number;
-  statusTier: 'safe' | 'warning' | 'danger'; // safe (>= target + 5), warning (target..target+5), danger (< target)
+  statusTier: 'safe' | 'warning' | 'danger' | 'neutral'; // safe (>= target + 5), warning (target..target+5), danger (< target), neutral (no classes held)
 }

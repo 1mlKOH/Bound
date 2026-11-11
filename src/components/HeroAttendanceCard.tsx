@@ -11,8 +11,20 @@ interface HeroAttendanceCardProps {
 export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats }) => {
   const { colors, isDark } = useTheme();
 
+  const isZeroState = stats.totalHeld === 0 || stats.statusTier === 'neutral';
+
   // Tier-based chromatic atmosphere
   const tierConfig = {
+    neutral: {
+      cardBg: colors.card,
+      labelColor: colors.textMuted,
+      trackBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+      progressColor: isDark ? 'rgba(255, 255, 255, 0.20)' : 'rgba(0, 0, 0, 0.15)',
+      subtitleColor: colors.textMuted,
+      badgeBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      badgeText: colors.textSecondary,
+      badgeLabel: 'No Data',
+    },
     safe: {
       cardBg: isDark ? '#0B2317' : '#EAF8F0',
       labelColor: isDark ? 'rgba(61, 220, 132, 0.85)' : '#047857',
@@ -45,28 +57,28 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
     },
   };
 
-  const currentTier = tierConfig[stats.statusTier] || tierConfig.safe;
+  const currentTier = isZeroState ? tierConfig.neutral : (tierConfig[stats.statusTier] || tierConfig.safe);
+
+  const targetPercent = isZeroState ? 0 : Math.min(100, Math.max(0, stats.pooledPercentage));
 
   const animatedPercent = useRef(
-    new Animated.Value(Math.min(100, Math.max(0, stats.pooledPercentage)))
+    new Animated.Value(targetPercent)
   ).current;
 
   useEffect(() => {
     Animated.spring(animatedPercent, {
-      toValue: Math.min(100, Math.max(0, stats.pooledPercentage)),
+      toValue: targetPercent,
       damping: 20,
       stiffness: 150,
       mass: 0.6,
       useNativeDriver: false,
     }).start();
-  }, [stats.pooledPercentage]);
+  }, [targetPercent]);
 
   const animatedWidth = animatedPercent.interpolate({
     inputRange: [0, 100],
     outputRange: ['0%', '100%'],
   });
-
-  const isZeroState = stats.totalHeld === 0 && stats.totalAttended === 0 && stats.totalAbsent === 0;
 
   const summarySubtitle = isZeroState
     ? `Target ${stats.globalTarget}% · No classes recorded yet`
@@ -85,6 +97,10 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
           borderCurve: 'continuous',
           backgroundColor: currentTier.cardBg,
           shadowColor: colors.cardShadow,
+          borderWidth: 1,
+          borderColor: isZeroState
+            ? (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)')
+            : 'transparent',
         },
       ]}
       className="mx-4 my-2 p-5"
@@ -127,7 +143,7 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
             styles.heroNumber,
             {
               letterSpacing: -1.6,
-              color: isDark ? '#FFFFFF' : '#0F172A',
+              color: isDark ? 'rgba(255, 255, 255, 0.40)' : 'rgba(0, 0, 0, 0.35)',
               fontSize: 52,
               fontWeight: '700',
               lineHeight: 58,
@@ -138,6 +154,7 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
           —%
         </Text>
       ) : (
+
         <View className="my-0.5">
           <NumberFlow
             value={Math.round(stats.pooledPercentage)}

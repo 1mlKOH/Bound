@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-b">
+  <title id="title-b">Bound Concept B - Layered Threshold Symbol</title>
+  <!-- Baseline plate (opacity 0.22) -->
+  <rect x="40" y="104" width="112" height="112" rx="28" fill="black" opacity="0.22"/>
+  <!-- Threshold boundary plate (opacity 0.50) -->
+  <rect x="72" y="72" width="112" height="112" rx="28" fill="black" opacity="0.5"/>
+  <!-- Safe buffer forward plate with TRUE negative space hole (fill-rule evenodd) -->
+  <path fill="black" fill-rule="evenodd" d="
+    M 132 40
+    H 184
+    C 199.5 40 212 52.5 212 68
+    V 124
+    C 212 139.5 199.5 152 184 152
+    H 132
+    C 116.5 152 104 139.5 104 124
+    V 68
+    C 104 52.5 116.5 40 132 40
+    Z
+    M 158 84
+    A 16 16 0 1 0 158.1 84
+    Z
+  "/>
+</svg>

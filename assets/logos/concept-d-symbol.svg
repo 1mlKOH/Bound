@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-d">
+  <title id="title-d">Bound Concept D - Glassmorphic Safety Gauge Symbol</title>
+  <path fill="black" fill-rule="evenodd" d="
+    M 73 40
+    H 153
+    C 181 40 203 59 203 84
+    C 203 98 195 110 183 118
+    C 199 126 211 142 211 162
+    C 211 192 186 216 153 216
+    H 73
+    C 57.5 216 45 203.5 45 188
+    V 68
+    C 45 52.5 57.5 40 73 40
+    Z
+    M 77 68
+    V 112
+    H 147
+    C 163 112 173 100 173 90
+    C 173 80 163 68 147 68
+    Z
+    M 77 136
+    V 188
+    H 149
+    C 169 188 181 176 181 162
+    C 181 148 169 136 149 136
+    Z
+  "/>
+  <rect x="77" y="152" width="96" height="36" rx="10" fill="black" opacity="0.3"/>
+</svg>

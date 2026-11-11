@@ -234,6 +234,10 @@ export default function AttendanceScreen() {
                 <TactilePill
                   onPress={() => {
                     Haptics.selectionAsync();
+                    if (activeDaySessions.length === 0) {
+                      toast.info('No classes scheduled to mark today');
+                      return;
+                    }
                     batchMarkDay(selectedDate);
                     toast.success('All classes marked Present');
                   }}
@@ -244,6 +248,7 @@ export default function AttendanceScreen() {
                       backgroundColor: colors.glassBg,
                       shadowColor: colors.cardShadow,
                       flexDirection: 'row',
+                      opacity: activeDaySessions.length === 0 ? 0.45 : 1,
                     },
                   ]}
                 >
@@ -265,7 +270,7 @@ export default function AttendanceScreen() {
                       },
                     ]}
                   >
-                    Batch
+                    All Present
                   </Text>
                 </TactilePill>
 
@@ -382,17 +387,38 @@ export default function AttendanceScreen() {
             </View>
             <Text
               style={[styles.sfText, { color: colors.text }]}
-              className="text-base font-semibold mb-1"
+              className="text-base font-semibold mb-1 text-center"
             >
-              No classes scheduled
+              {subjects.length === 0 ? 'Your timetable is empty' : 'No classes scheduled today'}
             </Text>
 
             <Text
               style={{ color: colors.textMuted }}
-              className="text-xs text-center"
+              className="text-xs text-center mb-4"
             >
-              Enjoy your free time, or tap '+ Extra' to log an unscheduled class.
+              {subjects.length === 0
+                ? 'Add your subjects to start tracking attendance and safe skips.'
+                : 'Enjoy your free time, or tap the menu (···) to log a makeup class.'}
             </Text>
+
+            {subjects.length === 0 && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => router.push('/modals/subject-editor')}
+                style={{
+                  backgroundColor: '#00BF63',
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  borderRadius: 999,
+                }}
+                className="flex-row items-center gap-2"
+              >
+                <PlusIcon size={16} color="#06210F" strokeWidth={2.6} />
+                <Text style={[styles.sfText, { color: '#06210F', fontWeight: '800', fontSize: 13 }]}>
+                  Add Your First Subject
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
         renderItem={({ item: session }) => (

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-e">
+  <title id="title-e">Bound Concept E - Isometric Boundary Ribbon Symbol</title>
+  <!-- Single compound path with true negative space holes (fill-rule evenodd) -->
+  <path fill="black" fill-rule="evenodd" d="
+    M 52 44
+    H 148
+    L 196 92
+    L 156 128
+    L 204 176
+    L 164 216
+    H 52
+    L 92 176
+    H 148
+    L 172 176
+    L 140 144
+    H 92
+    L 52 104
+    Z
+    M 92 76
+    H 136
+    L 156 96
+    L 136 116
+    H 92
+    Z
+    M 108 156
+    H 148
+    L 168 176
+    L 148 196
+    H 108
+    Z
+  "/>
+</svg>

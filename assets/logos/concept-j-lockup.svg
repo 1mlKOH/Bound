@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="100%" height="100%">
+  <defs>
+    <linearGradient id="jl-check-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5BFFA8" />
+      <stop offset="100%" stop-color="#05DF72" />
+    </linearGradient>
+    <linearGradient id="jl-card-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#242A38" />
+      <stop offset="100%" stop-color="#12151D" />
+    </linearGradient>
+  </defs>
+  <!-- Symbol (56x56) -->
+  <g transform="translate(12, 12)">
+    <rect x="4" y="8" width="48" height="44" rx="10" fill="url(#jl-card-grad)" stroke="#374151" stroke-width="2" />
+    <rect x="14" y="2" width="5" height="10" rx="2" fill="#94A3B8" />
+    <rect x="37" y="2" width="5" height="10" rx="2" fill="#94A3B8" />
+    <line x1="8" y1="19" x2="48" y2="19" stroke="#374151" stroke-width="2" />
+    <!-- Checkmark -->
+    <path d="M 18 33 L 26 41 L 42 23" fill="none" stroke="url(#jl-check-grad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+  <!-- Wordmark -->
+  <text x="82" y="47" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif" font-size="28" font-weight="700" fill="#F8FAFC" letter-spacing="-0.5">Bound</text>
+  <text x="82" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', sans-serif" font-size="10" font-weight="600" fill="#05DF72" letter-spacing="1.2">ATTENDANCE</text>
+</svg>

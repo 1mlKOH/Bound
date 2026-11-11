@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bound — Round 4: Contextual Student Attendance Icons</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #090B0E;
+      --card-bg: #141720;
+      --border: #232936;
+      --emerald: #05DF72;
+      --text: #F1F5F9;
+      --muted: #94A3B8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      padding: 32px 24px 64px;
+    }
+    .header {
+      max-width: 1040px;
+      margin: 0 auto 36px;
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(5, 223, 114, 0.12);
+      color: var(--emerald);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin: 0 0 10px;
+    }
+    p.subtitle {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    .grid {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+    .icon-preview {
+      width: 160px;
+      height: 160px;
+      margin: 16px 0 24px;
+      filter: drop-shadow(0 16px 24px rgba(0,0,0,0.5));
+    }
+    .card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      text-align: center;
+    }
+    .meta {
+      font-size: 13px;
+      color: var(--emerald);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: center;
+      margin-bottom: 20px;
+      flex-grow: 1;
+    }
+    .lockup-preview {
+      width: 100%;
+      background: #0D0F15;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: auto;
+    }
+    .lockup-preview svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Round 4 Exploration</div>
+    <h1>Recognizable Student Attendance Icons</h1>
+    <p class="subtitle">
+      Moving away from abstract sci-fi geometry to designs that immediately communicate college attendance, timetable roll-call, and the 75% cutoff threshold the instant a student looks at their phone screen.
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <!-- Concept J -->
+    <div class="card">
+      <div class="icon-preview">
+        <img src="concept-j-tile.svg" width="160" height="160" alt="Attendance Calendar Matrix">
+      </div>
+      <h2>Concept J — The Attendance Calendar</h2>
+      <div class="meta">Timetable Grid + Affirmative Checkmark</div>
+      <div class="desc">
+        A dark titanium calendar card with metallic top hinges and an embossed schedule matrix. An electric emerald 3D checkmark punches forward from the active day cell with affirmative roll-call presence.
+      </div>
+      <div class="lockup-preview">
+        <img src="concept-j-lockup.svg" style="width:100%; height:auto;" alt="Lockup J">
+      </div>
+    </div>
+
+    <!-- Concept K -->
+    <div class="card">
+      <div class="icon-preview">
+        <img src="concept-k-tile.svg" width="160" height="160" alt="75% Cutoff Gauge">
+      </div>
+      <h2>Concept K — The 75% Cutoff Gauge</h2>
+      <div class="meta">Threshold Meter + Safe Buffer Check</div>
+      <div class="desc">
+        A precision circular attendance gauge on obsidian titanium with an explicit 75% cutoff indicator notch. A vibrant green progress arc wraps safely past the cutoff around a bold centered checkmark.
+      </div>
+      <div class="lockup-preview">
+        <img src="concept-k-lockup.svg" style="width:100%; height:auto;" alt="Lockup K">
+      </div>
+    </div>
+
+    <!-- Concept L -->
+    <div class="card">
+      <div class="icon-preview">
+        <img src="concept-l-tile.svg" width="160" height="160" alt="Bound Student Ledger">
+      </div>
+      <h2>Concept L — The Bound Student Ledger</h2>
+      <div class="meta">Spiral Notebook + Class Status Badge</div>
+      <div class="desc">
+        Plays directly on the name "Bound" as a hardbound student notebook: metallic binder coils on the spine, with a glowing green attendance checkmark badge and daily streak indicator dots on the cover.
+      </div>
+      <div class="lockup-preview">
+        <img src="concept-l-lockup.svg" style="width:100%; height:auto;" alt="Lockup L">
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

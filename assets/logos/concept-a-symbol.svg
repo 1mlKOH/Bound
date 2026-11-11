@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-a">
+  <title id="title-a">Bound Concept A - Infinity B Symbol</title>
+  <path fill="black" fill-rule="evenodd" d="
+    M 73 40
+    C 57.5 40 45 52.5 45 68
+    L 45 188
+    C 45 203.5 57.5 216 73 216
+    L 147 216
+    C 183 216 211 188 211 153
+    C 211 136.5 202 122 188 114
+    C 197 106.5 203 94.5 203 81
+    C 203 58.5 183.5 40 156 40
+    Z
+    M 79 68
+    L 150 68
+    C 166.5 68 175 76.5 175 86
+    C 175 96 165.5 105 148 105
+    L 79 105
+    Z
+    M 79 133
+    L 152 133
+    C 171.5 133 182 141.5 182 154
+    C 182 167 169 188 146 188
+    L 79 188
+    Z
+  "/>
+  <path fill="black" opacity="0.35" d="
+    M 109 68
+    L 160 68
+    C 177 68 189 79 189 94
+    C 189 108 177 119 160 119
+    L 109 119
+    Z
+  "/>
+</svg>

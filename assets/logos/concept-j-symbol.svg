@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="j-cal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2A2F3D" />
+      <stop offset="100%" stop-color="#141720" />
+    </linearGradient>
+    <linearGradient id="j-check-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5BFFA8" />
+      <stop offset="100%" stop-color="#05DF72" />
+    </linearGradient>
+  </defs>
+  <!-- Calendar Body -->
+  <rect x="18" y="24" width="64" height="60" rx="14" fill="url(#j-cal-grad)" stroke="#3E4559" stroke-width="2" />
+  
+  <!-- Binder Rings / Top Tabs -->
+  <rect x="32" y="16" width="6" height="14" rx="3" fill="#8E9BB0" />
+  <rect x="62" y="16" width="6" height="14" rx="3" fill="#8E9BB0" />
+  
+  <!-- Calendar Header Line -->
+  <line x1="22" y1="38" x2="78" y2="38" stroke="#3E4559" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Timetable Grid Dots (Unmarked Days) -->
+  <circle cx="32" cy="48" r="3" fill="#4B5569" />
+  <circle cx="50" cy="48" r="3" fill="#4B5569" />
+  <circle cx="68" cy="48" r="3" fill="#4B5569" />
+  <circle cx="32" cy="62" r="3" fill="#4B5569" />
+  <circle cx="50" cy="62" r="3" fill="#4B5569" />
+  <circle cx="68" cy="62" r="3" fill="#4B5569" />
+  <circle cx="32" cy="74" r="3" fill="#4B5569" />
+  <circle cx="68" cy="74" r="3" fill="#4B5569" />
+  
+  <!-- Hero Attendance Checkmark (Punching out in safe emerald) -->
+  <path d="M 38 64 L 48 74 L 72 46" fill="none" stroke="url(#j-check-grad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

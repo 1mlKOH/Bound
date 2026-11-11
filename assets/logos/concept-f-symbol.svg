@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-f">
+  <title id="title-f">Bound Concept F - Chrono Loop Symbol</title>
+  <!-- Timeline spine -->
+  <rect x="46" y="40" width="28" height="176" rx="14" fill="black"/>
+  <!-- Circular track with true negative hole -->
+  <path fill="black" fill-rule="evenodd" d="
+    M 144 94
+    C 178.2 94 206 121.8 206 156
+    C 206 190.2 178.2 216 144 216
+    C 109.8 216 82 190.2 82 156
+    C 82 121.8 109.8 94 144 94
+    Z
+    M 144 126
+    C 160.5 126 174 139.5 174 156
+    C 174 172.5 160.5 184 144 184
+    C 127.5 184 114 172.5 114 156
+    C 114 139.5 127.5 126 144 126
+    Z
+  "/>
+  <!-- Upper Attendance Beacon with true negative cutout ring -->
+  <path fill="black" fill-rule="evenodd" d="
+    M 144 42
+    A 26 26 0 1 0 144.1 42
+    Z
+    M 144 58
+    A 10 10 0 1 1 143.9 58
+    Z
+  "/>
+</svg>

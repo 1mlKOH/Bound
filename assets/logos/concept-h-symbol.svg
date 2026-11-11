@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-h">
+  <title id="title-h">Bound Concept H - Threshold Perimeter</title>
+  <!-- Concentric Caliper Perimeter (Single compound path with evenodd) -->
+  <path fill="black" fill-rule="evenodd" d="
+    M 128 40
+    C 79.4 40 40 79.4 40 128
+    C 40 176.6 79.4 216 128 216
+    C 176.6 216 216 176.6 216 128
+    C 216 79.4 176.6 40 128 40
+    Z
+    M 128 72
+    C 158.9 72 184 97.1 184 128
+    C 184 158.9 158.9 184 128 184
+    C 97.1 184 72 158.9 72 128
+    C 72 97.1 97.1 72 128 72
+    Z
+    M 128 96
+    A 32 32 0 1 0 128.1 96
+    Z
+  "/>
+</svg>

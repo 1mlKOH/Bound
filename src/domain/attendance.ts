@@ -28,8 +28,8 @@ export function computeSubjectStats(
     // 'cancelled' and null are intentionally ignored in held counts
   }
 
-  const attended = subject.baselinePresent + presentCount;
-  const absent = subject.baselineAbsent + absentCount;
+  const attended = Math.max(0, (subject.baselinePresent || 0) + presentCount);
+  const absent = Math.max(0, (subject.baselineAbsent || 0) + absentCount);
   const totalHeld = attended + absent;
 
   const percentage = totalHeld === 0 ? 100 : (attended / totalHeld) * 100;
@@ -99,11 +99,13 @@ export function computePooledStats(
   }
 
   const totalHeld = totalAttended + totalAbsent;
-  const rawPercentage = totalHeld === 0 ? 100 : (totalAttended / totalHeld) * 100;
+  const rawPercentage = totalHeld === 0 ? 0 : (totalAttended / totalHeld) * 100;
   const pooledPercentage = Math.round(rawPercentage * 10) / 10;
 
-  let statusTier: 'safe' | 'warning' | 'danger' = 'safe';
-  if (pooledPercentage < globalTarget) {
+  let statusTier: 'safe' | 'warning' | 'danger' | 'neutral' = 'safe';
+  if (totalHeld === 0) {
+    statusTier = 'neutral';
+  } else if (pooledPercentage < globalTarget) {
     statusTier = 'danger';
   } else if (pooledPercentage < globalTarget + 5) {
     statusTier = 'warning';

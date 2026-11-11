@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-g">
+  <title id="title-g">Bound Concept G - Möbius Tether Knot</title>
+  <path fill="black" fill-rule="evenodd" d="
+    M 88 56
+    C 56 56 40 80 40 116
+    C 40 152 64 176 100 196
+    L 128 168
+    C 96 150 74 136 74 116
+    C 74 96 82 86 92 86
+    C 106 86 120 98 136 116
+    L 156 96
+    C 134 72 114 56 88 56
+    Z
+    M 168 200
+    C 200 200 216 176 216 140
+    C 216 104 192 80 156 60
+    L 128 88
+    C 160 106 182 120 182 140
+    C 182 160 174 170 164 170
+    C 150 170 136 158 120 140
+    L 100 160
+    C 122 184 142 200 168 200
+    Z
+  "/>
+</svg>

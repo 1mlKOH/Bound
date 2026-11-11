@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Alert,
   StyleSheet,
@@ -12,22 +11,93 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import RNDateTimePicker, {
+  DateTimePickerAndroid,
+} from '@react-native-community/datetimepicker';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
-import { CloseIcon, CalendarPlusIcon } from '../../src/components/icons';
+import {
+  CloseIcon,
+  CalendarPlusIcon,
+  ClockIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+} from '../../src/components/icons';
 import { useTheme } from '../../src/utils/theme';
 import { Haptics } from '../../src/utils/haptics';
 import { SubjectDuotoneIcon } from '../../src/components/icons/SubjectDuotoneIcon';
 import { toast } from 'sonner-native';
 
-function formatTimeInput(val: string): string {
-  const cleaned = val.replace(/[^0-9:]/g, '');
-  if (cleaned.length === 4 && !cleaned.includes(':')) {
-    return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+function parseDateString(dateStr: string): Date {
+  if (!dateStr || !dateStr.includes('-')) return new Date();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return new Date();
+  return new Date(y, m - 1, d, 12, 0, 0);
+}
+
+function formatDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDisplayDate(dateStr: string): string {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return dateStr;
+    const dateObj = new Date(y, m - 1, d);
+    return dateObj.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
   }
-  return cleaned;
+}
+
+function timeStringToDate(timeStr: string): Date {
+  const d = new Date();
+  if (!timeStr || !timeStr.includes(':')) {
+    d.setHours(15, 0, 0, 0);
+    return d;
+  }
+  const [h, m] = timeStr.split(':').map(Number);
+  d.setHours(isNaN(h) ? 15 : h, isNaN(m) ? 0 : m, 0, 0);
+  return d;
+}
+
+function dateToTimeString(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function computeDurationLabel(startTime: string, endTime: string): { label: string; isValid: boolean } {
+  if (!startTime || !endTime || startTime.length < 5 || endTime.length < 5) {
+    return { label: '—', isValid: true };
+  }
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) {
+    return { label: '—', isValid: true };
+  }
+  const startMins = sh * 60 + sm;
+  const endMins = eh * 60 + em;
+  const diff = endMins - startMins;
+  if (diff <= 0) {
+    return { label: 'End ≤ Start', isValid: false };
+  }
+  const hours = Math.floor(diff / 60);
+  const mins = diff % 60;
+  if (hours > 0 && mins > 0) return { label: `${hours}h ${mins}m`, isValid: true };
+  if (hours > 0) return { label: `${hours}h`, isValid: true };
+  return { label: `${mins}m`, isValid: true };
 }
 
 const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
@@ -86,6 +156,93 @@ export default function ExtraClassModal() {
   const [startTime, setStartTime] = useState('15:00');
   const [endTime, setEndTime] = useState('16:00');
 
+  const [iosPicker, setIosPicker] = useState<{
+    type: 'time' | 'date';
+    field?: 'startTime' | 'endTime';
+    date: Date;
+  } | null>(null);
+
+  const duration = useMemo(
+    () => computeDurationLabel(startTime, endTime),
+    [startTime, endTime]
+  );
+
+  const handleStartTimeChange = (newStartTime: string) => {
+    const [oldSh, oldSm] = startTime.split(':').map(Number);
+    const [oldEh, oldEm] = endTime.split(':').map(Number);
+    const durationMins = oldEh * 60 + oldEm - (oldSh * 60 + oldSm);
+    const validDuration = durationMins > 0 ? durationMins : 60;
+
+    const [newSh, newSm] = newStartTime.split(':').map(Number);
+    const newStartMins = newSh * 60 + newSm;
+    const [eh, em] = endTime.split(':').map(Number);
+    const currentEndMins = eh * 60 + em;
+
+    let nextEnd = endTime;
+    if (newStartMins >= currentEndMins) {
+      const updatedEndMins = (newStartMins + validDuration) % (24 * 60);
+      const endH = String(Math.floor(updatedEndMins / 60)).padStart(2, '0');
+      const endM = String(updatedEndMins % 60).padStart(2, '0');
+      nextEnd = `${endH}:${endM}`;
+    }
+    setStartTime(newStartTime);
+    setEndTime(nextEnd);
+  };
+
+  const openTimePicker = (field: 'startTime' | 'endTime') => {
+    Haptics.selectionAsync();
+    const currentTimeStr = field === 'startTime' ? startTime : endTime;
+    const currentDate = timeStringToDate(currentTimeStr);
+
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: currentDate,
+        mode: 'time',
+        is24Hour: false,
+        onChange: (event, selected) => {
+          if (event.type === 'set' && selected) {
+            const timeStr = dateToTimeString(selected);
+            Haptics.selectionAsync();
+            if (field === 'startTime') {
+              handleStartTimeChange(timeStr);
+            } else {
+              setEndTime(timeStr);
+            }
+          }
+        },
+      });
+    } else {
+      setIosPicker({
+        type: 'time',
+        field,
+        date: currentDate,
+      });
+    }
+  };
+
+  const openDatePicker = () => {
+    Haptics.selectionAsync();
+    const currentDate = parseDateString(date);
+
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: currentDate,
+        mode: 'date',
+        onChange: (event, selected) => {
+          if (event.type === 'set' && selected) {
+            Haptics.selectionAsync();
+            setDate(formatDateString(selected));
+          }
+        },
+      });
+    } else {
+      setIosPicker({
+        type: 'date',
+        date: currentDate,
+      });
+    }
+  };
+
   const scrollViewRef = useRef<any>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -108,8 +265,32 @@ export default function ExtraClassModal() {
     };
   }, []);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isDirty = activeSubjects.length > 0 && (
+    selectedSubjectId !== (activeSubjects[0]?.id || '') ||
+    date !== selectedDate ||
+    startTime !== '15:00' ||
+    endTime !== '16:00'
+  );
+
+  const handleClose = () => {
+    if (isDirty) {
+      Alert.alert(
+        'Discard Extra Class?',
+        'Are you sure you want to discard this class?',
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+        ]
+      );
+    } else {
+      router.back();
+    }
+  };
+
   const handleSave = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isSubmitting) return;
     if (!selectedSubjectId) {
       toast.error('Please select a subject');
       return;
@@ -119,10 +300,19 @@ export default function ExtraClassModal() {
       return;
     }
 
+    setIsSubmitting(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     const sub = activeSubjects.find((s) => s.id === selectedSubjectId);
+    if (!sub) {
+      setIsSubmitting(false);
+      toast.error('Selected subject no longer exists');
+      return;
+    }
+
     addExtraClass(selectedSubjectId, date, startTime, endTime);
     toast.success('Extra class added', {
-      description: `${sub?.name || 'Class'} (${startTime} - ${endTime})`,
+      description: `${sub.name} (${startTime} - ${endTime})`,
     });
     router.back();
   };
@@ -138,7 +328,7 @@ export default function ExtraClassModal() {
         className="flex-row items-center justify-between px-4 pt-3 pb-3 border-b"
       >
         <View className="w-16 items-start">
-          <TactileCloseButton onPress={() => router.back()} />
+          <TactileCloseButton onPress={handleClose} />
         </View>
 
         <View className="flex-1 flex-row items-center justify-center mx-1">
@@ -163,6 +353,8 @@ export default function ExtraClassModal() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSave}
+            disabled={isSubmitting || activeSubjects.length === 0}
+            style={{ opacity: isSubmitting || activeSubjects.length === 0 ? 0.45 : 1 }}
             className="px-4 py-2 rounded-full bg-[#00BF63]"
           >
             <Text className="text-xs font-bold text-[#06210F]">Save</Text>
@@ -202,6 +394,38 @@ export default function ExtraClassModal() {
           >
             Select Subject
           </Text>
+          {activeSubjects.length === 0 ? (
+            <View className="items-center py-4">
+              <Text
+                style={[styles.sfText, { color: colors.textSecondary }]}
+                className="text-xs text-center mb-3 leading-4"
+              >
+                No subjects registered yet. You need at least one subject to log an extra class.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  router.replace('/modals/subject-editor');
+                }}
+                style={{
+                  backgroundColor: '#00BF63',
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 999,
+                }}
+                className="flex-row items-center gap-1.5"
+              >
+                <Text
+                  style={[
+                    styles.sfText,
+                    { color: '#06210F', fontWeight: '800', fontSize: 13 },
+                  ]}
+                >
+                  + Create Subject First
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
           <View className="flex-row flex-wrap gap-2">
             {activeSubjects.map((sub) => {
               const isSelected = selectedSubjectId === sub.id;
@@ -246,6 +470,7 @@ export default function ExtraClassModal() {
               );
             })}
           </View>
+        )}
         </View>
 
         {/* Date & Time Settings */}
@@ -261,133 +486,262 @@ export default function ExtraClassModal() {
         >
           <Text
             style={{ color: colors.text }}
-            className="text-base font-bold mb-3"
+            className="text-base font-bold mb-1"
           >
             Time & Date
           </Text>
-
           <Text
             style={{ color: colors.textMuted }}
-            className="text-xs font-semibold mb-1"
+            className="text-xs mb-3.5"
           >
-            Date (YYYY-MM-DD)
+            Choose the session date and schedule hours using native selectors.
           </Text>
-          <TextInput
-            value={date}
-            onChangeText={setDate}
-            placeholder="2026-11-07"
-            placeholderTextColor={colors.placeholderText}
-            style={{
-              backgroundColor: colors.inputBg,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            }}
-            className="p-3.5 rounded-xl border text-sm font-semibold mb-3"
-          />
 
-          <View className="flex-row justify-between space-x-2">
-            <View className="flex-1 mr-1.5">
+          {/* Date Selector Capsule */}
+          <View className="mb-4">
+            <Text
+              style={{ color: colors.textMuted }}
+              className="text-[10px] font-semibold mb-1.5 uppercase tracking-wider"
+            >
+              Date
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={openDatePicker}
+              style={{
+                backgroundColor: colors.inputBg,
+                borderColor: colors.inputBorder,
+                height: 44,
+              }}
+              className="px-3 rounded-xl border flex-row items-center justify-between"
+            >
+              <View className="flex-row items-center">
+                <CalendarIcon
+                  size={15}
+                  color={colors.textSecondary}
+                  strokeWidth={2}
+                />
+                <Text
+                  style={{ color: colors.text }}
+                  className="text-sm font-semibold ml-2.5"
+                >
+                  {formatDisplayDate(date)}
+                </Text>
+              </View>
               <Text
-                style={{ color: colors.textMuted }}
-                className="text-xs font-semibold mb-1"
+                style={{ color: colors.textMuted, fontVariant: ['tabular-nums'] }}
+                className="text-xs font-medium"
               >
-                Start Time
+                {date}
               </Text>
-              <TextInput
-                value={startTime}
-                onChangeText={(val) => setStartTime(formatTimeInput(val))}
-                onFocus={() => {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 120);
-                }}
-                placeholder="15:00"
-                placeholderTextColor={colors.placeholderText}
-                keyboardType="numbers-and-punctuation"
-                returnKeyType="next"
-                style={{
-                  backgroundColor: colors.inputBg,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                }}
-                className="p-3 rounded-xl border text-sm font-semibold text-center"
-              />
-            </View>
-
-            <View className="flex-1 ml-1.5">
-              <Text
-                style={{ color: colors.textMuted }}
-                className="text-xs font-semibold mb-1"
-              >
-                End Time
-              </Text>
-              <TextInput
-                value={endTime}
-                onChangeText={(val) => setEndTime(formatTimeInput(val))}
-                onFocus={() => {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 120);
-                }}
-                placeholder="16:00"
-                placeholderTextColor={colors.placeholderText}
-                keyboardType="numbers-and-punctuation"
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-                style={{
-                  backgroundColor: colors.inputBg,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                }}
-                className="p-3 rounded-xl border text-sm font-semibold text-center"
-              />
-            </View>
+            </TouchableOpacity>
           </View>
 
-          {/* Quick extra-class presets */}
-          <View className="flex-row flex-wrap gap-1.5 mt-3 pt-2.5 border-t border-[rgba(0,0,0,0.04)] dark:border-[rgba(255,255,255,0.05)]">
-            {[
-              { start: '09:00', end: '10:00' },
-              { start: '11:00', end: '12:00' },
-              { start: '14:00', end: '15:00' },
-              { start: '15:00', end: '16:00' },
-              { start: '16:00', end: '17:00' },
-            ].map((preset) => {
-              const isActive =
-                startTime === preset.start && endTime === preset.end;
-              return (
-                <TouchableOpacity
-                  key={`${preset.start}-${preset.end}`}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setStartTime(preset.start);
-                    setEndTime(preset.end);
-                  }}
-                  style={{
-                    backgroundColor: isActive
-                      ? colors.statusSafe
-                      : isDark
-                      ? 'rgba(255, 255, 255, 0.08)'
-                      : 'rgba(0, 0, 0, 0.05)',
-                    borderRadius: 8,
-                  }}
-                  className="px-2.5 py-1"
+          {/* Time & Duration Row (Unified Tactile) */}
+          <View className="flex-row items-start justify-between">
+            <View className="flex-row items-start">
+              {/* Start Time Native Clock Picker */}
+              <View>
+                <Text
+                  style={{ color: colors.textMuted }}
+                  className="text-[10px] font-semibold mb-1 uppercase tracking-wider"
                 >
+                  Start
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => openTimePicker('startTime')}
+                  style={{
+                    backgroundColor: colors.inputBg,
+                    borderColor: colors.inputBorder,
+                    height: 40,
+                  }}
+                  className="px-2.5 rounded-xl border flex-row items-center justify-center min-w-[84px]"
+                >
+                  <ClockIcon
+                    size={13}
+                    color={colors.textSecondary}
+                    strokeWidth={2.2}
+                  />
                   <Text
                     style={{
-                      color: isActive ? '#06210F' : colors.textSecondary,
+                      color: colors.text,
                       fontVariant: ['tabular-nums'],
                     }}
-                    className="text-[11px] font-semibold"
+                    className="text-sm font-bold ml-1.5"
                   >
-                    {preset.start} - {preset.end}
+                    {startTime}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
+              </View>
+
+              {/* Arrow centered with 40px buttons */}
+              <View
+                className="px-1.5 justify-center items-center"
+                style={{ height: 40, marginTop: 18 }}
+              >
+                <ArrowRightIcon
+                  size={14}
+                  color={colors.textMuted}
+                  strokeWidth={2.4}
+                />
+              </View>
+
+              {/* End Time Native Clock Picker */}
+              <View>
+                <Text
+                  style={{ color: colors.textMuted }}
+                  className="text-[10px] font-semibold mb-1 uppercase tracking-wider"
+                >
+                  End
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => openTimePicker('endTime')}
+                  style={{
+                    backgroundColor: colors.inputBg,
+                    borderColor: colors.inputBorder,
+                    height: 40,
+                  }}
+                  className="px-2.5 rounded-xl border flex-row items-center justify-center min-w-[84px]"
+                >
+                  <ClockIcon
+                    size={13}
+                    color={colors.textSecondary}
+                    strokeWidth={2.2}
+                  />
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontVariant: ['tabular-nums'],
+                    }}
+                    className="text-sm font-bold ml-1.5"
+                  >
+                    {endTime}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Duration Column */}
+            <View className="items-end ml-2">
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-[10px] font-semibold mb-1 uppercase tracking-wider text-right"
+              >
+                Duration
+              </Text>
+              <View
+                style={{
+                  backgroundColor: duration.isValid
+                    ? isDark
+                      ? 'rgba(255, 255, 255, 0.06)'
+                      : 'rgba(0, 0, 0, 0.04)'
+                    : isDark
+                    ? 'rgba(255, 107, 114, 0.15)'
+                    : 'rgba(239, 68, 68, 0.12)',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: duration.isValid
+                    ? isDark
+                      ? 'rgba(255, 255, 255, 0.06)'
+                      : 'rgba(0, 0, 0, 0.05)'
+                    : isDark
+                    ? 'rgba(255, 107, 114, 0.3)'
+                    : 'rgba(239, 68, 68, 0.25)',
+                  height: 40,
+                }}
+                className="px-3 justify-center items-end min-w-[80px]"
+              >
+                <Text
+                  style={{
+                    color: duration.isValid
+                      ? colors.text
+                      : isDark
+                      ? '#FF6B72'
+                      : '#DC2626',
+                    fontVariant: ['tabular-nums'],
+                  }}
+                  className="text-xs font-bold"
+                >
+                  {duration.label}
+                </Text>
+                <Text
+                  style={{ color: colors.textMuted }}
+                  className="text-[9px] font-medium"
+                >
+                  Single class
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
+
+        {/* iOS Native DateTimePicker Modal Sheet */}
+        {Platform.OS === 'ios' && iosPicker && (
+          <Modal transparent animationType="fade" visible>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: colors.card,
+                  borderTopLeftRadius: 28,
+                  borderTopRightRadius: 28,
+                  padding: 20,
+                  paddingBottom: 34,
+                }}
+              >
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text
+                    style={{ color: colors.text }}
+                    className="text-base font-bold"
+                  >
+                    {iosPicker.type === 'date'
+                      ? 'Select Date'
+                      : `Select ${
+                          iosPicker.field === 'startTime'
+                            ? 'Start Time'
+                            : 'End Time'
+                        }`}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIosPicker(null)}
+                    className="px-4 py-1.5 rounded-full bg-[#00BF63]"
+                  >
+                    <Text className="text-xs font-bold text-[#06210F]">
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <RNDateTimePicker
+                  value={iosPicker.date}
+                  mode={iosPicker.type}
+                  display={iosPicker.type === 'date' ? 'inline' : 'spinner'}
+                  themeVariant={isDark ? 'dark' : 'light'}
+                  onChange={(_, selected) => {
+                    if (selected) {
+                      setIosPicker((prev) =>
+                        prev ? { ...prev, date: selected } : null
+                      );
+                      if (iosPicker.type === 'date') {
+                        setDate(formatDateString(selected));
+                      } else if (iosPicker.field === 'startTime') {
+                        handleStartTimeChange(dateToTimeString(selected));
+                      } else {
+                        setEndTime(dateToTimeString(selected));
+                      }
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
+        )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

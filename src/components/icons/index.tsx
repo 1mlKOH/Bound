@@ -201,6 +201,53 @@ export const ChevronUpIcon: React.FC<IconProps> = ({
 );
 
 /**
+ * Arrow right direction indicator
+ */
+export const ArrowRightIcon: React.FC<IconProps> = ({
+  size = 16,
+  color = '#8E8E93',
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M5 12H19M19 12L12 5M19 12L12 19"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * Clock icon for time selection
+ */
+export const ClockIcon: React.FC<IconProps> = ({
+  size = 16,
+  color = '#8E8E93',
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle
+      cx="12"
+      cy="12"
+      r="9"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M12 7v5l3 3"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
  * Search magnifying glass
  */
 export const SearchIcon: React.FC<IconProps> = ({
@@ -265,6 +312,19 @@ export const PlusIcon: React.FC<IconProps> = ({
 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Line x1="12" y1="5" x2="12" y2="19" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    <Line x1="5" y1="12" x2="19" y2="12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+  </Svg>
+);
+
+/**
+ * Minus / Subtract Icon
+ */
+export const MinusIcon: React.FC<IconProps> = ({
+  size = 18,
+  color = '#FFFFFF',
+  strokeWidth = 2.4,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Line x1="5" y1="12" x2="19" y2="12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
   </Svg>
 );

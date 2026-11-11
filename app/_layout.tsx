@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -28,6 +28,12 @@ export default function RootLayout() {
       router.replace('/onboarding');
     }
   }, [isLoading, hasOnboarded, segments]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.canvas }} />
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

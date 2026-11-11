@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title-c">
+  <title id="title-c">Bound Concept C - Boundary Caliper Symbol</title>
+  <path fill="black" fill-rule="evenodd" d="
+    M 68 40
+    C 52.5 40 40 52.5 40 68
+    L 40 188
+    C 40 203.5 52.5 216 68 216
+    L 134 216
+    C 183 216 216 182 216 133
+    C 216 84 183 40 134 40
+    Z
+    M 68 68
+    L 134 68
+    C 168 68 188 98 188 133
+    C 188 168 168 188 134 188
+    L 68 188
+    Z
+  "/>
+  <rect x="40" y="114" width="110" height="28" fill="black"/>
+  <circle cx="128" cy="88" r="16" fill="black"/>
+</svg>

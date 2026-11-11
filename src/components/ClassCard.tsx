@@ -71,6 +71,7 @@ const ActionPressButton: React.FC<ActionPressButtonProps> = ({
     >
       <TouchableOpacity
         activeOpacity={0.85}
+        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={onPress}
@@ -79,10 +80,11 @@ const ActionPressButton: React.FC<ActionPressButtonProps> = ({
           {
             borderRadius: 16,
             borderCurve: 'continuous',
+            minHeight: 44,
           },
           buttonStyle,
         ]}
-        className="py-2.5 flex-row items-center justify-center"
+        className="py-3 flex-row items-center justify-center"
       >
         {icon && <View className="mr-1.5">{icon}</View>}
         <Text
