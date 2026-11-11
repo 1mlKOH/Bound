@@ -5,6 +5,14 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Toaster } from 'sonner-native';
+import {
+  useFonts,
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+  Figtree_800ExtraBold,
+} from '@expo-google-fonts/figtree';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { useTheme } from '../src/utils/theme';
 import '../global.css';
@@ -17,19 +25,27 @@ export default function RootLayout() {
   const hasOnboarded = useAttendanceStore((state) => state.settings.hasOnboarded);
   const { colors, isDark } = useTheme();
 
+  const [fontsLoaded, fontError] = useFonts({
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+    Figtree_800ExtraBold,
+  });
+
   useEffect(() => {
     initialize();
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || (!fontsLoaded && !fontError)) return;
     const inOnboarding = segments[0] === 'onboarding';
     if (!hasOnboarded && !inOnboarding) {
       router.replace('/onboarding');
     }
-  }, [isLoading, hasOnboarded, segments]);
+  }, [isLoading, fontsLoaded, fontError, hasOnboarded, segments]);
 
-  if (isLoading) {
+  if (isLoading || (!fontsLoaded && !fontError)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.canvas }} />
     );

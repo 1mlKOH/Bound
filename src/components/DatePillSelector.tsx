@@ -78,13 +78,13 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
           style={[
             styles.glassCapsule,
             {
-              borderRadius: 18,
+              borderRadius: 999,
               borderCurve: 'continuous',
               backgroundColor: colors.glassBg,
               shadowColor: colors.cardShadow,
             },
           ]}
-          className="w-10 h-9 items-center justify-center mr-1"
+          className="w-10 h-10 items-center justify-center mr-1"
         >
           <ChevronLeftIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
         </TouchableOpacity>
@@ -101,13 +101,13 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
           style={[
             styles.glassCapsule,
             {
-              borderRadius: 18,
+              borderRadius: 999,
               borderCurve: 'continuous',
               backgroundColor: colors.glassBg,
               shadowColor: colors.cardShadow,
             },
           ]}
-          className="px-6 h-9 items-center justify-center min-w-[100px]"
+          className="px-6 h-10 items-center justify-center min-w-[110px]"
         >
           <Animated.Text
             style={[
@@ -118,7 +118,7 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
                 opacity: textFade,
               },
             ]}
-            className="text-[13px] font-semibold"
+            className="text-[14px] font-bold"
           >
             {formatDisplay()}
           </Animated.Text>
@@ -136,13 +136,13 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
           style={[
             styles.glassCapsule,
             {
-              borderRadius: 18,
+              borderRadius: 999,
               borderCurve: 'continuous',
               backgroundColor: colors.glassBg,
               shadowColor: colors.cardShadow,
             },
           ]}
-          className="w-10 h-9 items-center justify-center ml-1"
+          className="w-10 h-10 items-center justify-center ml-1"
         >
           <ChevronRightIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
         </TouchableOpacity>
@@ -159,6 +159,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   dateText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_700Bold',
+      default: undefined,
+    }),
   },
 });

@@ -78,18 +78,18 @@ const ActionPressButton: React.FC<ActionPressButtonProps> = ({
         style={[
           styles.actionButton,
           {
-            borderRadius: 16,
+            borderRadius: 999,
             borderCurve: 'continuous',
             minHeight: 44,
           },
           buttonStyle,
         ]}
-        className="py-3 flex-row items-center justify-center"
+        className="py-2.5 px-3 flex-row items-center justify-center"
       >
         {icon && <View className="mr-1.5">{icon}</View>}
         <Text
           style={[styles.sfText, textStyle]}
-          className="text-xs font-semibold"
+          className="text-xs font-bold"
         >
           {label}
         </Text>
@@ -426,9 +426,17 @@ const styles = StyleSheet.create({
   },
   actionButton: {},
   titleText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_700Bold',
+      default: undefined,
+    }),
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_600SemiBold',
+      default: undefined,
+    }),
   },
 });

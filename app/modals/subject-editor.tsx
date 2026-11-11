@@ -1368,7 +1368,7 @@ const styles = StyleSheet.create({
   sfText: {
     fontFamily: Platform.select({
       ios: 'System',
-      android: 'Roboto',
+      android: 'Figtree_600SemiBold',
       default: undefined,
     }),
   },

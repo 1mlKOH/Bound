@@ -756,6 +756,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_600SemiBold',
+      default: undefined,
+    }),
   },
 });

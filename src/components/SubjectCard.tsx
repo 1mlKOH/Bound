@@ -18,16 +18,16 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   const statusColor = isSafe
-    ? isDark ? '#3DDC84' : '#15803D'
+    ? colors.statusSafe
     : isClose
-    ? isDark ? '#FFB020' : '#D97706'
-    : isDark ? '#FF6B72' : '#E11D48';
+    ? colors.statusWarning
+    : colors.statusDanger;
 
   const badgeBg = isSafe
-    ? isDark ? 'rgba(61, 220, 132, 0.14)' : 'rgba(21, 128, 61, 0.12)'
+    ? colors.presentBadgeBg
     : isClose
-    ? isDark ? 'rgba(255, 176, 32, 0.16)' : 'rgba(217, 119, 6, 0.12)'
-    : isDark ? 'rgba(255, 107, 114, 0.16)' : 'rgba(225, 29, 72, 0.12)';
+    ? isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)'
+    : isDark ? 'rgba(255, 107, 114, 0.18)' : 'rgba(209, 50, 58, 0.14)';
 
   const onPressIn = () => {
     Animated.timing(scale, {
@@ -61,7 +61,7 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
         style={[
           styles.cardContainer,
           {
-            borderRadius: 24,
+            borderRadius: 28,
             borderCurve: 'continuous',
             backgroundColor: colors.card,
             shadowColor: colors.cardShadow,
@@ -90,10 +90,10 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
           <View className="flex-1">
             <Text
               style={[
-                styles.sfText,
+                styles.titleText,
                 { letterSpacing: -0.3, color: colors.text },
               ]}
-              className="text-[17px] font-semibold"
+              className="text-[17px] font-bold"
               numberOfLines={1}
             >
               {subject.name}
@@ -123,7 +123,7 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
         <View style={{ flexShrink: 0 }} className="items-end justify-center">
           <Text
             style={[
-              styles.sfText,
+              styles.percentageText,
               { color: statusColor, letterSpacing: -0.8, fontVariant: ['tabular-nums'] },
             ]}
             className="text-[26px] font-bold"
@@ -133,17 +133,17 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
           <View
             style={{
               backgroundColor: badgeBg,
-              borderRadius: 10,
+              borderRadius: 999,
               borderCurve: 'continuous',
             }}
-            className="px-2 py-0.5 mt-1"
+            className="px-2.5 py-0.5 mt-1"
           >
             <Text
               style={[
-                styles.sfText,
+                styles.badgeText,
                 { color: statusColor, letterSpacing: 0.1, fontVariant: ['tabular-nums'] },
               ]}
-              className="text-[11px] font-semibold"
+              className="text-[11px] font-bold"
             >
               {statusLabel}
             </Text>
@@ -161,7 +161,33 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  titleText: {
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_700Bold',
+      default: undefined,
+    }),
+  },
+  percentageText: {
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_800ExtraBold',
+      default: undefined,
+    }),
+    fontWeight: '800',
+  },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_500Medium',
+      default: undefined,
+    }),
+  },
+  badgeText: {
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_700Bold',
+      default: undefined,
+    }),
   },
 });

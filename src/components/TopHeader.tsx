@@ -36,11 +36,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         style={[
           styles.largeTitle,
           {
-            letterSpacing: -0.8,
+            letterSpacing: -0.5,
             color: colors.text,
+            fontSize: Platform.OS === 'ios' ? 34 : 28,
+            fontWeight: Platform.OS === 'ios' ? '700' : '800',
           },
         ]}
-        className="text-[32px] font-bold leading-tight"
+        className="font-bold leading-tight"
       >
         {title}
       </Text>
@@ -71,7 +73,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
 const styles = StyleSheet.create({
   largeTitle: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_800ExtraBold',
+      default: undefined,
+    }),
   },
   actionButton: {
     shadowOffset: { width: 0, height: 2 },

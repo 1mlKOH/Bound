@@ -27,32 +27,32 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
     },
     safe: {
       cardBg: isDark ? '#0B2317' : '#EAF8F0',
-      labelColor: isDark ? 'rgba(61, 220, 132, 0.85)' : '#047857',
+      labelColor: isDark ? 'rgba(61, 220, 132, 0.85)' : '#0D8A33',
       trackBg: isDark ? '#143D27' : '#C8EED9',
-      progressColor: isDark ? '#3DDC84' : '#1FB45A',
+      progressColor: isDark ? '#3DDC84' : '#0D8A33',
       subtitleColor: isDark ? 'rgba(167, 243, 208, 0.80)' : '#047857',
-      badgeBg: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-      badgeText: isDark ? '#3DDC84' : '#15803D',
+      badgeBg: isDark ? 'rgba(61, 220, 132, 0.15)' : 'rgba(13, 138, 51, 0.12)',
+      badgeText: isDark ? '#3DDC84' : '#0D8A33',
       badgeLabel: 'Safe',
     },
     warning: {
       cardBg: isDark ? '#221607' : '#FEF9C3',
-      labelColor: isDark ? 'rgba(255, 176, 32, 0.85)' : '#B45309',
+      labelColor: isDark ? 'rgba(255, 176, 32, 0.85)' : '#B26A00',
       trackBg: isDark ? '#3D270E' : '#FDE68A',
-      progressColor: isDark ? '#FFB020' : '#D97706',
+      progressColor: isDark ? '#FFB020' : '#B26A00',
       subtitleColor: isDark ? 'rgba(253, 230, 138, 0.80)' : '#92400E',
-      badgeBg: isDark ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.18)',
-      badgeText: isDark ? '#FFB020' : '#D97706',
+      badgeBg: isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)',
+      badgeText: isDark ? '#FFB020' : '#B26A00',
       badgeLabel: 'Close',
     },
     danger: {
       cardBg: isDark ? '#240B12' : '#FFE4E6',
-      labelColor: isDark ? 'rgba(255, 107, 114, 0.85)' : '#BE123C',
+      labelColor: isDark ? 'rgba(255, 107, 114, 0.85)' : '#D1323A',
       trackBg: isDark ? '#3D121B' : '#FECDD3',
-      progressColor: isDark ? '#FF6B72' : '#E11D48',
+      progressColor: isDark ? '#FF6B72' : '#D1323A',
       subtitleColor: isDark ? 'rgba(254, 205, 211, 0.80)' : '#9F1239',
-      badgeBg: isDark ? 'rgba(244, 63, 94, 0.18)' : 'rgba(244, 63, 94, 0.18)',
-      badgeText: isDark ? '#FF6B72' : '#E11D48',
+      badgeBg: isDark ? 'rgba(255, 107, 114, 0.18)' : 'rgba(209, 50, 58, 0.14)',
+      badgeText: isDark ? '#FF6B72' : '#D1323A',
       badgeLabel: 'Below',
     },
   };
@@ -118,7 +118,7 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
         </Text>
         <View
           style={{
-            borderRadius: 12,
+            borderRadius: 999,
             borderCurve: 'continuous',
             backgroundColor: currentTier.badgeBg,
           }}
@@ -129,23 +129,23 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
               styles.sfText,
               { letterSpacing: -0.1, color: currentTier.badgeText },
             ]}
-            className="text-xs font-semibold"
+            className="text-xs font-bold"
           >
             {currentTier.badgeLabel}
           </Text>
         </View>
       </View>
 
-      {/* Hero Percentage Display with Apple SF Optical Sizing & NumberFlow animation */}
+      {/* Hero Percentage Display with Figtree 52/800 Optical Sizing & NumberFlow animation */}
       {isZeroState ? (
         <Text
           style={[
             styles.heroNumber,
             {
-              letterSpacing: -1.6,
+              letterSpacing: -1.56,
               color: isDark ? 'rgba(255, 255, 255, 0.40)' : 'rgba(0, 0, 0, 0.35)',
               fontSize: 52,
-              fontWeight: '700',
+              fontWeight: '800',
               lineHeight: 58,
             },
           ]}
@@ -154,17 +154,20 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
           —%
         </Text>
       ) : (
-
         <View className="my-0.5">
           <NumberFlow
             value={Math.round(stats.pooledPercentage)}
             suffix="%"
             style={{
-              fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+              fontFamily: Platform.select({
+                ios: 'System',
+                android: 'Figtree_800ExtraBold',
+                default: undefined,
+              }),
               fontSize: 52,
-              fontWeight: '700',
-              letterSpacing: -1.6,
-              color: isDark ? '#FFFFFF' : '#0F172A',
+              fontWeight: '800',
+              letterSpacing: -1.56,
+              color: isDark ? '#F5F5F7' : '#111114',
             }}
           />
         </View>
@@ -207,10 +210,18 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   heroNumber: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_800ExtraBold',
+      default: undefined,
+    }),
     fontVariant: ['tabular-nums'],
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_600SemiBold',
+      default: undefined,
+    }),
   },
 });

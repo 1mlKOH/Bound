@@ -136,12 +136,14 @@ export const FloatingBottomNav: React.FC = () => {
           style={[
             styles.liquidLayer,
             {
-              borderRadius: 36,
+              borderRadius: 999,
               borderCurve: 'continuous',
               backgroundColor: colors.navBg,
+              borderWidth: 1,
+              borderColor: colors.navBorder,
             },
           ]}
-          className="h-[70px] px-3 flex-row items-center justify-around"
+          className="h-[64px] px-2.5 flex-row items-center justify-around"
         >
           {/* Home Tab */}
           <NavTabItem
@@ -154,7 +156,7 @@ export const FloatingBottomNav: React.FC = () => {
             inactiveTextColor={colors.navInactiveText}
             iconColor={isHome ? colors.navActiveIcon : colors.navInactiveIcon}
             renderIcon={(color) => (
-              <HomeIcon size={21} color={color} strokeWidth={2} />
+              <HomeIcon size={20} color={color} strokeWidth={2} />
             )}
           />
 
@@ -169,7 +171,7 @@ export const FloatingBottomNav: React.FC = () => {
             inactiveTextColor={colors.navInactiveText}
             iconColor={isSubjects ? colors.navActiveIcon : colors.navInactiveIcon}
             renderIcon={(color) => (
-              <SubjectsIcon size={21} color={color} strokeWidth={2} />
+              <SubjectsIcon size={20} color={color} strokeWidth={2} />
             )}
           />
 
@@ -184,7 +186,7 @@ export const FloatingBottomNav: React.FC = () => {
             inactiveTextColor={colors.navInactiveText}
             iconColor={isStats ? colors.navActiveIcon : colors.navInactiveIcon}
             renderIcon={(color) => (
-              <StatsIcon size={21} color={color} strokeWidth={2} />
+              <StatsIcon size={20} color={color} strokeWidth={2} />
             )}
           />
         </View>
@@ -195,17 +197,27 @@ export const FloatingBottomNav: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
+    borderRadius: 999,
+    borderCurve: 'continuous',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.28,
     shadowRadius: 18,
     elevation: 16,
   },
   liquidLayer: {},
   tabItem: {
-    borderRadius: 24,
+    borderRadius: 999,
     borderCurve: 'continuous',
+    height: 52,
+    minWidth: 72,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tabLabel: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Figtree_700Bold',
+      default: undefined,
+    }),
   },
 });
