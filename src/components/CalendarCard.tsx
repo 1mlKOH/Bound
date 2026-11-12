@@ -512,6 +512,27 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
                     >
                       {dayNum}
                     </Text>
+
+                    {/* Absolute indicator dot — zero layout impact on date number centering */}
+                    {status && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: 3.5,
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor:
+                            status === 'red'
+                              ? '#FF6B72'
+                              : status === 'amber'
+                              ? '#FFB020'
+                              : isSelected
+                              ? '#FFFFFF'
+                              : '#30D158',
+                        }}
+                      />
+                    )}
                   </View>
                 </TouchableOpacity>
               );
