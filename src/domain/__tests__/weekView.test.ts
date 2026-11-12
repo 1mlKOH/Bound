@@ -4,6 +4,7 @@ import {
   getMondayOfDate,
   getWeekDates,
   formatCardDate,
+  getTodayDateString,
 } from '../attendance.ts';
 
 test('getMondayOfDate correctly resolves Monday for any day of the week', () => {
@@ -50,3 +51,15 @@ test('formatCardDate formats dates correctly for day agenda cards', () => {
   assert.equal(formatCardDate('2026-11-07'), 'Sat, Nov 7, 2026');
   assert.equal(formatCardDate('2026-11-08'), 'Sun, Nov 8, 2026');
 });
+
+test('getTodayDateString returns valid YYYY-MM-DD matching local date', () => {
+  const todayStr = getTodayDateString();
+  assert.match(todayStr, /^\d{4}-\d{2}-\d{2}$/);
+
+  const now = new Date();
+  const expectedYear = now.getFullYear();
+  const expectedMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const expectedDay = String(now.getDate()).padStart(2, '0');
+  assert.equal(todayStr, `${expectedYear}-${expectedMonth}-${expectedDay}`);
+});
+

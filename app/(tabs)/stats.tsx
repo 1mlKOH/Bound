@@ -7,6 +7,7 @@ import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { CalendarCard } from '../../src/components/CalendarCard';
 import { BySubjectBreakdownCard } from '../../src/components/BySubjectBreakdownCard';
 import { useTheme } from '../../src/utils/theme';
+import { getTodayDateString } from '../../src/domain/attendance';
 
 export default function StatsScreen() {
   const { colors } = useTheme();
@@ -58,6 +59,7 @@ export default function StatsScreen() {
           getSessionsForDate={getSessionsForDate}
           onSelectDate={setSelectedDate}
           viewMode={statsFilter}
+          todayDate={getTodayDateString()}
         />
 
         {/* By Subject Progress Breakdown Card */}

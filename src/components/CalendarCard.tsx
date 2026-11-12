@@ -24,6 +24,7 @@ import {
   getMondayOfDate,
   getWeekDates,
   formatCardDate,
+  getTodayDateString,
 } from '../domain/attendance';
 
 if (
@@ -138,18 +139,18 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
   getSessionsForDate,
   onSelectDate,
   viewMode,
-  todayDate = '2026-11-07',
+  todayDate = getTodayDateString(),
 }) => {
   const { colors, isDark } = useTheme();
 
   // Month navigation state
   const [currentYear, setCurrentYear] = useState(() => {
     const [y] = selectedDate.split('-').map(Number);
-    return y || 2026;
+    return y || new Date().getFullYear();
   });
   const [currentMonth, setCurrentMonth] = useState(() => {
     const [, m] = selectedDate.split('-').map(Number);
-    return (m || 11) - 1; // 0-indexed
+    return (m || (new Date().getMonth() + 1)) - 1; // 0-indexed
   });
 
   // Week navigation state

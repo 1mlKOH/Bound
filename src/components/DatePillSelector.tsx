@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Platform, StyleSheet, Animated } from 're
 import { Haptics } from '../utils/haptics';
 import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 import { useTheme } from '../utils/theme';
+import { getTodayDateString } from '../domain/attendance';
 
 interface DatePillSelectorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -12,7 +13,7 @@ interface DatePillSelectorProps {
 
 export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
   selectedDate,
-  todayDate = '2026-11-07',
+  todayDate = getTodayDateString(),
   onSelectDate,
 }) => {
   const { colors } = useTheme();

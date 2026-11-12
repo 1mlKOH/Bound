@@ -25,6 +25,7 @@ import {
   getMondayOfDate,
   getWeekDates,
   formatCardDate,
+  getTodayDateString,
 } from '../../src/domain/attendance';
 import {
   CloseIcon,
@@ -225,7 +226,7 @@ export default function SubjectEditorModal() {
       scheduleSlots.filter(
         (slot) =>
           slot.subjectId === subjectId &&
-          (slot.effectiveTo === null || slot.effectiveTo >= '2026-11-07')
+          (slot.effectiveTo === null || slot.effectiveTo >= getTodayDateString())
       ),
     [scheduleSlots, subjectId]
   );
@@ -509,7 +510,7 @@ export default function SubjectEditorModal() {
         targetPct: parsedTarget,
         baselinePresent: parsedPresent,
         baselineAbsent: parsedAbsent,
-        startDate: existingSubject?.startDate || '2026-08-01',
+        startDate: existingSubject?.startDate || getTodayDateString(),
         endDate: existingSubject?.endDate || null,
       },
       unrolledSlots

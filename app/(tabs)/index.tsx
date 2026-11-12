@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { View, Text, ScrollView, FlatList, TouchableOpacity, Platform, StyleSheet, Animated } from 'react-native';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, FlatList, TouchableOpacity, Platform, StyleSheet, Animated, AppState } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Haptics } from '../../src/utils/haptics';
@@ -7,6 +7,7 @@ import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
 import { DatePillSelector } from '../../src/components/DatePillSelector';
 import { HeroAttendanceCard } from '../../src/components/HeroAttendanceCard';
+import { getTodayDateString } from '../../src/domain/attendance';
 import { ClassCard } from '../../src/components/ClassCard';
 import {
   PlusIcon,
@@ -99,6 +100,24 @@ export default function AttendanceScreen() {
     return new Map(subjects.map((s) => [s.id, s]));
   }, [subjects]);
 
+  // Midnight date rollover handler when app resumes
+  useEffect(() => {
+    let lastKnownToday = getTodayDateString();
+    const sub = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        const currentToday = getTodayDateString();
+        if (currentToday !== lastKnownToday) {
+          const prev = lastKnownToday;
+          lastKnownToday = currentToday;
+          if (useAttendanceStore.getState().selectedDate === prev) {
+            setSelectedDate(currentToday);
+          }
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [setSelectedDate]);
+
   // Dev-only data boundary switch for adversarial testing
   const [dataMode, setDataMode] = useState<'demo' | 'worst' | 'empty' | 'one' | 'huge'>('demo');
 
@@ -150,7 +169,7 @@ export default function AttendanceScreen() {
       {/* Date Navigation Pill */}
       <DatePillSelector
         selectedDate={selectedDate}
-        todayDate="2026-11-07"
+        todayDate={getTodayDateString()}
         onSelectDate={setSelectedDate}
       />
 

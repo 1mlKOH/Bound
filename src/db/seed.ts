@@ -1,7 +1,7 @@
 import { expoDb } from './client';
-import { generateUUID } from '../domain/attendance';
+import { generateUUID, getTodayDateString } from '../domain/attendance';
 
-export function seedDemoData(targetDateStr: string = '2026-11-07') {
+export function seedDemoData(targetDateStr: string = getTodayDateString()) {
   // Clear any existing data
   expoDb.execSync(`
     DELETE FROM sessions;
@@ -62,20 +62,20 @@ export function seedDemoData(targetDateStr: string = '2026-11-07') {
     ]
   );
 
-  // 3. Today's sessions (matching screenshot 4):
+  // 3. Saturday reference sessions (2026-11-07, matching screenshot 4):
   // Physics 09:00 - 10:00 -> 'present'
   // Data Structures 11:00 - 12:00 -> null ('Tap to mark')
   // Economics 14:00 - 15:00 -> 'cancelled'
   expoDb.runSync(
     `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
      VALUES
-      (?, ?, ?, ?, '09:00', '10:00', 'present', '2026-11-07T09:05:00Z'),
-      (?, ?, ?, ?, '11:00', '12:00', NULL, NULL),
-      (?, ?, ?, ?, '14:00', '15:00', 'cancelled', '2026-11-07T13:30:00Z')`,
+      (?, ?, ?, '2026-11-07', '09:00', '10:00', 'present', '2026-11-07T09:05:00Z'),
+      (?, ?, ?, '2026-11-07', '11:00', '12:00', NULL, NULL),
+      (?, ?, ?, '2026-11-07', '14:00', '15:00', 'cancelled', '2026-11-07T13:30:00Z')`,
     [
-      generateUUID(), physicsId, slotPhysicsSat, targetDateStr,
-      generateUUID(), dsId, slotDsSat, targetDateStr,
-      generateUUID(), econId, slotEconSat, targetDateStr
+      generateUUID(), physicsId, slotPhysicsSat,
+      generateUUID(), dsId, slotDsSat,
+      generateUUID(), econId, slotEconSat,
     ]
   );
 

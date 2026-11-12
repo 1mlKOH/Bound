@@ -18,6 +18,7 @@ import {
   generateUUID,
   isSlotEffectiveOnDate,
   isSubjectActiveOnDate,
+  getTodayDateString,
 } from '../domain/attendance';
 import { syncScheduledNotifications } from '../utils/notifications';
 
@@ -33,6 +34,7 @@ interface AttendanceStoreState {
 
   // Actions
   initialize: () => void;
+  resetToToday: () => void;
   setSelectedDate: (date: string) => void;
   setStatsFilter: (filter: 'month' | 'week') => void;
   markSession: (sessionId: string, status: AttendanceStatus) => void;
@@ -98,8 +100,8 @@ const DEFAULT_SETTINGS: Settings = {
   hasOnboarded: false,
 };
 
-// Default reference date matching screenshots
-const DEFAULT_DATE = '2026-11-07';
+// Default reference date is dynamic real-time today
+const DEFAULT_DATE = getTodayDateString();
 
 export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   subjects: [],
@@ -185,17 +187,19 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         label: r.label,
       }));
 
+      const today = getTodayDateString();
       set({
         subjects,
         scheduleSlots,
         sessions,
         holidays,
         settings: currentSettings,
+        selectedDate: today,
         isLoading: false,
       });
 
-      // Ensure sessions for selectedDate are generated
-      get().getSessionsForDate(get().selectedDate);
+      // Ensure sessions for today are generated
+      get().getSessionsForDate(today);
 
       // Reschedule reminders
       syncScheduledNotifications(currentSettings, subjects, scheduleSlots);
@@ -203,6 +207,12 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       console.error('Failed to initialize database:', e);
       set({ isLoading: false });
     }
+  },
+
+  resetToToday: () => {
+    const today = getTodayDateString();
+    set({ selectedDate: today });
+    get().getSessionsForDate(today);
   },
 
   setSelectedDate: (date: string) => {
