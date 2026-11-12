@@ -18,7 +18,7 @@ const SubjectRow: React.FC<{
 }> = ({ item, isLast, index }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { subject, percentage, isSafe, isClose, statusLabel } = item;
+  const { subject, percentage, isSafe, isClose } = item;
 
   const animWidth = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -107,18 +107,7 @@ const SubjectRow: React.FC<{
             </Text>
           </View>
 
-          <View className="flex-row items-center space-x-2">
-            {/* Inline Safe Buffer / Recovery Tag */}
-            <Text
-              style={[
-                styles.sfText,
-                { color: statusColor, letterSpacing: -0.1 },
-              ]}
-              className="text-[12px] font-semibold mr-2"
-            >
-              {statusLabel}
-            </Text>
-
+          <View className="flex-row items-center">
             {/* Percentage & Chevron */}
             <Text
               style={[
