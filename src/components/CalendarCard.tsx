@@ -178,6 +178,11 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
     setCurrentWeekMonday(mon);
   }, [selectedDate]);
 
+  // Fold all 7 cards by default when switching to week view or changing week
+  useEffect(() => {
+    setCollapsedDays({});
+  }, [viewMode, currentWeekMonday]);
+
   // Pre-generate sessions for the active week in SQLite if handler exists
   useEffect(() => {
     if (viewMode === 'week' && getSessionsForDate) {
@@ -507,21 +512,6 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
                     >
                       {dayNum}
                     </Text>
-
-                    {/* Status indicator dot */}
-                    {(isSelected || status) && (
-                      <View
-                        className="w-1.5 h-1.5 rounded-full mt-0.5"
-                        style={{
-                          backgroundColor:
-                            status === 'red'
-                              ? '#FF6B72'
-                              : status === 'amber'
-                              ? '#FFB020'
-                              : colors.statusSafe,
-                        }}
-                      />
-                    )}
                   </View>
                 </TouchableOpacity>
               );
@@ -610,7 +600,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
                     Haptics.selectionAsync();
                     onSelectDate(dateStr);
                     // Auto-expand this day's card if it was collapsed
-                    if (collapsedDays[dateStr]) {
+                    if (collapsedDays[dateStr] ?? true) {
                       LayoutAnimation.configureNext(
                         LayoutAnimation.create(200, 'easeOut', 'opacity')
                       );
@@ -633,8 +623,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
             {weekDates.map((dateStr) => {
               const daySessions = getDaySessions(dateStr);
               const isSelected = selectedDate === dateStr;
-              const isCollapsed =
-                collapsedDays[dateStr] ?? (daySessions.length === 0);
+              const isCollapsed = collapsedDays[dateStr] ?? true;
 
               return (
                 <CollapsibleDayCard
