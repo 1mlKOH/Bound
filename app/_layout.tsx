@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Toaster } from 'sonner-native';
+import * as Notifications from 'expo-notifications';
 import {
   useFonts,
   Figtree_400Regular,
@@ -15,6 +16,10 @@ import {
 } from '@expo-google-fonts/figtree';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { useTheme } from '../src/utils/theme';
+import {
+  setupNotificationCategoriesAndChannels,
+  handleNotificationResponse,
+} from '../src/utils/notifications';
 import '../global.css';
 
 export default function RootLayout() {
@@ -36,6 +41,26 @@ export default function RootLayout() {
   useEffect(() => {
     initialize();
   }, []);
+
+  useEffect(() => {
+    setupNotificationCategoriesAndChannels();
+
+    // Check if app was launched via notification response from cold-start
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        handleNotificationResponse(response, router);
+      }
+    });
+
+    // Listen for notification responses while running
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      handleNotificationResponse(response, router);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
 
   useEffect(() => {
     if (isLoading || (!fontsLoaded && !fontError)) return;

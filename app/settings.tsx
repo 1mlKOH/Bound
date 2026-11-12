@@ -31,6 +31,7 @@ import {
 import { useTheme } from '../src/utils/theme';
 import { SegmentedControl } from '../src/components/SegmentedControl';
 import { toast } from 'sonner-native';
+import { sendTestNotification } from '../src/utils/notifications';
 
 interface TactileCloseButtonProps {
   onPress: () => void;
@@ -645,6 +646,77 @@ export default function SettingsScreen() {
               }}
               thumbColor="#FFFFFF"
             />
+          </View>
+
+          {/* Test Notification Row */}
+          <View
+            style={{ borderTopColor: colors.divider }}
+            className="pt-3 mt-2 border-t"
+          >
+            <View className="mb-2">
+              <Text
+                style={[styles.sfText, { color: colors.text }]}
+                className="text-xs font-semibold"
+              >
+                Test Live Notifications
+              </Text>
+              <Text
+                style={[styles.sfText, { color: colors.textMuted }]}
+                className="text-[11px] mt-0.5"
+              >
+                Inspect lockscreen action buttons, sounds, and math copy
+              </Text>
+            </View>
+
+            <View className="flex-row gap-2 mt-1">
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  sendTestNotification('safe');
+                }}
+                style={{
+                  borderRadius: 14,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.presentBadgeBg,
+                }}
+                className="flex-1 py-2 items-center justify-center"
+              >
+                <Text
+                  style={[
+                    styles.sfText,
+                    { color: colors.presentBadgeText },
+                  ]}
+                  className="text-xs font-semibold"
+                >
+                  Safe Alert (+Skips)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  sendTestNotification('risk');
+                }}
+                style={{
+                  borderRadius: 14,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.absentBadgeBg,
+                }}
+                className="flex-1 py-2 items-center justify-center"
+              >
+                <Text
+                  style={[
+                    styles.sfText,
+                    { color: colors.absentBadgeText },
+                  ]}
+                  className="text-xs font-semibold"
+                >
+                  Risk Alert (Cutoff)
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 

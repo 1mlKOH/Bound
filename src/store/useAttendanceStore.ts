@@ -202,7 +202,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       get().getSessionsForDate(today);
 
       // Reschedule reminders
-      syncScheduledNotifications(currentSettings, subjects, scheduleSlots);
+      syncScheduledNotifications(currentSettings, subjects, scheduleSlots, sessions, holidays);
     } catch (e) {
       console.error('Failed to initialize database:', e);
       set({ isLoading: false });
@@ -259,6 +259,15 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       'UPDATE sessions SET status = ?, marked_at = ? WHERE id = ?',
       [finalStatus, markedAt, sessionId]
     );
+
+    // Reschedule notifications to reflect updated attendance calculations
+    syncScheduledNotifications(
+      get().settings,
+      get().subjects,
+      get().scheduleSlots,
+      updatedSessions,
+      get().holidays
+    );
   },
 
   batchMarkDay: (dateStr: string) => {
@@ -289,6 +298,15 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         [now, id]
       );
     }
+
+    // Reschedule notifications to reflect updated attendance calculations
+    syncScheduledNotifications(
+      get().settings,
+      get().subjects,
+      get().scheduleSlots,
+      updatedSessions,
+      get().holidays
+    );
   },
 
   toggleHoliday: (dateStr: string, label: string = 'Holiday') => {
@@ -476,7 +494,13 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     );
 
     // Sync notification schedules
-    syncScheduledNotifications(updated, get().subjects, get().scheduleSlots);
+    syncScheduledNotifications(
+      updated,
+      get().subjects,
+      get().scheduleSlots,
+      get().sessions,
+      get().holidays
+    );
   },
 
   completeOnboarding: async (options: {
@@ -519,7 +543,13 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     );
 
     get().initialize();
-    syncScheduledNotifications(get().settings, get().subjects, get().scheduleSlots);
+    syncScheduledNotifications(
+      get().settings,
+      get().subjects,
+      get().scheduleSlots,
+      get().sessions,
+      get().holidays
+    );
   },
 
   resetOnboarding: () => {
