@@ -17,17 +17,23 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
 
   const scale = useRef(new Animated.Value(1)).current;
 
-  const statusColor = isSafe
+  const isZeroState = totalHeld === 0;
+
+  const statusColor = isZeroState
+    ? colors.textMuted
+    : isSafe
     ? colors.statusSafe
     : isClose
     ? colors.statusWarning
     : colors.statusDanger;
 
-  const badgeBg = isSafe
+  const badgeBg = isZeroState
+    ? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)')
+    : isSafe
     ? colors.presentBadgeBg
     : isClose
-    ? isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)'
-    : isDark ? 'rgba(255, 107, 114, 0.18)' : 'rgba(209, 50, 58, 0.14)';
+    ? (isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)')
+    : (isDark ? 'rgba(255, 107, 114, 0.18)' : 'rgba(209, 50, 58, 0.14)');
 
   const onPressIn = () => {
     Animated.timing(scale, {
@@ -128,7 +134,7 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
             ]}
             className="text-[26px] font-bold"
           >
-            {Math.round(percentage)}%
+            {isZeroState ? '—%' : `${Math.round(percentage)}%`}
           </Text>
           <View
             style={{
@@ -145,7 +151,7 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
               ]}
               className="text-[11px] font-bold"
             >
-              {statusLabel}
+              {isZeroState ? 'No classes yet' : statusLabel}
             </Text>
           </View>
         </View>

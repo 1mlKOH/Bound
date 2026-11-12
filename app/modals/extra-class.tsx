@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -274,7 +275,7 @@ export default function ExtraClassModal() {
     endTime !== '16:00'
   );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (isDirty) {
       Alert.alert(
         'Discard Extra Class?',
@@ -287,7 +288,20 @@ export default function ExtraClassModal() {
     } else {
       router.back();
     }
-  };
+  }, [isDirty, router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isDirty) {
+        handleClose();
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isDirty, handleClose]);
 
   const handleSave = () => {
     if (isSubmitting) return;

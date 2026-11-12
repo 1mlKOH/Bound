@@ -84,12 +84,14 @@ const ActionPressButton: React.FC<ActionPressButtonProps> = ({
           },
           buttonStyle,
         ]}
-        className="py-2.5 px-3 flex-row items-center justify-center"
+        className="py-2.5 px-2 flex-row items-center justify-center"
       >
-        {icon && <View className="mr-1.5">{icon}</View>}
+        {icon && <View className="mr-1">{icon}</View>}
         <Text
-          style={[styles.sfText, textStyle]}
-          className="text-xs font-bold"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[styles.sfText, textStyle, { fontSize: 11.5 }]}
+          className="font-bold"
         >
           {label}
         </Text>
@@ -102,6 +104,8 @@ interface ClassCardProps {
   session: Session;
   subject?: Subject;
   primaryLabel?: 'name' | 'code';
+  bufferLabel?: string;
+  bufferTier?: 'safe' | 'warning' | 'danger' | 'neutral';
   onMark: (status: AttendanceStatus) => void;
 }
 
@@ -109,10 +113,13 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   session,
   subject,
   primaryLabel = 'name',
+  bufferLabel,
+  bufferTier,
   onMark,
 }) => {
   const { colors, isDark } = useTheme();
   const [isExpanded, setIsExpanded] = useState(session.status === null);
+  const lastMarkTime = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
   const title =
     primaryLabel === 'code' && subject?.code
@@ -122,6 +129,11 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   const subjectColor = subject?.color || '#1FB45A';
 
   const handleMark = (status: AttendanceStatus) => {
+    const now = Date.now();
+    if (lastMarkTime.current.id === session.id && now - lastMarkTime.current.time < 350) {
+      return;
+    }
+    lastMarkTime.current = { id: session.id, time: now };
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onMark(status);
   };
@@ -199,7 +211,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
           style={[styles.sfText, { color: colors.textMuted }]}
           className="text-xs font-medium mr-1"
         >
-          Tap to mark
+          Unmarked
         </Text>
         {isExpanded ? (
           <ChevronUpIcon size={14} color={colors.textMuted} />
@@ -303,15 +315,54 @@ export const ClassCard: React.FC<ClassCardProps> = ({
             >
               {title}
             </Text>
-            <Text
-              style={[
-                styles.sfText,
-                { letterSpacing: 0.1, color: colors.textMuted },
-              ]}
-              className="text-[12px] mt-0.5"
-            >
-              {session.startTime} - {session.endTime}
-            </Text>
+            <View className="flex-row items-center mt-0.5 flex-wrap">
+              <Text
+                style={[
+                  styles.sfText,
+                  { letterSpacing: 0.1, color: colors.textMuted },
+                ]}
+                className="text-[12px] mr-2"
+              >
+                {session.startTime} - {session.endTime}
+              </Text>
+              {bufferLabel && (
+                <View
+                  style={{
+                    backgroundColor:
+                      bufferTier === 'safe'
+                        ? isDark ? 'rgba(61, 220, 132, 0.15)' : 'rgba(13, 138, 51, 0.12)'
+                        : bufferTier === 'warning'
+                        ? isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)'
+                        : bufferTier === 'danger'
+                        ? isDark ? 'rgba(255, 107, 114, 0.18)' : 'rgba(209, 50, 58, 0.14)'
+                        : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                    borderRadius: 999,
+                    paddingHorizontal: 7,
+                    paddingVertical: 1.5,
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.sfText,
+                      {
+                        color:
+                          bufferTier === 'safe'
+                            ? isDark ? '#3DDC84' : '#0D8A33'
+                            : bufferTier === 'warning'
+                            ? isDark ? '#FFB020' : '#B26A00'
+                            : bufferTier === 'danger'
+                            ? isDark ? '#FF6B72' : '#D1323A'
+                            : colors.textSecondary,
+                        fontSize: 10.5,
+                        fontWeight: '700',
+                      },
+                    ]}
+                  >
+                    {bufferLabel}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
 
@@ -383,9 +434,9 @@ export const ClassCard: React.FC<ClassCardProps> = ({
             }}
           />
 
-          {/* Cancelled Button */}
+          {/* Cancel Button */}
           <ActionPressButton
-            label="Cancelled"
+            label="Cancel"
             icon={
               <CircleMinusIcon
                 size={13}

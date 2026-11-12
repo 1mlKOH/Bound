@@ -22,6 +22,23 @@ import {
 } from '../domain/attendance';
 import { syncScheduledNotifications } from '../utils/notifications';
 
+let notificationSyncTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedSyncNotifications = (
+  settings: Settings,
+  subjects: Subject[],
+  scheduleSlots: ScheduleSlot[],
+  sessions: Session[],
+  holidays: Holiday[]
+) => {
+  if (notificationSyncTimer) {
+    clearTimeout(notificationSyncTimer);
+  }
+  notificationSyncTimer = setTimeout(() => {
+    syncScheduledNotifications(settings, subjects, scheduleSlots, sessions, holidays);
+    notificationSyncTimer = null;
+  }, 400);
+};
+
 interface AttendanceStoreState {
   subjects: Subject[];
   scheduleSlots: ScheduleSlot[];
@@ -38,7 +55,7 @@ interface AttendanceStoreState {
   setSelectedDate: (date: string) => void;
   setStatsFilter: (filter: 'month' | 'week') => void;
   markSession: (sessionId: string, status: AttendanceStatus) => void;
-  batchMarkDay: (dateStr: string) => void;
+  batchMarkDay: (dateStr: string) => number;
   toggleHoliday: (dateStr: string, label?: string) => void;
   addExtraClass: (
     subjectId: string,
@@ -261,7 +278,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     );
 
     // Reschedule notifications to reflect updated attendance calculations
-    syncScheduledNotifications(
+    debouncedSyncNotifications(
       get().settings,
       get().subjects,
       get().scheduleSlots,
@@ -270,7 +287,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     );
   },
 
-  batchMarkDay: (dateStr: string) => {
+  batchMarkDay: (dateStr: string): number => {
     const daySessions = get().getSessionsForDate(dateStr);
     const now = new Date().toISOString();
     const { sessions } = get();
@@ -284,7 +301,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       return s;
     });
 
-    if (idsToUpdate.length === 0) return;
+    if (idsToUpdate.length === 0) return 0;
 
     set({ sessions: updatedSessions });
     try {
@@ -300,30 +317,43 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     }
 
     // Reschedule notifications to reflect updated attendance calculations
-    syncScheduledNotifications(
+    debouncedSyncNotifications(
       get().settings,
       get().subjects,
       get().scheduleSlots,
       updatedSessions,
       get().holidays
     );
+
+    return idsToUpdate.length;
   },
 
   toggleHoliday: (dateStr: string, label: string = 'Holiday') => {
     const { holidays } = get();
     const exists = holidays.some((h) => h.date === dateStr);
 
+    let updatedHolidays: Holiday[];
     if (exists) {
-      set({ holidays: holidays.filter((h) => h.date !== dateStr) });
+      updatedHolidays = holidays.filter((h) => h.date !== dateStr);
+      set({ holidays: updatedHolidays });
       expoDb.runSync('DELETE FROM holidays WHERE date = ?', [dateStr]);
     } else {
       const newHoliday: Holiday = { date: dateStr, label };
-      set({ holidays: [...holidays, newHoliday] });
+      updatedHolidays = [...holidays, newHoliday];
+      set({ holidays: updatedHolidays });
       expoDb.runSync('INSERT INTO holidays (date, label) VALUES (?, ?)', [
         dateStr,
         label,
       ]);
     }
+
+    debouncedSyncNotifications(
+      get().settings,
+      get().subjects,
+      get().scheduleSlots,
+      get().sessions,
+      updatedHolidays
+    );
   },
 
   addExtraClass: (
@@ -351,7 +381,8 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       markedAt: null,
     };
 
-    set((state) => ({ sessions: [...state.sessions, newSession] }));
+    const updatedSessions = [...get().sessions, newSession];
+    set({ sessions: updatedSessions });
 
     try {
       expoDb.runSync(
@@ -362,6 +393,14 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     } catch (err) {
       console.error('Failed to insert extra class session into database:', err);
     }
+
+    debouncedSyncNotifications(
+      get().settings,
+      get().subjects,
+      get().scheduleSlots,
+      updatedSessions,
+      get().holidays
+    );
   },
 
   saveSubject: (subjectData, slots) => {
@@ -449,20 +488,36 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   archiveSubject: (id: string) => {
     const now = new Date().toISOString();
     expoDb.runSync('UPDATE subjects SET archived_at = ? WHERE id = ?', [now, id]);
-    set((state) => ({
-      subjects: state.subjects.map((s) =>
-        s.id === id ? { ...s, archivedAt: now } : s
-      ),
-    }));
+    const updatedSubjects = get().subjects.map((s) =>
+      s.id === id ? { ...s, archivedAt: now } : s
+    );
+    set({ subjects: updatedSubjects });
+    debouncedSyncNotifications(
+      get().settings,
+      updatedSubjects,
+      get().scheduleSlots,
+      get().sessions,
+      get().holidays
+    );
   },
 
   deleteSubject: (id: string) => {
     expoDb.runSync('DELETE FROM subjects WHERE id = ?', [id]);
-    set((state) => ({
-      subjects: state.subjects.filter((s) => s.id !== id),
-      scheduleSlots: state.scheduleSlots.filter((slot) => slot.subjectId !== id),
-      sessions: state.sessions.filter((ses) => ses.subjectId !== id),
-    }));
+    const updatedSubjects = get().subjects.filter((s) => s.id !== id);
+    const updatedSlots = get().scheduleSlots.filter((slot) => slot.subjectId !== id);
+    const updatedSessions = get().sessions.filter((ses) => ses.subjectId !== id);
+    set({
+      subjects: updatedSubjects,
+      scheduleSlots: updatedSlots,
+      sessions: updatedSessions,
+    });
+    debouncedSyncNotifications(
+      get().settings,
+      updatedSubjects,
+      updatedSlots,
+      updatedSessions,
+      get().holidays
+    );
   },
 
   updateSettings: (partial: Partial<Settings>) => {
@@ -494,7 +549,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     );
 
     // Sync notification schedules
-    syncScheduledNotifications(
+    debouncedSyncNotifications(
       updated,
       get().subjects,
       get().scheduleSlots,
@@ -511,7 +566,8 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   }) => {
     if (options.loadSampleData) {
       seedDemoData(DEFAULT_DATE);
-    } else {
+    } else if (!get().settings.hasOnboarded && get().subjects.length === 0) {
+      // Only purge if it's a genuine fresh cold-start onboarding
       expoDb.execSync(`
         DELETE FROM sessions;
         DELETE FROM schedule_slots;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -55,13 +56,13 @@ const PALETTE = [
 ];
 
 const WEEKDAY_PILLS = [
-  { day: 0, label: 'Sun' },
-  { day: 1, label: 'Mon' },
-  { day: 2, label: 'Tue' },
-  { day: 3, label: 'Wed' },
-  { day: 4, label: 'Thu' },
-  { day: 5, label: 'Fri' },
-  { day: 6, label: 'Sat' },
+  { day: 0, label: 'Su' },
+  { day: 1, label: 'Mo' },
+  { day: 2, label: 'Tu' },
+  { day: 3, label: 'We' },
+  { day: 4, label: 'Th' },
+  { day: 5, label: 'Fr' },
+  { day: 6, label: 'Sa' },
 ];
 
 function timeStringToDate(timeStr: string): Date {
@@ -116,11 +117,12 @@ function computeDurationLabel(startTime: string, endTime: string): { label: stri
 }
 
 function groupExistingSlots(
-  rawSlots: Array<{ weekday: number; startTime: string; endTime: string }>
+  rawSlots: Array<{ weekday: number; startTime: string; endTime: string }>,
+  defaultDay: number = new Date().getDay()
 ): ScheduleBatchSlot[] {
   if (!rawSlots || rawSlots.length === 0) {
     return [
-      { id: 'slot-init-1', weekdays: [1], startTime: '09:00', endTime: '10:00' },
+      { id: 'slot-init-1', weekdays: [defaultDay], startTime: '09:00', endTime: '10:00' },
     ];
   }
 
@@ -149,6 +151,14 @@ function groupExistingSlots(
       endTime,
     };
   });
+}
+
+function normalizeBatchSlots(slots: ScheduleBatchSlot[]) {
+  return slots.map((s) => ({
+    weekdays: [...s.weekdays].sort((a, b) => a - b),
+    startTime: s.startTime,
+    endTime: s.endTime,
+  }));
 }
 
 function formatTimeInput(val: string): string {
@@ -231,6 +241,19 @@ export default function SubjectEditorModal() {
     [scheduleSlots, subjectId]
   );
 
+  const initialValues = useRef({
+    name: existingSubject?.name || '',
+    code: existingSubject?.code || '',
+    color: existingSubject?.color || PALETTE[0],
+    targetPct: existingSubject?.targetPct ? String(existingSubject.targetPct) : '',
+    baselinePresent: String(existingSubject?.baselinePresent ?? 0),
+    baselineAbsent: String(existingSubject?.baselineAbsent ?? 0),
+  }).current;
+
+  const initialSlotsJson = useMemo(() => {
+    return JSON.stringify(normalizeBatchSlots(groupExistingSlots(existingSlots)));
+  }, []);
+
   const [name, setName] = useState(existingSubject?.name || '');
   const [code, setCode] = useState(existingSubject?.code || '');
   const [color, setColor] = useState(existingSubject?.color || PALETTE[0]);
@@ -249,9 +272,17 @@ export default function SubjectEditorModal() {
     [name, code]
   );
 
+  const currentDayOfWeek = useMemo(() => {
+    if (selectedDate && selectedDate.includes('-')) {
+      const [y, m, d] = selectedDate.split('-').map(Number);
+      return new Date(y, m - 1, d).getDay();
+    }
+    return new Date().getDay();
+  }, [selectedDate]);
+
   // Slots state (batch-grouped by time for multi-day schedules)
   const [batchSlots, setBatchSlots] = useState<ScheduleBatchSlot[]>(() =>
-    groupExistingSlots(existingSlots)
+    groupExistingSlots(existingSlots, currentDayOfWeek)
   );
 
   const scrollViewRef = useRef<any>(null);
@@ -356,7 +387,10 @@ export default function SubjectEditorModal() {
         const currentEndMins = eh * 60 + em;
 
         if (newStartMins >= currentEndMins) {
-          const updatedEndMins = (newStartMins + validDuration) % (24 * 60);
+          let updatedEndMins = newStartMins + validDuration;
+          if (updatedEndMins >= 24 * 60) {
+            updatedEndMins = 23 * 60 + 59;
+          }
           const endH = String(Math.floor(updatedEndMins / 60)).padStart(2, '0');
           const endM = String(updatedEndMins % 60).padStart(2, '0');
           nextEnd = `${endH}:${endM}`;
@@ -432,24 +466,63 @@ export default function SubjectEditorModal() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isDirty = !existingSubject
-    ? name.trim().length > 0 || code.trim().length > 0 || batchSlots.length > 1
-    : name !== existingSubject.name || code !== existingSubject.code || color !== existingSubject.color;
+  const isDirty = useMemo(() => {
+    const isNameDirty = name.trim() !== initialValues.name.trim();
+    const isCodeDirty = code.trim() !== initialValues.code.trim();
+    const isColorDirty = color !== initialValues.color;
+    const isTargetDirty = targetPct.trim() !== initialValues.targetPct.trim();
+    const isPresentDirty = baselinePresent.trim() !== initialValues.baselinePresent.trim();
+    const isAbsentDirty = baselineAbsent.trim() !== initialValues.baselineAbsent.trim();
+    const isSlotsDirty = JSON.stringify(normalizeBatchSlots(batchSlots)) !== initialSlotsJson;
 
-  const handleClose = () => {
+    return (
+      isNameDirty ||
+      isCodeDirty ||
+      isColorDirty ||
+      isTargetDirty ||
+      isPresentDirty ||
+      isAbsentDirty ||
+      isSlotsDirty
+    );
+  }, [
+    name,
+    code,
+    color,
+    targetPct,
+    baselinePresent,
+    baselineAbsent,
+    batchSlots,
+    initialValues,
+    initialSlotsJson,
+  ]);
+
+  const handleClose = useCallback(() => {
     if (isDirty) {
       Alert.alert(
-        'Discard Subject?',
-        'Are you sure you want to discard your changes?',
+        'Unsaved Changes',
+        'Do you want to exit without saving your edits?',
         [
           { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+          { text: 'Exit Without Saving', style: 'destructive', onPress: () => router.back() },
         ]
       );
     } else {
       router.back();
     }
-  };
+  }, [isDirty, router]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isDirty) {
+        handleClose();
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isDirty, handleClose]);
 
   const handleSave = () => {
     if (isSubmitting) return;
@@ -458,7 +531,15 @@ export default function SubjectEditorModal() {
     const cleanCode = code.replace(/[\r\n]+/g, ' ').trim();
 
     if (!cleanName) {
-      Alert.alert('Required', 'Please enter a subject name.');
+      toast.error('Please enter a subject name');
+      return;
+    }
+
+    if (hasConflict) {
+      Alert.alert(
+        'Schedule Conflict',
+        'Two or more timetable slots on the same day overlap in time. Please adjust the times before saving.'
+      );
       return;
     }
 
@@ -607,8 +688,14 @@ export default function SubjectEditorModal() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSave}
-            disabled={isSubmitting}
-            style={{ opacity: isSubmitting ? 0.45 : 1 }}
+            disabled={isSubmitting || !name.trim()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{
+              opacity: isSubmitting || !name.trim() ? 0.45 : 1,
+              minHeight: 36,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
             className="px-4 py-2 rounded-full bg-[#00BF63]"
           >
             <Text className="text-xs font-bold text-[#06210F]">Save</Text>
@@ -671,7 +758,7 @@ export default function SubjectEditorModal() {
                 className="text-[10px] font-bold tracking-wider uppercase"
                 numberOfLines={1}
               >
-                Auto Icon • {detectedCategory.label}
+                Auto-detected • {detectedCategory.label}
               </Text>
             </View>
 
@@ -776,38 +863,46 @@ export default function SubjectEditorModal() {
             style={{ color: colors.textMuted }}
             className="text-xs font-semibold mb-2"
           >
-            Subject Color Swatch
+            Subject Color
           </Text>
-          <View className="flex-row justify-between mb-2">
+          <View className="flex-row flex-wrap justify-between mb-1" style={{ rowGap: 12 }}>
             {PALETTE.map((swatch) => {
               const isSelected = color === swatch;
               return (
-                <TouchableOpacity
+                <View
                   key={swatch}
-                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                  onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-                    setColor(swatch);
-                    Haptics.selectionAsync();
+                  style={{
+                    width: '22%',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.swatchItem,
-                    {
-                      backgroundColor: swatch,
-                      transform: [{ scale: isSelected ? 1.14 : 1 }],
-                      borderWidth: isSelected ? 2.5 : 0,
-                      borderColor: '#FFFFFF',
-                      shadowColor: isSelected ? swatch : 'transparent',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: isSelected ? 0.45 : 0,
-                      shadowRadius: 5,
-                      elevation: isSelected ? 4 : 0,
-                    },
-                  ]}
                 >
-                  {isSelected && <CheckIcon size={14} color="#FFFFFF" strokeWidth={2.6} />}
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    onPress={() => {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                      setColor(swatch);
+                      Haptics.selectionAsync();
+                    }}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.swatchItem,
+                      {
+                        backgroundColor: swatch,
+                        transform: [{ scale: isSelected ? 1.12 : 1 }],
+                        borderWidth: isSelected ? 2.5 : 0,
+                        borderColor: '#FFFFFF',
+                        shadowColor: isSelected ? swatch : 'transparent',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: isSelected ? 0.45 : 0,
+                        shadowRadius: 5,
+                        elevation: isSelected ? 4 : 0,
+                      },
+                    ]}
+                  >
+                    {isSelected && <CheckIcon size={14} color="#FFFFFF" strokeWidth={2.6} />}
+                  </TouchableOpacity>
+                </View>
               );
             })}
           </View>
@@ -854,7 +949,7 @@ export default function SubjectEditorModal() {
                   onChangeText={(val) => setTargetPct(val.replace(/[^0-9.]/g, ''))}
                   onFocus={() => {
                     setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({ y: 320, animated: true });
+                      scrollViewRef.current?.scrollTo({ y: 520, animated: true });
                     }, 120);
                   }}
                   keyboardType="numeric"
@@ -891,7 +986,7 @@ export default function SubjectEditorModal() {
                 placeholderTextColor={colors.placeholderText}
                 onFocus={() => {
                   setTimeout(() => {
-                    scrollViewRef.current?.scrollTo({ y: 320, animated: true });
+                    scrollViewRef.current?.scrollTo({ y: 520, animated: true });
                   }, 120);
                 }}
                 keyboardType="numeric"
@@ -921,7 +1016,7 @@ export default function SubjectEditorModal() {
                 placeholderTextColor={colors.placeholderText}
                 onFocus={() => {
                   setTimeout(() => {
-                    scrollViewRef.current?.scrollTo({ y: 320, animated: true });
+                    scrollViewRef.current?.scrollTo({ y: 520, animated: true });
                   }, 120);
                 }}
                 keyboardType="numeric"
@@ -947,7 +1042,7 @@ export default function SubjectEditorModal() {
               shadowColor: colors.cardShadow,
             },
           ]}
-          className="p-5 my-2 rounded-[28px]"
+          className="p-4 my-2 rounded-[28px]"
         >
           {/* Header */}
           <View className="flex-row items-center justify-between mb-3">
@@ -1025,11 +1120,11 @@ export default function SubjectEditorModal() {
                     : '#E5E7EB',
                   borderRadius: 20,
                 }}
-                className="p-4 mb-3 border"
+                className="p-3 mb-3 border"
               >
                 {/* Day Selector Pills & Trash Action */}
                 <View className="flex-row items-center justify-between mb-3.5">
-                  <View className="flex-row items-center flex-1 justify-between mr-2">
+                  <View className="flex-row items-center flex-1 justify-between mr-1">
                     {WEEKDAY_PILLS.map((w) => {
                       const isSelected = slot.weekdays.includes(w.day);
                       return (
@@ -1054,12 +1149,12 @@ export default function SubjectEditorModal() {
                               ? 'rgba(255, 255, 255, 0.08)'
                               : '#E5E7EB',
                             flex: 1,
-                            maxWidth: 40,
+                            maxWidth: 38,
                             height: 32,
                             borderRadius: 10,
                             alignItems: 'center',
                             justifyContent: 'center',
-                            marginHorizontal: 1.5,
+                            marginHorizontal: 1,
                             borderWidth: 1,
                           }}
                         >
@@ -1107,9 +1202,9 @@ export default function SubjectEditorModal() {
 
                 {/* Time Capsule Native Clock Buttons & Duration Column */}
                 <View className="flex-row items-start justify-between">
-                  <View className="flex-row items-start">
+                  <View className="flex-row items-start flex-1 mr-1.5">
                     {/* Start Time Native Picker Button */}
-                    <View>
+                    <View className="flex-1">
                       <Text
                         style={{ color: colors.textMuted }}
                         className="text-[10px] font-semibold mb-1 uppercase tracking-wider"
@@ -1124,7 +1219,7 @@ export default function SubjectEditorModal() {
                           borderColor: colors.inputBorder,
                           height: 40,
                         }}
-                        className="px-2.5 rounded-xl border flex-row items-center justify-center min-w-[84px]"
+                        className="px-2 rounded-xl border flex-row items-center justify-center min-w-[72px] max-w-[88px]"
                       >
                         <ClockIcon
                           size={13}
@@ -1145,18 +1240,18 @@ export default function SubjectEditorModal() {
 
                     {/* Connected Arrow */}
                     <View
-                      className="px-1.5 justify-center items-center"
+                      className="px-1 justify-center items-center"
                       style={{ height: 40, marginTop: 18 }}
                     >
                       <ArrowRightIcon
-                        size={14}
+                        size={13}
                         color={colors.textMuted}
                         strokeWidth={2.4}
                       />
                     </View>
 
                     {/* End Time Native Picker Button */}
-                    <View>
+                    <View className="flex-1">
                       <Text
                         style={{ color: colors.textMuted }}
                         className="text-[10px] font-semibold mb-1 uppercase tracking-wider"
@@ -1171,7 +1266,7 @@ export default function SubjectEditorModal() {
                           borderColor: colors.inputBorder,
                           height: 40,
                         }}
-                        className="px-2.5 rounded-xl border flex-row items-center justify-center min-w-[84px]"
+                        className="px-2 rounded-xl border flex-row items-center justify-center min-w-[72px] max-w-[88px]"
                       >
                         <ClockIcon
                           size={13}
@@ -1192,7 +1287,7 @@ export default function SubjectEditorModal() {
                   </View>
 
                   {/* Duration & Day Count Column */}
-                  <View className="items-end ml-2">
+                  <View className="items-end flex-shrink-0">
                     <Text
                       style={{ color: colors.textMuted }}
                       className="text-[10px] font-semibold mb-1 uppercase tracking-wider text-right"
@@ -1219,7 +1314,7 @@ export default function SubjectEditorModal() {
                           : 'rgba(239, 68, 68, 0.25)',
                         height: 40,
                       }}
-                      className="px-3 justify-center items-end min-w-[80px]"
+                      className="px-2 justify-center items-end min-w-[68px]"
                     >
                       <Text
                         style={{
@@ -1353,6 +1448,38 @@ export default function SubjectEditorModal() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Primary Bottom Save Action */}
+        <View className="mt-3 mb-6">
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleSave}
+            disabled={isSubmitting || !name.trim()}
+            style={{
+              backgroundColor: !name.trim()
+                ? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)')
+                : '#00BF63',
+              minHeight: 48,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: isSubmitting ? 0.6 : 1,
+            }}
+          >
+            <Text
+              style={[
+                styles.sfText,
+                {
+                  color: !name.trim() ? colors.textMuted : '#06210F',
+                  fontSize: 15,
+                  fontWeight: '800',
+                },
+              ]}
+            >
+              {existingSubject ? 'Save Changes' : 'Save Subject'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -1374,9 +1501,9 @@ const styles = StyleSheet.create({
     }),
   },
   swatchItem: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },

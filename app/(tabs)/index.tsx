@@ -26,13 +26,23 @@ interface TactilePillProps {
   onPress: () => void;
   style?: any;
   className?: string;
+  hitSlop?: any;
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
-const TactilePill: React.FC<TactilePillProps> = ({ onPress, style, className = '', children }) => {
+const TactilePill: React.FC<TactilePillProps> = ({
+  onPress,
+  style,
+  className = '',
+  hitSlop = { top: 8, bottom: 8, left: 6, right: 6 },
+  disabled = false,
+  children,
+}) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
+    if (disabled) return;
     Animated.timing(scale, {
       toValue: 0.95,
       duration: 100,
@@ -41,6 +51,7 @@ const TactilePill: React.FC<TactilePillProps> = ({ onPress, style, className = '
   };
 
   const onPressOut = () => {
+    if (disabled) return;
     Animated.spring(scale, {
       toValue: 1,
       damping: 14,
@@ -53,6 +64,8 @@ const TactilePill: React.FC<TactilePillProps> = ({ onPress, style, className = '
     <Animated.View style={{ transform: [{ scale }], justifyContent: 'center', alignItems: 'center' }}>
       <TouchableOpacity
         activeOpacity={0.85}
+        disabled={disabled}
+        hitSlop={hitSlop}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={onPress}
@@ -82,6 +95,7 @@ export default function AttendanceScreen() {
     selectedDate,
     setSelectedDate,
     getPooledStats,
+    getAllSubjectStats,
     getSessionsForDate,
     markSession,
     batchMarkDay,
@@ -93,12 +107,17 @@ export default function AttendanceScreen() {
   const scrollBottomPadding = Math.max(insets.bottom, 16) + 70 + 24;
 
   const pooledStats = getPooledStats();
+  const allSubjectStats = getAllSubjectStats();
   const daySessions = getSessionsForDate(selectedDate);
   const isHoliday = isDateHoliday(selectedDate);
 
   const subjectMap = useMemo(() => {
     return new Map(subjects.map((s) => [s.id, s]));
   }, [subjects]);
+
+  const subjectStatsMap = useMemo(() => {
+    return new Map(allSubjectStats.map((st) => [st.subject.id, st]));
+  }, [allSubjectStats]);
 
   // Midnight date rollover handler when app resumes
   useEffect(() => {
@@ -251,14 +270,20 @@ export default function AttendanceScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                 {/* Batch Mark Pill */}
                 <TactilePill
+                  disabled={activeDaySessions.length === 0}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    if (activeDaySessions.length === 0) {
-                      toast.info('No classes scheduled to mark today');
-                      return;
+                    if (activeDaySessions.length === 0) return;
+                    const count = batchMarkDay(selectedDate);
+                    if (count > 0) {
+                      toast.success(
+                        count === 1
+                          ? 'Class marked Present'
+                          : `All ${count} classes marked Present`
+                      );
+                    } else {
+                      toast.info('All classes are already marked');
                     }
-                    batchMarkDay(selectedDate);
-                    toast.success('All classes marked Present');
                   }}
                   style={[
                     styles.pillButton,
@@ -267,7 +292,7 @@ export default function AttendanceScreen() {
                       backgroundColor: colors.glassBg,
                       shadowColor: colors.cardShadow,
                       flexDirection: 'row',
-                      opacity: activeDaySessions.length === 0 ? 0.45 : 1,
+                      opacity: activeDaySessions.length === 0 ? 0.35 : 1,
                     },
                   ]}
                 >
@@ -349,10 +374,11 @@ export default function AttendanceScreen() {
                   trigger={({ open }) => (
                     <TactilePill
                       onPress={open}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       style={[
                         styles.pillButton,
                         {
-                          width: 32,
+                          width: 34,
                           backgroundColor: isHoliday
                             ? isDark
                               ? 'rgba(245, 158, 11, 0.20)'
@@ -440,14 +466,28 @@ export default function AttendanceScreen() {
             )}
           </View>
         }
-        renderItem={({ item: session }) => (
-          <ClassCard
-            session={session}
-            subject={activeSubjectMap.get(session.subjectId)}
-            primaryLabel={settings.primaryCardLabel}
-            onMark={(status) => markSession(session.id, status)}
-          />
-        )}
+        renderItem={({ item: session }) => {
+          const st = subjectStatsMap.get(session.subjectId);
+          const bufferTier: 'safe' | 'warning' | 'danger' | 'neutral' =
+            !st || st.totalHeld === 0
+              ? 'neutral'
+              : st.isSafe
+              ? 'safe'
+              : st.isClose
+              ? 'warning'
+              : 'danger';
+
+          return (
+            <ClassCard
+              session={session}
+              subject={activeSubjectMap.get(session.subjectId)}
+              primaryLabel={settings.primaryCardLabel}
+              bufferLabel={st?.statusLabel}
+              bufferTier={bufferTier}
+              onMark={(status) => markSession(session.id, status)}
+            />
+          );
+        }}
       />
 
       {/* Dev-only break-ui adversarial dataset toggle */}
@@ -527,8 +567,8 @@ export default function AttendanceScreen() {
 
 const styles = StyleSheet.create({
   pillButton: {
-    height: 32,
-    borderRadius: 16,
+    height: 34,
+    borderRadius: 17,
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',

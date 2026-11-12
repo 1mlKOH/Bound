@@ -555,7 +555,7 @@ export default function OnboardingScreen() {
   ];
 
   // Dynamic ticket dimensions for Screen 3 (compact for natural card animation)
-  const ticketWidth = Math.min(270, width - 64);
+  const ticketWidth = Math.min(290, width - 48);
   const ticketHeight = 96;
   const notchX = Math.round(ticketWidth * 0.70);
   const activeCourse = PREVIEW_COURSES[selectedCourseIdx];
@@ -974,9 +974,13 @@ export default function OnboardingScreen() {
                   {/* Left Body: Subject info and buffer count */}
                   <View style={{ width: notchX - 16 }} className="justify-center py-1.5">
                     <Text
-                      style={[styles.sfText, { color: 'rgba(255, 255, 255, 0.85)' }]}
-                      className="text-[10px] font-extrabold tracking-widest uppercase mb-0.5"
+                      style={[
+                        styles.sfText,
+                        { color: 'rgba(255, 255, 255, 0.85)', letterSpacing: 0.4 },
+                      ]}
+                      className="text-[9.5px] font-extrabold uppercase mb-0.5"
                       numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
                       {activeCourse.code} · {activeCourse.days}
                     </Text>

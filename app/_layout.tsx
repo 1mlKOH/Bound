@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Toaster } from 'sonner-native';
 import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
   Figtree_400Regular,
@@ -21,6 +22,8 @@ import {
   handleNotificationResponse,
 } from '../src/utils/notifications';
 import '../global.css';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const router = useRouter();
@@ -64,6 +67,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isLoading || (!fontsLoaded && !fontError)) return;
+    SplashScreen.hideAsync().catch(() => {});
     const inOnboarding = segments[0] === 'onboarding';
     if (!hasOnboarded && !inOnboarding) {
       router.replace('/onboarding');

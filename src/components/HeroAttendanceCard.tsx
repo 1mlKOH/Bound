@@ -43,7 +43,7 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
       subtitleColor: isDark ? 'rgba(253, 230, 138, 0.80)' : '#92400E',
       badgeBg: isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)',
       badgeText: isDark ? '#FFB020' : '#B26A00',
-      badgeLabel: 'Close',
+      badgeLabel: 'Near Target',
     },
     danger: {
       cardBg: isDark ? '#240B12' : '#FFE4E6',
@@ -53,7 +53,7 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
       subtitleColor: isDark ? 'rgba(254, 205, 211, 0.80)' : '#9F1239',
       badgeBg: isDark ? 'rgba(255, 107, 114, 0.18)' : 'rgba(209, 50, 58, 0.14)',
       badgeText: isDark ? '#FF6B72' : '#D1323A',
-      badgeLabel: 'Below',
+      badgeLabel: 'Below Target',
     },
   };
 

@@ -38,7 +38,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   children,
   trigger,
   align = 'end',
-  minWidth = 224,
+  minWidth = 256,
 }) => {
   const { colors, isDark } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -272,7 +272,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                             styles.description,
                             { color: colors.textMuted },
                           ]}
-                          numberOfLines={1}
+                          numberOfLines={2}
                         >
                           {item.description}
                         </Text>
@@ -295,8 +295,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderCurve: 'continuous',
     borderWidth: 1,
-    paddingVertical: 5,
-    paddingHorizontal: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 18,
@@ -305,20 +305,20 @@ const styles = StyleSheet.create({
   },
   menuItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
+    alignItems: 'flex-start',
+    paddingVertical: 9,
     paddingHorizontal: 10,
     borderRadius: 14,
     borderCurve: 'continuous',
-    minHeight: 46,
+    minHeight: 48,
   },
   firstItem: {
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
   },
   lastItem: {
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
   },
   iconContainer: {
     width: 32,
@@ -328,10 +328,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
+    marginTop: 1.5,
   },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
+    paddingTop: 1,
   },
   labelRow: {
     flexDirection: 'row',

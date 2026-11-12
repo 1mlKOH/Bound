@@ -50,11 +50,12 @@ export function computeSubjectStats(
   } else {
     if (targetFraction >= 1) {
       mustAttend = 999;
+      statusLabel = 'Cannot reach 100%';
     } else {
       const needed = (targetFraction * totalHeld - attended) / (1 - targetFraction);
       mustAttend = Math.max(1, Math.ceil(needed));
+      statusLabel = `Attend next ${mustAttend}`;
     }
-    statusLabel = `Attend next ${mustAttend}`;
   }
 
   const isBelow = roundedPct < effectiveTarget;
