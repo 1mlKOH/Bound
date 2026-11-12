@@ -360,6 +360,12 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
     cells.push(null);
   }
 
+  // Group month cells into rows of 7 for pixel-perfect column alignment
+  const monthRows: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    monthRows.push(cells.slice(i, i + 7));
+  }
+
   // --- MONTH VIEW ---
   const renderMonthView = () => (
     <View>
@@ -380,9 +386,9 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
       </View>
 
       {/* Weekday Labels (M T W T F S S) */}
-      <View className="flex-row justify-between mb-3">
+      <View className="flex-row mb-3">
         {WEEKDAYS.map((label, idx) => (
-          <View key={idx} className="w-10 items-center">
+          <View key={idx} style={{ flex: 1 }} className="items-center justify-center">
             <Text
               style={{
                 color: idx === 6 ? '#FF6B72' : colors.textMuted,
@@ -398,80 +404,85 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
       {/* Calendar Grid */}
       <Animated.View
         style={{ opacity: gridFade, transform: [{ translateX: gridTranslateX }] }}
-        className="flex-row flex-wrap"
       >
-        {cells.map((dayNum, idx) => {
-          if (dayNum === null) {
-            return <View key={idx} className="w-[14.28%] h-12" />;
-          }
+        {monthRows.map((row, rowIdx) => (
+          <View key={rowIdx} className="flex-row h-12">
+            {row.map((dayNum, colIdx) => {
+              const cellIdx = rowIdx * 7 + colIdx;
+              if (dayNum === null) {
+                return <View key={cellIdx} style={{ flex: 1 }} className="h-12" />;
+              }
 
-          const monthStr = String(currentMonth + 1).padStart(2, '0');
-          const dayStr = String(dayNum).padStart(2, '0');
-          const cellDateStr = `${currentYear}-${monthStr}-${dayStr}`;
-          const isSelected = selectedDate === cellDateStr;
-          const isSunday = idx % 7 === 6;
-          const status = dayStatusMap.get(cellDateStr);
+              const monthStr = String(currentMonth + 1).padStart(2, '0');
+              const dayStr = String(dayNum).padStart(2, '0');
+              const cellDateStr = `${currentYear}-${monthStr}-${dayStr}`;
+              const isSelected = selectedDate === cellDateStr;
+              const isSunday = colIdx === 6;
+              const status = dayStatusMap.get(cellDateStr);
 
-          return (
-            <TouchableOpacity
-              key={idx}
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                onSelectDate(cellDateStr);
-              }}
-              className="w-[14.28%] h-12 items-center justify-center relative"
-            >
-              <View
-                style={[
-                  isSelected && styles.selectedCell,
-                  {
-                    borderRadius: 12,
-                    borderCurve: 'continuous',
-                    backgroundColor: isSelected
-                      ? colors.presentBadgeBg
-                      : 'transparent',
-                  },
-                ]}
-                className="w-9 h-9 items-center justify-center"
-              >
-                <Text
-                  style={[
-                    styles.sfText,
-                    {
-                      letterSpacing: -0.1,
-                      color: isSunday
-                        ? '#FF6B72'
-                        : isSelected
-                        ? colors.text
-                        : colors.textSecondary,
-                      fontWeight: isSelected ? '700' : '600',
-                      fontVariant: ['tabular-nums'],
-                    },
-                  ]}
-                  className="text-[13px]"
+              return (
+                <TouchableOpacity
+                  key={cellIdx}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    onSelectDate(cellDateStr);
+                  }}
+                  style={{ flex: 1 }}
+                  className="h-12 items-center justify-center relative"
                 >
-                  {dayNum}
-                </Text>
-
-                {/* Status indicator dot */}
-                {(isSelected || status) && (
                   <View
-                    className="w-1.5 h-1.5 rounded-full mt-0.5"
-                    style={{
-                      backgroundColor:
-                        status === 'red'
-                          ? '#FF6B72'
-                          : status === 'amber'
-                          ? '#FFB020'
-                          : colors.statusSafe,
-                    }}
-                  />
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                    style={[
+                      isSelected && styles.selectedCell,
+                      {
+                        borderRadius: 12,
+                        borderCurve: 'continuous',
+                        backgroundColor: isSelected
+                          ? colors.presentBadgeBg
+                          : 'transparent',
+                      },
+                    ]}
+                    className="w-9 h-9 items-center justify-center"
+                  >
+                    <Text
+                      style={[
+                        styles.sfText,
+                        {
+                          letterSpacing: -0.1,
+                          color: isSunday
+                            ? '#FF6B72'
+                            : isSelected
+                            ? colors.text
+                            : colors.textSecondary,
+                          fontWeight: isSelected ? '700' : '600',
+                          fontVariant: ['tabular-nums'],
+                        },
+                      ]}
+                      className="text-[13px]"
+                    >
+                      {dayNum}
+                    </Text>
+
+                    {/* Status indicator dot */}
+                    {(isSelected || status) && (
+                      <View
+                        className="w-1.5 h-1.5 rounded-full mt-0.5"
+                        style={{
+                          backgroundColor:
+                            status === 'red'
+                              ? '#FF6B72'
+                              : status === 'amber'
+                              ? '#FFB020'
+                              : colors.statusSafe,
+                        }}
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </Animated.View>
     </View>
   );
@@ -510,9 +521,9 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
         </View>
 
         {/* Weekday Labels (M T W T F S S) */}
-        <View className="flex-row justify-between mb-2">
+        <View className="flex-row mb-2">
           {WEEKDAYS.map((label, idx) => (
-            <View key={idx} className="w-10 items-center">
+            <View key={idx} style={{ flex: 1 }} className="items-center justify-center">
               <Text
                 style={{
                   color: idx === 6 ? '#FF6B72' : colors.textMuted,
@@ -531,7 +542,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
             opacity: weekFade,
             transform: [{ translateX: weekTranslateX }],
           }}
-          className="flex-row justify-between mb-4"
+          className="flex-row mb-4"
         >
           {weekDates.map((dateStr, idx) => {
             const isSelected = selectedDate === dateStr;
@@ -669,7 +680,8 @@ const WeekDateCell: React.FC<WeekDateCellProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
-      className="w-10 items-center justify-center relative"
+      style={{ flex: 1 }}
+      className="items-center justify-center relative"
     >
       <Animated.View
         style={[
