@@ -17,7 +17,7 @@ const dummySubject: Subject = {
   createdAt: '2026-09-01T00:00:00Z',
 };
 
-test('generateClassReminderCopy formats safe buffer alerts correctly', () => {
+test('generateClassReminderCopy formats safe buffer alerts correctly without emojis', () => {
   const safeStats: SubjectStats = {
     subject: dummySubject,
     attended: 37,
@@ -34,13 +34,13 @@ test('generateClassReminderCopy formats safe buffer alerts correctly', () => {
   };
 
   const copy = generateClassReminderCopy(dummySubject, safeStats, '10:00', 15);
-  assert.equal(copy.title, '📚 Physics starts in 15m');
+  assert.equal(copy.title, 'Physics starts in 15m');
   assert.match(copy.body, /Safe buffer: \+4 skips available/);
   assert.match(copy.body, /82\.2%/);
   assert.match(copy.body, /Class starts at 10:00/);
 });
 
-test('generateClassReminderCopy formats zero-skip safe buffer correctly', () => {
+test('generateClassReminderCopy formats zero-skip safe buffer correctly without emojis', () => {
   const zeroSkipStats: SubjectStats = {
     subject: dummySubject,
     attended: 30,
@@ -57,12 +57,12 @@ test('generateClassReminderCopy formats zero-skip safe buffer correctly', () => 
   };
 
   const copy = generateClassReminderCopy(dummySubject, zeroSkipStats, '11:30', 5);
-  assert.equal(copy.title, '⚡ Physics starts in 5m (75%)');
-  assert.match(copy.body, /On the edge of your 75% target/);
-  assert.match(copy.body, /Missing today will drop you below cutoff!/);
+  assert.equal(copy.title, 'Physics starts in 5m (75%)');
+  assert.match(copy.body, /Near your 75% target cutoff/);
+  assert.match(copy.body, /Missing today will drop you below target\./);
 });
 
-test('generateClassReminderCopy formats at-risk alert when below cutoff', () => {
+test('generateClassReminderCopy formats at-risk alert when below cutoff without emojis', () => {
   const riskStats: SubjectStats = {
     subject: dummySubject,
     attended: 17,
@@ -79,10 +79,10 @@ test('generateClassReminderCopy formats at-risk alert when below cutoff', () => 
   };
 
   const copy = generateClassReminderCopy(dummySubject, riskStats, '14:00', 10);
-  assert.equal(copy.title, '⚠️ Physics starts in 10m (70.8%)');
+  assert.equal(copy.title, 'Physics starts in 10m (70.8%)');
   assert.match(copy.body, /Cutoff is 75%/);
   assert.match(copy.body, /Need next 4 classes to recover/);
-  assert.match(copy.body, /Attendance required today!/);
+  assert.match(copy.body, /Attendance required today\./);
 });
 
 test('generateClassReminderCopy handles singular class recovery grammar', () => {

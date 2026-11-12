@@ -90,14 +90,14 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
     await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.CLASS_REMINDER, [
       {
         identifier: NOTIFICATION_ACTIONS.MARK_PRESENT,
-        buttonTitle: '✅ Attended',
+        buttonTitle: 'Attended',
         options: {
           opensAppToForeground: true,
         },
       },
       {
         identifier: NOTIFICATION_ACTIONS.MARK_ABSENT,
-        buttonTitle: '❌ Missed',
+        buttonTitle: 'Missed',
         options: {
           isDestructive: true,
           opensAppToForeground: true,
@@ -105,7 +105,7 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
       },
       {
         identifier: NOTIFICATION_ACTIONS.VIEW_TIMETABLE,
-        buttonTitle: '📅 View Today',
+        buttonTitle: 'View Today',
         options: {
           opensAppToForeground: true,
         },
@@ -199,8 +199,8 @@ export async function syncScheduledNotifications(
     if (settings.sundayDigestEnabled) {
       const sundayBody =
         pooled.subjectsBelowTarget > 0
-          ? `⚠️ ${pooled.subjectsBelowTarget} subject${pooled.subjectsBelowTarget > 1 ? 's are' : ' is'} below target (${settings.globalTargetPct}%). Review your attendance and plan next week!`
-          : `🎉 All subjects on track (${pooled.pooledPercentage}% overall). Have a great week ahead!`;
+          ? `${pooled.subjectsBelowTarget} subject${pooled.subjectsBelowTarget > 1 ? 's are' : ' is'} below target (${settings.globalTargetPct}%). Review your attendance and plan next week.`
+          : `All subjects are on track (${pooled.pooledPercentage}% overall). Have a great week ahead.`;
 
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -403,11 +403,11 @@ export async function sendTestNotification(
 
   const isSafe = variant === 'safe';
   const title = isSafe
-    ? `📚 ${sampleSubject.name} starts in 15m`
-    : `⚠️ ${sampleSubject.name} starts in 15m (74.0%)`;
+    ? `${sampleSubject.name} starts in 15m`
+    : `${sampleSubject.name} starts in 15m (${isSafe ? '82.0%' : '74.0%'})`;
   const body = isSafe
     ? 'Safe buffer: +4 skips banked. Class starts at 10:00.'
-    : 'Cutoff is 75%. Attendance required today! Need next 2 classes to recover.';
+    : 'Cutoff is 75%. Attendance required today. Need next 2 classes to recover.';
 
   await Notifications.scheduleNotificationAsync({
     content: {
