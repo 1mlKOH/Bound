@@ -19,18 +19,19 @@ import { ChevronLeftIcon, RefreshIcon, PlusIcon, MinusIcon } from '../../src/com
 import { AttendanceStatus } from '../../src/types';
 import { fontFamilyNames } from '../../src/utils/typography';
 
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export default function SubjectDetailStatsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
 
-  const {
-    subjects,
-    sessions,
-    markSession,
-    settings,
-  } = useAttendanceStore();
+  const subjects = useAttendanceStore((state) => state.subjects);
+  const sessions = useAttendanceStore((state) => state.sessions);
+  const markSession = useAttendanceStore((state) => state.markSession);
+  const settings = useAttendanceStore((state) => state.settings);
 
   const [activeSubjectId, setActiveSubjectId] = useState<string>(id || subjects[0]?.id || '');
 
@@ -132,12 +133,12 @@ export default function SubjectDetailStatsScreen() {
     ? isDark ? '#FFB020' : '#D97706'
     : isDark ? '#FF6B72' : '#DC2626';
 
-  // Format date helper: "Nov 3  Tue · 11:00"
+  // Fast date formatting without Hermes Intl overhead: "Nov 3  Tue · 11:00"
   const formatSessionLabel = (dateStr: string, time?: string) => {
     const [y, m, d] = dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
-    const monthStr = dateObj.toLocaleDateString('en-US', { month: 'short' });
-    const weekdayStr = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthStr = SHORT_MONTHS[m - 1] || '';
+    const weekdayStr = SHORT_DAYS[dateObj.getDay()] || '';
     const timeStr = time ? ` · ${time}` : '';
     return `${monthStr} ${d}  ${weekdayStr}${timeStr}`;
   };
@@ -471,15 +472,19 @@ export default function SubjectDetailStatsScreen() {
               <Text style={[styles.sfText, { color: colors.textDim }]} className="text-xs mb-1">
                 Attended
               </Text>
-              <NumberFlow
-                value={simAttended}
-                style={{
-                  fontFamily: fontFamilyNames.bold,
-                  fontSize: 19,
-                  fontWeight: '700',
-                  color: colors.text,
-                }}
-              />
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    fontFamily: fontFamilyNames.bold,
+                    fontSize: 19,
+                    color: colors.text,
+                    fontVariant: ['tabular-nums'],
+                  },
+                ]}
+              >
+                {simAttended}
+              </Text>
             </View>
 
             <View style={{ width: 1, height: 26, backgroundColor: colors.divider }} />
@@ -488,15 +493,19 @@ export default function SubjectDetailStatsScreen() {
               <Text style={[styles.sfText, { color: colors.textDim }]} className="text-xs mb-1">
                 Missed
               </Text>
-              <NumberFlow
-                value={simMissed}
-                style={{
-                  fontFamily: fontFamilyNames.bold,
-                  fontSize: 19,
-                  fontWeight: '700',
-                  color: colors.text,
-                }}
-              />
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    fontFamily: fontFamilyNames.bold,
+                    fontSize: 19,
+                    color: colors.text,
+                    fontVariant: ['tabular-nums'],
+                  },
+                ]}
+              >
+                {simMissed}
+              </Text>
             </View>
 
             <View style={{ width: 1, height: 26, backgroundColor: colors.divider }} />
@@ -505,15 +514,19 @@ export default function SubjectDetailStatsScreen() {
               <Text style={[styles.sfText, { color: colors.textDim }]} className="text-xs mb-1">
                 Total Held
               </Text>
-              <NumberFlow
-                value={simTotalHeld}
-                style={{
-                  fontFamily: fontFamilyNames.bold,
-                  fontSize: 19,
-                  fontWeight: '700',
-                  color: colors.text,
-                }}
-              />
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    fontFamily: fontFamilyNames.bold,
+                    fontSize: 19,
+                    color: colors.text,
+                    fontVariant: ['tabular-nums'],
+                  },
+                ]}
+              >
+                {simTotalHeld}
+              </Text>
             </View>
           </View>
         </View>

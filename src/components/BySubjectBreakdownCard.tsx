@@ -46,7 +46,7 @@ const SubjectRow: React.FC<{
   const onPressIn = () => {
     Animated.timing(scale, {
       toValue: 0.98,
-      duration: 100,
+      duration: 40,
       useNativeDriver: true,
     }).start();
   };
@@ -62,16 +62,14 @@ const SubjectRow: React.FC<{
 
   const handlePress = () => {
     Haptics.selectionAsync();
-    router.push({
-      pathname: '/stats/[id]',
-      params: { id: subject.id },
-    });
+    router.push(`/stats/${subject.id}`);
   };
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
-        activeOpacity={0.88}
+        activeOpacity={0.82}
+        delayPressIn={0}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={handlePress}

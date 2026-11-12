@@ -131,6 +131,7 @@ export default function RootLayout() {
             options={{
               headerShown: false,
               animation: 'slide_from_right',
+              animationDuration: 220,
               contentStyle: { backgroundColor: colors.canvas },
             }}
           />
