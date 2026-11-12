@@ -9,6 +9,7 @@ import {
   Easing,
   LayoutAnimation,
   UIManager,
+  AccessibilityInfo,
 } from 'react-native';
 import { Haptics } from '../utils/haptics';
 import { Session, Subject, ScheduleSlot } from '../types';
@@ -100,8 +101,9 @@ const TactileChevronButton: React.FC<{
 
   const onPressIn = () => {
     Animated.timing(scale, {
-      toValue: 0.92,
-      duration: 100,
+      toValue: 0.96,
+      duration: 80,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
   };
@@ -109,8 +111,9 @@ const TactileChevronButton: React.FC<{
   const onPressOut = () => {
     Animated.spring(scale, {
       toValue: 1,
-      damping: 14,
-      stiffness: 240,
+      damping: 16,
+      stiffness: 320,
+      mass: 0.5,
       useNativeDriver: true,
     }).start();
   };
@@ -182,6 +185,14 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
     }
   }, [currentWeekMonday, viewMode, getSessionsForDate]);
 
+  // Reduced motion support
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => sub?.remove();
+  }, []);
+
   // Animated transitions
   const gridFade = useRef(new Animated.Value(1)).current;
   const gridTranslateX = useRef(new Animated.Value(0)).current;
@@ -191,20 +202,32 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
 
   const triggerMonthTransition = (direction: 'left' | 'right') => {
     Haptics.selectionAsync();
-    gridFade.setValue(0.68);
-    gridTranslateX.setValue(direction === 'left' ? 14 : -14);
+    gridFade.stopAnimation();
+    gridTranslateX.stopAnimation();
+    if (reduceMotion) {
+      gridFade.setValue(0.5);
+      gridTranslateX.setValue(0);
+      Animated.timing(gridFade, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    gridFade.setValue(0.35);
+    gridTranslateX.setValue(direction === 'left' ? 18 : -18);
     Animated.parallel([
       Animated.timing(gridFade, {
         toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
+        duration: 200,
+        easing: Easing.bezier(0.23, 1, 0.32, 1),
         useNativeDriver: true,
       }),
       Animated.spring(gridTranslateX, {
         toValue: 0,
-        damping: 18,
-        stiffness: 240,
-        mass: 0.7,
+        damping: 20,
+        stiffness: 260,
+        mass: 0.65,
         useNativeDriver: true,
       }),
     ]).start();
@@ -232,20 +255,32 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
 
   const triggerWeekTransition = (direction: 'left' | 'right') => {
     Haptics.selectionAsync();
-    weekFade.setValue(0.68);
-    weekTranslateX.setValue(direction === 'left' ? 14 : -14);
+    weekFade.stopAnimation();
+    weekTranslateX.stopAnimation();
+    if (reduceMotion) {
+      weekFade.setValue(0.5);
+      weekTranslateX.setValue(0);
+      Animated.timing(weekFade, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    weekFade.setValue(0.35);
+    weekTranslateX.setValue(direction === 'left' ? 18 : -18);
     Animated.parallel([
       Animated.timing(weekFade, {
         toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
+        duration: 200,
+        easing: Easing.bezier(0.23, 1, 0.32, 1),
         useNativeDriver: true,
       }),
       Animated.spring(weekTranslateX, {
         toValue: 0,
-        damping: 18,
-        stiffness: 240,
-        mass: 0.7,
+        damping: 20,
+        stiffness: 260,
+        mass: 0.65,
         useNativeDriver: true,
       }),
     ]).start();
@@ -374,12 +409,19 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
         <TactileChevronButton onPress={prevMonth}>
           <ChevronLeftIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
         </TactileChevronButton>
-        <Text
-          style={[styles.sfText, { color: colors.text }]}
-          className="text-base font-bold tracking-wide"
+        <Animated.View
+          style={{
+            opacity: gridFade,
+            transform: [{ translateX: gridTranslateX }],
+          }}
         >
-          {MONTH_NAMES[currentMonth]} {currentYear}
-        </Text>
+          <Text
+            style={[styles.sfText, { color: colors.text }]}
+            className="text-base font-bold tracking-wide"
+          >
+            {MONTH_NAMES[currentMonth]} {currentYear}
+          </Text>
+        </Animated.View>
         <TactileChevronButton onPress={nextMonth}>
           <ChevronRightIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
         </TactileChevronButton>
@@ -536,83 +578,85 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
           ))}
         </View>
 
-        {/* Weekday Date Strip */}
+        {/* Coordinated Week Body Transition */}
         <Animated.View
           style={{
             opacity: weekFade,
             transform: [{ translateX: weekTranslateX }],
           }}
-          className="flex-row mb-4"
         >
-          {weekDates.map((dateStr, idx) => {
-            const isSelected = selectedDate === dateStr;
-            const isSunday = idx === 6;
-            const dayNum = Number(dateStr.slice(8, 10));
-            const status = dayStatusMap.get(dateStr);
+          {/* Weekday Date Strip */}
+          <View className="flex-row mb-4">
+            {weekDates.map((dateStr, idx) => {
+              const isSelected = selectedDate === dateStr;
+              const isSunday = idx === 6;
+              const dayNum = Number(dateStr.slice(8, 10));
+              const status = dayStatusMap.get(dateStr);
 
-            return (
-              <WeekDateCell
-                key={dateStr}
-                dateStr={dateStr}
-                isSelected={isSelected}
-                isSunday={isSunday}
-                dayNum={dayNum}
-                status={status}
-                isDark={isDark}
-                colors={colors}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  onSelectDate(dateStr);
-                  // Auto-expand this day's card if it was collapsed
-                  if (collapsedDays[dateStr]) {
+              return (
+                <WeekDateCell
+                  key={dateStr}
+                  dateStr={dateStr}
+                  isSelected={isSelected}
+                  isSunday={isSunday}
+                  dayNum={dayNum}
+                  status={status}
+                  isDark={isDark}
+                  colors={colors}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    onSelectDate(dateStr);
+                    // Auto-expand this day's card if it was collapsed
+                    if (collapsedDays[dateStr]) {
+                      LayoutAnimation.configureNext(
+                        LayoutAnimation.create(200, 'easeOut', 'opacity')
+                      );
+                      setCollapsedDays((prev) => ({
+                        ...prev,
+                        [dateStr]: false,
+                      }));
+                    }
+                  }}
+                />
+              );
+            })}
+          </View>
+
+          {/* Subtle Divider */}
+          <View className="h-[1px] bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.08)] mb-4" />
+
+          {/* 7 Daily Agenda Cards */}
+          <View>
+            {weekDates.map((dateStr) => {
+              const daySessions = getDaySessions(dateStr);
+              const isSelected = selectedDate === dateStr;
+              const isCollapsed =
+                collapsedDays[dateStr] ?? (daySessions.length === 0);
+
+              return (
+                <CollapsibleDayCard
+                  key={dateStr}
+                  dateStr={dateStr}
+                  isToday={dateStr === todayDate}
+                  isSelected={isSelected}
+                  sessions={daySessions}
+                  subjectsMap={subjectsMap}
+                  isCollapsed={isCollapsed}
+                  onToggleCollapse={() => {
                     LayoutAnimation.configureNext(
                       LayoutAnimation.create(200, 'easeOut', 'opacity')
                     );
                     setCollapsedDays((prev) => ({
                       ...prev,
-                      [dateStr]: false,
+                      [dateStr]: !isCollapsed,
                     }));
-                  }
-                }}
-              />
-            );
-          })}
+                  }}
+                  onSelect={() => onSelectDate(dateStr)}
+                />
+              );
+            })}
+          </View>
         </Animated.View>
-
-        {/* Subtle Divider */}
-        <View className="h-[1px] bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.08)] mb-4" />
-
-        {/* 7 Daily Agenda Cards */}
-        <View>
-          {weekDates.map((dateStr) => {
-            const daySessions = getDaySessions(dateStr);
-            const isSelected = selectedDate === dateStr;
-            const isCollapsed =
-              collapsedDays[dateStr] ?? (daySessions.length === 0);
-
-            return (
-              <CollapsibleDayCard
-                key={dateStr}
-                dateStr={dateStr}
-                isToday={dateStr === todayDate}
-                isSelected={isSelected}
-                sessions={daySessions}
-                subjectsMap={subjectsMap}
-                isCollapsed={isCollapsed}
-                onToggleCollapse={() => {
-                  LayoutAnimation.configureNext(
-                    LayoutAnimation.create(200, 'easeOut', 'opacity')
-                  );
-                  setCollapsedDays((prev) => ({
-                    ...prev,
-                    [dateStr]: !isCollapsed,
-                  }));
-                }}
-                onSelect={() => onSelectDate(dateStr)}
-              />
-            );
-          })}
-        </View>
       </View>
     );
   };
