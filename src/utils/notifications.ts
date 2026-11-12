@@ -2,11 +2,15 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { Settings, ScheduleSlot, Subject, Session, Holiday, SubjectStats } from '../types';
 import { computeSubjectStats, computePooledStats, getTodayDateString } from '../domain/attendance';
-import { generateClassReminderCopy } from '../domain/notifications';
+import {
+  generateClassReminderCopy,
+  generateUnmarkedCatchupCopy,
+  getUnmarkedCountForDate,
+} from '../domain/notifications';
 import { Haptics } from './haptics';
 import { toast } from 'sonner-native';
 
-export { generateClassReminderCopy };
+export { generateClassReminderCopy, generateUnmarkedCatchupCopy, getUnmarkedCountForDate };
 
 // Set up notification display behavior
 Notifications.setNotificationHandler({
@@ -62,8 +66,8 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
       });
 
       await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNELS.DAILY_CHECK, {
-        name: 'Daily Attendance Check',
-        description: 'Evening reminders to log attendance for the day',
+        name: 'Unmarked Class Reminders',
+        description: 'Evening reminders for unlogged classes',
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 200],
         lightColor: '#3DDC84',
@@ -131,7 +135,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 
 /**
  * Reschedules all local notifications according to user settings, active schedule slots,
- * and current attendance stats (generating smart contextual copy).
+ * and current attendance stats (generating smart contextual copy and conditionally scheduling
+ * evening catch-up reminders only when classes are left unmarked).
  */
 export async function syncScheduledNotifications(
   settings: Settings,
@@ -165,34 +170,66 @@ export async function syncScheduledNotifications(
     }
     const pooled = computePooledStats(allStats, settings.globalTargetPct);
 
-    // 2. Schedule Daily Evening Alert if enabled
+    // 2. Schedule Unmarked Class Catch-up Reminders if enabled
+    // Only schedules if there are active, unlogged classes for that day!
     if (settings.dailyReminderEnabled) {
       const [hourStr, minuteStr] = settings.dailyReminderTime.split(':');
       const hour = parseInt(hourStr, 10) || 18;
       const minute = parseInt(minuteStr, 10) || 0;
 
-      const dailyBody =
-        pooled.subjectsBelowTarget > 0
-          ? `Log today's classes! ${pooled.subjectsBelowTarget} subject${pooled.subjectsBelowTarget > 1 ? 's are' : ' is'} below your ${settings.globalTargetPct}% target.`
-          : "Don't forget to mark your class attendance for today!";
+      // Check today (day 0) and upcoming active days (up to 6 days ahead)
+      for (let daysAhead = 0; daysAhead < 7; daysAhead++) {
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + daysAhead);
+        targetDate.setHours(hour, minute, 0, 0);
 
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Daily Attendance Check',
-          body: dailyBody,
-          sound: true,
-          data: {
-            type: 'DAILY_CHECK',
-          },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-          channelId: NOTIFICATION_CHANNELS.DAILY_CHECK,
-          hour,
-          minute,
-          repeats: true,
-        },
-      });
+        // If reminder time has already passed for today, skip
+        if (targetDate.getTime() <= Date.now()) {
+          continue;
+        }
+
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDate.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+        const dayOfWeek = targetDate.getDay();
+
+        const unmarked = getUnmarkedCountForDate(
+          dateStr,
+          dayOfWeek,
+          slots,
+          activeSubjectsMap,
+          sessions,
+          holidaysSet
+        );
+
+        // Only schedule if there are actually unmarked classes for this day!
+        if (unmarked.count > 0) {
+          const { title, body } = generateUnmarkedCatchupCopy(
+            unmarked.count,
+            unmarked.sampleSubjectName
+          );
+
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title,
+              body,
+              sound: true,
+              categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
+              data: {
+                type: 'UNMARKED_CHECK',
+                date: dateStr,
+                unmarkedCount: unmarked.count,
+              },
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: targetDate,
+              channelId: NOTIFICATION_CHANNELS.DAILY_CHECK,
+            },
+          });
+        }
+      }
     }
 
     // 3. Schedule Weekly Sunday Digest if enabled
@@ -388,16 +425,17 @@ export async function sendTestNotification(
   if (variant === 'daily') {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Daily Attendance Check',
-        body: "Don't forget to log your class attendance for today!",
+        title: 'Unmarked Classes Remaining',
+        body: 'You have 2 classes left to mark today (Physics, Calculus). Tap to log your attendance.',
         sound: true,
-        data: { type: 'DAILY_CHECK' },
+        categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
+        data: { type: 'UNMARKED_CHECK' },
       },
       trigger: {
         channelId: NOTIFICATION_CHANNELS.DAILY_CHECK,
       },
     });
-    toast.info('Test daily notification sent!');
+    toast.info('Test unmarked class alert sent!');
     return;
   }
 

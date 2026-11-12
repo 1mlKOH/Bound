@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateClassReminderCopy } from '../notifications.ts';
-import type { Subject, SubjectStats } from '../../types/index.ts';
+import {
+  generateClassReminderCopy,
+  generateUnmarkedCatchupCopy,
+  getUnmarkedCountForDate,
+} from '../notifications.ts';
+import type { Subject, SubjectStats, ScheduleSlot, Session } from '../../types/index.ts';
 
 const dummySubject: Subject = {
   id: 'sub-1',
@@ -103,4 +107,105 @@ test('generateClassReminderCopy handles singular class recovery grammar', () => 
 
   const copy = generateClassReminderCopy(dummySubject, riskStatsSingular, '09:00', 5);
   assert.match(copy.body, /Need next 1 class to recover/);
+});
+
+test('generateUnmarkedCatchupCopy formats single unmarked class with subject name', () => {
+  const copy = generateUnmarkedCatchupCopy(1, 'Calculus');
+  assert.equal(copy.title, 'Unmarked Class Remaining');
+  assert.equal(
+    copy.body,
+    'You have 1 class left to mark today (Calculus). Tap to log your attendance.'
+  );
+});
+
+test('generateUnmarkedCatchupCopy formats multiple unmarked classes', () => {
+  const copy = generateUnmarkedCatchupCopy(3);
+  assert.equal(copy.title, 'Unmarked Classes Remaining');
+  assert.equal(
+    copy.body,
+    'You have 3 classes left to mark today. Tap to log your attendance.'
+  );
+});
+
+test('getUnmarkedCountForDate returns 0 on holidays', () => {
+  const holidays = new Set(['2026-11-12']);
+  const result = getUnmarkedCountForDate(
+    '2026-11-12',
+    4,
+    [],
+    new Map(),
+    [],
+    holidays
+  );
+  assert.equal(result.count, 0);
+});
+
+test('getUnmarkedCountForDate accurately reports unmarked slots and ignores marked sessions', () => {
+  const slot1: ScheduleSlot = {
+    id: 'slot-1',
+    subjectId: 'sub-1',
+    weekday: 1, // Mon
+    startTime: '09:00',
+    endTime: '10:00',
+    effectiveFrom: '2026-09-01',
+    effectiveTo: null,
+  };
+  const slot2: ScheduleSlot = {
+    id: 'slot-2',
+    subjectId: 'sub-1',
+    weekday: 1, // Mon
+    startTime: '11:00',
+    endTime: '12:00',
+    effectiveFrom: '2026-09-01',
+    effectiveTo: null,
+  };
+
+  const subjectsMap = new Map([['sub-1', dummySubject]]);
+
+  // Case A: 2 slots on Monday, 0 sessions marked yet
+  const resA = getUnmarkedCountForDate('2026-11-16', 1, [slot1, slot2], subjectsMap, [], new Set());
+  assert.equal(resA.count, 2);
+  assert.equal(resA.sampleSubjectName, 'Physics');
+
+  // Case B: 1 marked as present, 1 unmarked
+  const session1: Session = {
+    id: 'sess-1',
+    subjectId: 'sub-1',
+    slotId: 'slot-1',
+    date: '2026-11-16',
+    startTime: '09:00',
+    endTime: '10:00',
+    status: 'present',
+    markedAt: '2026-11-16T09:30:00Z',
+  };
+  const resB = getUnmarkedCountForDate(
+    '2026-11-16',
+    1,
+    [slot1, slot2],
+    subjectsMap,
+    [session1],
+    new Set()
+  );
+  assert.equal(resB.count, 1);
+
+  // Case C: Both marked (present & absent) -> 0 unmarked
+  const session2: Session = {
+    id: 'sess-2',
+    subjectId: 'sub-1',
+    slotId: 'slot-2',
+    date: '2026-11-16',
+    startTime: '11:00',
+    endTime: '12:00',
+    status: 'absent',
+    markedAt: '2026-11-16T12:05:00Z',
+  };
+  const resC = getUnmarkedCountForDate(
+    '2026-11-16',
+    1,
+    [slot1, slot2],
+    subjectsMap,
+    [session1, session2],
+    new Set()
+  );
+  assert.equal(resC.count, 0);
 });
