@@ -12,7 +12,7 @@ import {
   AccessibilityInfo,
 } from 'react-native';
 import { Haptics } from '../utils/haptics';
-import { Session, Subject, ScheduleSlot } from '../types';
+import { Session, Subject, ScheduleSlot, Holiday } from '../types';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -21,6 +21,7 @@ import {
 import { useTheme } from '../utils/theme';
 import { fontFamilyNames } from '../utils/typography';
 import { SegmentedControl } from './SegmentedControl';
+import { DayLogSheet } from './DayLogSheet';
 import {
   isSlotEffectiveOnDate,
   isSubjectActiveOnDate,
@@ -42,6 +43,7 @@ interface CalendarCardProps {
   sessions: Session[];
   subjects?: Subject[];
   scheduleSlots?: ScheduleSlot[];
+  holidays?: Holiday[];
   getSessionsForDate?: (dateStr: string) => Session[];
   onSelectDate: (dateStr: string) => void;
   viewMode: 'month' | 'week';
@@ -142,6 +144,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
   sessions,
   subjects = [],
   scheduleSlots = [],
+  holidays = [],
   getSessionsForDate,
   onSelectDate,
   viewMode,
@@ -149,6 +152,10 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
   todayDate = getTodayDateString(),
 }) => {
   const { colors, isDark } = useTheme();
+
+  // Day lecture log sheet state for month view
+  const [sheetDate, setSheetDate] = useState<string | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // Month navigation state
   const [currentYear, setCurrentYear] = useState(() => {
@@ -478,6 +485,8 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
                   onPress={() => {
                     Haptics.selectionAsync();
                     onSelectDate(cellDateStr);
+                    setSheetDate(cellDateStr);
+                    setIsSheetOpen(true);
                   }}
                   style={{ flex: 1 }}
                   className="h-12 items-center justify-center relative"
@@ -541,6 +550,17 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
           </View>
         ))}
       </Animated.View>
+
+      {/* Read-Only Day Lecture Log Bottom Sheet */}
+      <DayLogSheet
+        visible={isSheetOpen}
+        dateStr={sheetDate}
+        sessions={sheetDate ? getDaySessions(sheetDate) : []}
+        subjectsMap={subjectsMap}
+        holidays={holidays}
+        todayDate={todayDate}
+        onClose={() => setIsSheetOpen(false)}
+      />
     </View>
   );
 

@@ -19,6 +19,7 @@ export default function StatsScreen() {
     sessions,
     subjects,
     scheduleSlots,
+    holidays,
     getSessionsForDate,
     getAllSubjectStats,
   } = useAttendanceStore();
@@ -48,6 +49,7 @@ export default function StatsScreen() {
           sessions={sessions}
           subjects={subjects}
           scheduleSlots={scheduleSlots}
+          holidays={holidays}
           getSessionsForDate={getSessionsForDate}
           onSelectDate={setSelectedDate}
           viewMode={statsFilter}
