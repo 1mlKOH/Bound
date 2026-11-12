@@ -19,6 +19,7 @@ import {
   ChevronDownIcon,
 } from './icons';
 import { useTheme } from '../utils/theme';
+import { SegmentedControl } from './SegmentedControl';
 import {
   isSlotEffectiveOnDate,
   isSubjectActiveOnDate,
@@ -43,6 +44,7 @@ interface CalendarCardProps {
   getSessionsForDate?: (dateStr: string) => Session[];
   onSelectDate: (dateStr: string) => void;
   viewMode: 'month' | 'week';
+  onViewModeChange?: (mode: 'month' | 'week') => void;
   todayDate?: string;
 }
 
@@ -142,6 +144,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
   getSessionsForDate,
   onSelectDate,
   viewMode,
+  onViewModeChange,
   todayDate = getTodayDateString(),
 }) => {
   const { colors, isDark } = useTheme();
@@ -674,6 +677,28 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
       ]}
       className="mx-4 my-2 p-5"
     >
+      {/* Card Header: "Calendar log" + Month/Week Segmented Control */}
+      <View className="flex-row items-center justify-between mb-4">
+        <Text
+          style={[styles.sfText, { letterSpacing: -0.3, color: colors.text }]}
+          className="text-[17px] font-semibold"
+        >
+          Calendar log
+        </Text>
+        {onViewModeChange && (
+          <View style={{ width: 144 }}>
+            <SegmentedControl
+              options={[
+                { label: 'Month', value: 'month' },
+                { label: 'Week', value: 'week' },
+              ]}
+              selectedValue={viewMode}
+              onSelect={(val) => onViewModeChange(val as 'month' | 'week')}
+            />
+          </View>
+        )}
+      </View>
+
       {viewMode === 'week' ? renderWeekView() : renderMonthView()}
     </View>
   );

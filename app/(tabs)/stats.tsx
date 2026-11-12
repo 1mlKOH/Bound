@@ -3,7 +3,6 @@ import { ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 import { TopHeader } from '../../src/components/TopHeader';
-import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { CalendarCard } from '../../src/components/CalendarCard';
 import { BySubjectBreakdownCard } from '../../src/components/BySubjectBreakdownCard';
 import { useTheme } from '../../src/utils/theme';
@@ -33,24 +32,17 @@ export default function StatsScreen() {
       edges={['top']}
     >
       {/* Top Header */}
-      <TopHeader title="Statistics" />
-
-      {/* Segmented Control: Week | Month (Week first matching reference design) */}
-      <SegmentedControl
-        options={[
-          { label: 'Week', value: 'week' },
-          { label: 'Month', value: 'month' },
-        ]}
-        selectedValue={statsFilter}
-        onSelect={(val) => setStatsFilter(val)}
-      />
+      <TopHeader title="Stats" />
 
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Calendar Card (Month or Week with daily agenda overview) */}
+        {/* By Subject Progress Breakdown Card (Top Card) */}
+        <BySubjectBreakdownCard statsList={statsList} />
+
+        {/* Integrated Calendar Log Card (Month or Week with daily agenda) */}
         <CalendarCard
           selectedDate={selectedDate}
           sessions={sessions}
@@ -59,11 +51,9 @@ export default function StatsScreen() {
           getSessionsForDate={getSessionsForDate}
           onSelectDate={setSelectedDate}
           viewMode={statsFilter}
+          onViewModeChange={setStatsFilter}
           todayDate={getTodayDateString()}
         />
-
-        {/* By Subject Progress Breakdown Card */}
-        <BySubjectBreakdownCard statsList={statsList} />
       </ScrollView>
     </SafeAreaView>
   );

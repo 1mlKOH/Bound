@@ -126,6 +126,14 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: colors.canvas },
             }}
           />
+          <Stack.Screen
+            name="stats/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: { backgroundColor: colors.canvas },
+            }}
+          />
         </Stack>
         <Toaster
           theme={isDark ? 'dark' : 'light'}
