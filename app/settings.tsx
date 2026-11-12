@@ -493,7 +493,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
 
-          {/* Daily Evening Alert */}
+          {/* Unmarked Class Reminder */}
           <View
             style={{ borderBottomColor: colors.divider }}
             className="flex-row items-center justify-between py-2 border-b"
@@ -503,13 +503,13 @@ export default function SettingsScreen() {
                 style={[styles.sfText, { color: colors.text }]}
                 className="text-sm font-semibold"
               >
-                Daily Evening Alert
+                Unmarked Class Reminder
               </Text>
               <Text
                 style={[styles.sfText, { color: colors.textMuted }]}
                 className="text-xs mt-0.5"
               >
-                Reminds you to log classes on active weekdays
+                Only reminds you in the evening if any classes are left unmarked for the day
               </Text>
             </View>
             <Switch
@@ -709,7 +709,7 @@ export default function SettingsScreen() {
                   ]}
                   className="text-xs font-semibold"
                 >
-                  Safe Alert (+Skips)
+                  Safe Alert
                 </Text>
               </TouchableOpacity>
 
@@ -733,7 +733,31 @@ export default function SettingsScreen() {
                   ]}
                   className="text-xs font-semibold"
                 >
-                  Risk Alert (Cutoff)
+                  Risk Alert
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  sendTestNotification('daily');
+                }}
+                style={{
+                  borderRadius: 14,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.actionBg,
+                }}
+                className="flex-1 py-2 items-center justify-center"
+              >
+                <Text
+                  style={[
+                    styles.sfText,
+                    { color: colors.textSecondary },
+                  ]}
+                  className="text-xs font-semibold"
+                >
+                  Catch-up
                 </Text>
               </TouchableOpacity>
             </View>
