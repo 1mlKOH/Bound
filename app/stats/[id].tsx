@@ -43,11 +43,16 @@ export default function SubjectDetailStatsScreen() {
 
   const targetPercentage = activeSubject?.targetPct ?? settings.globalTargetPct ?? 75;
 
-  // Filter sessions for active subject sorted newest first
-  const subjectSessions = useMemo(() => {
+  // Filter marked sessions for active subject sorted newest first (most recent marked class on top)
+  const markedSessions = useMemo(() => {
     if (!activeSubject) return [];
     return sessions
-      .filter((s) => s.subjectId === activeSubject.id)
+      .filter(
+        (s) =>
+          s.subjectId === activeSubject.id &&
+          s.status !== null &&
+          (s.status === 'present' || s.status === 'absent' || s.status === 'cancelled')
+      )
       .sort((a, b) => {
         if (b.date !== a.date) return b.date.localeCompare(a.date);
         return (b.startTime || '').localeCompare(a.startTime || '');
@@ -56,16 +61,22 @@ export default function SubjectDetailStatsScreen() {
 
   // Base counts
   const actualAttended = useMemo(() => {
-    return subjectSessions.filter((s) => s.status === 'present').length;
-  }, [subjectSessions]);
+    return (
+      (activeSubject?.baselinePresent || 0) +
+      markedSessions.filter((s) => s.status === 'present').length
+    );
+  }, [markedSessions, activeSubject]);
 
   const actualMissed = useMemo(() => {
-    return subjectSessions.filter((s) => s.status === 'absent').length;
-  }, [subjectSessions]);
+    return (
+      (activeSubject?.baselineAbsent || 0) +
+      markedSessions.filter((s) => s.status === 'absent').length
+    );
+  }, [markedSessions, activeSubject]);
 
   const actualHeld = useMemo(() => {
-    return subjectSessions.filter((s) => s.status === 'present' || s.status === 'absent').length;
-  }, [subjectSessions]);
+    return actualAttended + actualMissed;
+  }, [actualAttended, actualMissed]);
 
   // Simulated counts
   const simAttended = actualAttended + simAttendDelta;
@@ -298,7 +309,7 @@ export default function SubjectDetailStatsScreen() {
           ]}
           className="p-5 my-2"
         >
-          {/* Card Header: Subject Name + Code + Target % */}
+          {/* Card Header: Subject Name + Target % */}
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center flex-1 pr-2">
               <View
@@ -320,17 +331,6 @@ export default function SubjectDetailStatsScreen() {
               >
                 {activeSubject.name}
               </Text>
-              {activeSubject.code ? (
-                <Text
-                  style={[
-                    styles.sfText,
-                    { color: colors.textMuted },
-                  ]}
-                  className="text-xs font-semibold ml-1.5"
-                >
-                  {activeSubject.code}
-                </Text>
-              ) : null}
             </View>
 
             <Text
@@ -345,28 +345,18 @@ export default function SubjectDetailStatsScreen() {
           </View>
 
           {/* Hero Numbers Row: Large NumberFlow Percentage + Margin */}
-          <View className="flex-row items-baseline justify-between mt-1 mb-2">
-            <View className="flex-row items-baseline">
-              <NumberFlow
-                value={percentage}
-                format={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
-                style={{
-                  fontSize: 44,
-                  fontWeight: '800',
-                  color: statusColor,
-                  letterSpacing: -1,
-                }}
-              />
-              <Text
-                style={[
-                  styles.sfText,
-                  { color: statusColor, letterSpacing: -0.5 },
-                ]}
-                className="text-[28px] font-extrabold ml-0.5"
-              >
-                %
-              </Text>
-            </View>
+          <View className="flex-row items-center justify-between mt-1 mb-2">
+            <NumberFlow
+              value={percentage}
+              suffix="%"
+              format={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
+              style={{
+                fontSize: 44,
+                fontWeight: '800',
+                color: statusColor,
+                letterSpacing: -1,
+              }}
+            />
 
             <View className="items-end">
               <Text
@@ -584,7 +574,7 @@ export default function SubjectDetailStatsScreen() {
                 ]}
                 className="text-xs font-bold ml-1.5"
               >
-                +1 Attend
+                Attend
               </Text>
             </TouchableOpacity>
 
@@ -609,7 +599,7 @@ export default function SubjectDetailStatsScreen() {
                 ]}
                 className="text-xs font-bold ml-1.5"
               >
-                +1 Skip
+                Skip
               </Text>
             </TouchableOpacity>
           </View>
@@ -641,7 +631,7 @@ export default function SubjectDetailStatsScreen() {
                 style={[styles.sfText, { color: colors.textDim }]}
                 className="text-xs font-medium ml-1.5"
               >
-                ({subjectSessions.length})
+                ({markedSessions.length})
               </Text>
             </View>
 
@@ -654,15 +644,15 @@ export default function SubjectDetailStatsScreen() {
           </View>
 
           {/* Session Rows */}
-          {subjectSessions.length === 0 ? (
+          {markedSessions.length === 0 ? (
             <View className="py-6 items-center justify-center">
               <Text style={[styles.sfText, { color: colors.textMuted }]} className="text-xs">
-                No past lectures recorded for this subject yet.
+                No marked lectures for this subject yet.
               </Text>
             </View>
           ) : (
-            subjectSessions.map((session, idx) => {
-              const isLast = idx === subjectSessions.length - 1;
+            markedSessions.map((session, idx) => {
+              const isLast = idx === markedSessions.length - 1;
               const status = session.status;
 
               return (
