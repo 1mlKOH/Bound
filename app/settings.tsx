@@ -290,7 +290,7 @@ export default function SettingsScreen() {
           <Text
             style={[
               styles.sfText,
-              { letterSpacing: -0.3, color: colors.text },
+              { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
             ]}
             className="text-[17px] font-semibold mb-3"
           >
@@ -357,11 +357,21 @@ export default function SettingsScreen() {
           className="p-5 my-2"
         >
           <View className="flex-row items-center mb-1">
-            <GaugeIcon size={17} color={isDark ? '#3DDC84' : '#15803D'} />
+            <View
+              style={{
+                width: 20,
+                height: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: Platform.OS === 'android' ? 1 : 0,
+              }}
+            >
+              <GaugeIcon size={17} color={colors.textSecondary} />
+            </View>
             <Text
               style={[
                 styles.sfText,
-                { letterSpacing: -0.3, color: colors.text },
+                { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
               ]}
               className="text-[17px] font-semibold ml-2"
             >
@@ -423,7 +433,7 @@ export default function SettingsScreen() {
           <Text
             style={[
               styles.sfText,
-              { letterSpacing: -0.3, color: colors.text },
+              { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
             ]}
             className="text-[17px] font-semibold mb-0.5"
           >
@@ -461,11 +471,21 @@ export default function SettingsScreen() {
           className="p-5 my-2"
         >
           <View className="flex-row items-center mb-3">
-            <BellIcon size={17} color={isDark ? '#3DDC84' : '#15803D'} strokeWidth={2} />
+            <View
+              style={{
+                width: 20,
+                height: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: Platform.OS === 'android' ? 1 : 0,
+              }}
+            >
+              <BellIcon size={17} color={colors.textSecondary} strokeWidth={2} />
+            </View>
             <Text
               style={[
                 styles.sfText,
-                { letterSpacing: -0.3, color: colors.text },
+                { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
               ]}
               className="text-[17px] font-semibold ml-2"
             >
@@ -736,7 +756,7 @@ export default function SettingsScreen() {
           <Text
             style={[
               styles.sfText,
-              { letterSpacing: -0.3, color: colors.text },
+              { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
             ]}
             className="text-[17px] font-semibold mb-3"
           >
@@ -895,5 +915,6 @@ const styles = StyleSheet.create({
   },
   sfText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    includeFontPadding: false,
   },
 });
