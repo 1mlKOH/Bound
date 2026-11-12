@@ -19,6 +19,7 @@ import {
   ChevronDownIcon,
 } from './icons';
 import { useTheme } from '../utils/theme';
+import { fontFamilyNames } from '../utils/typography';
 import { SegmentedControl } from './SegmentedControl';
 import {
   isSlotEffectiveOnDate,
@@ -1205,6 +1206,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.semiBold,
+    includeFontPadding: false,
   },
 });

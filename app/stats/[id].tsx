@@ -17,6 +17,7 @@ import { useTheme } from '../../src/utils/theme';
 import { Haptics } from '../../src/utils/haptics';
 import { ChevronLeftIcon, RefreshIcon, PlusIcon, MinusIcon } from '../../src/components/icons';
 import { AttendanceStatus } from '../../src/types';
+import { fontFamilyNames } from '../../src/utils/typography';
 
 export default function SubjectDetailStatsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -351,10 +352,11 @@ export default function SubjectDetailStatsScreen() {
               suffix="%"
               format={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
               style={{
+                fontFamily: fontFamilyNames.extraBold,
                 fontSize: 44,
                 fontWeight: '800',
                 color: statusColor,
-                letterSpacing: -1,
+                letterSpacing: -1.3,
               }}
             />
 
@@ -471,7 +473,12 @@ export default function SubjectDetailStatsScreen() {
               </Text>
               <NumberFlow
                 value={simAttended}
-                style={{ fontSize: 19, fontWeight: '700', color: colors.text }}
+                style={{
+                  fontFamily: fontFamilyNames.bold,
+                  fontSize: 19,
+                  fontWeight: '700',
+                  color: colors.text,
+                }}
               />
             </View>
 
@@ -483,7 +490,12 @@ export default function SubjectDetailStatsScreen() {
               </Text>
               <NumberFlow
                 value={simMissed}
-                style={{ fontSize: 19, fontWeight: '700', color: colors.text }}
+                style={{
+                  fontFamily: fontFamilyNames.bold,
+                  fontSize: 19,
+                  fontWeight: '700',
+                  color: colors.text,
+                }}
               />
             </View>
 
@@ -495,7 +507,12 @@ export default function SubjectDetailStatsScreen() {
               </Text>
               <NumberFlow
                 value={simTotalHeld}
-                style={{ fontSize: 19, fontWeight: '700', color: colors.text }}
+                style={{
+                  fontFamily: fontFamilyNames.bold,
+                  fontSize: 19,
+                  fontWeight: '700',
+                  color: colors.text,
+                }}
               />
             </View>
           </View>
@@ -739,7 +756,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.semiBold,
     includeFontPadding: false,
   },
 });

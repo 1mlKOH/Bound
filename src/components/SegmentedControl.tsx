@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Haptics } from '../utils/haptics';
 import { useTheme } from '../utils/theme';
+import { fontFamilyNames } from '../utils/typography';
 
 interface SegmentedControlProps {
   options: { label: string; value: string }[];
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   label: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.semiBold,
+    includeFontPadding: false,
   },
 });

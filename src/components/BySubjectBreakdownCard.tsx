@@ -5,6 +5,7 @@ import { Haptics } from '../utils/haptics';
 import { SubjectStats } from '../types';
 import { useTheme } from '../utils/theme';
 import { ChevronRightIcon } from './icons';
+import { fontFamilyNames } from '../utils/typography';
 
 interface BySubjectBreakdownCardProps {
   statsList: SubjectStats[];
@@ -221,6 +222,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.semiBold,
+    includeFontPadding: false,
   },
 });
