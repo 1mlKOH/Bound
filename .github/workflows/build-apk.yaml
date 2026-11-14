@@ -116,22 +116,54 @@ jobs:
             exit $BUILD_EXIT_CODE
           fi
 
+          BUILD_ID=$(grep -oE '/builds/[a-f0-9-]{36}' eas-build.log | cut -d/ -f3 | head -n 1)
+          echo "Extracted EAS Build ID: $BUILD_ID"
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+          echo "### 🚀 Expo EAS Cloud Build Completed!" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Platform**: Android (APK)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Profile**: $PROFILE" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$BUILD_ID" ]; then
+            echo "- **Build ID**: \`$BUILD_ID\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Expo Direct Link**: [Install / Download APK](https://expo.dev/accounts/w0lfgang/projects/bound/builds/$BUILD_ID)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: ⬇️ Download APK from EAS Cloud
+        id: download_apk
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.download_artifact }}
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Downloading built APK from EAS servers..."
-          eas build:download --platform android --non-interactive
-          
+          BUILD_ID="${{ steps.eas_build.outputs.build_id }}"
+          if [ -z "$BUILD_ID" ] && [ -f eas-build.log ]; then
+            BUILD_ID=$(grep -oE '/builds/[a-f0-9-]{36}' eas-build.log | cut -d/ -f3 | head -n 1)
+          fi
+          echo "Target EAS Build ID: $BUILD_ID"
+
+          rm -f ./bound-testing.apk
+          if [ -n "$BUILD_ID" ]; then
+            echo "Downloading APK for build $BUILD_ID..."
+            eas build:download --build-id "$BUILD_ID" --output ./bound-testing.apk --non-interactive || \
+            eas build:download --build-id "$BUILD_ID" --non-interactive || \
+            echo "::warning::eas build:download encountered an issue. Build is accessible directly at https://expo.dev/accounts/w0lfgang/projects/bound/builds/$BUILD_ID"
+          else
+            echo "Attempting fallback download by platform..."
+            eas build:download --platform android --non-interactive || true
+          fi
+
           # Find downloaded APK and stage for upload
           APK_FILE=$(ls -t *.apk 2>/dev/null | head -n 1)
           if [ -n "$APK_FILE" ]; then
             echo "Downloaded APK file: $APK_FILE"
-            cp "$APK_FILE" bound-testing.apk
-            echo "APK ready at ./bound-testing.apk"
+            if [ "$APK_FILE" != "bound-testing.apk" ]; then
+              cp "$APK_FILE" bound-testing.apk
+            fi
+            echo "APK ready at ./bound-testing.apk ($(du -h bound-testing.apk | cut -f1))"
+            echo "apk_exists=true" >> "$GITHUB_OUTPUT"
+            echo "- **Artifact**: \`bound-testing.apk\` ready for download" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Warning: No .apk file found in root directory after download."
+            echo "apk_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 📤 Upload APK to GitHub Artifacts
