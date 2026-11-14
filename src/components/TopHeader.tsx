@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { Haptics } from '../utils/haptics';
 import { SettingsIcon, SunIcon } from './icons';
 import { useTheme } from '../utils/theme';
+import { BoundLogo } from './BoundLogo';
 
 interface TopHeaderProps {
   title: string;
   showSettings?: boolean;
   rightAction?: 'settings' | 'sun';
   onRightActionPress?: () => void;
+  showLogo?: boolean;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -17,6 +19,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   showSettings = true,
   rightAction = 'settings',
   onRightActionPress,
+  showLogo = false,
 }) => {
   const router = useRouter();
   const { colors } = useTheme();
@@ -32,20 +35,23 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <View className="flex-row items-center justify-between px-5 pt-3 pb-2">
-      <Text
-        style={[
-          styles.largeTitle,
-          {
-            letterSpacing: -0.5,
-            color: colors.text,
-            fontSize: Platform.OS === 'ios' ? 34 : 28,
-            fontWeight: Platform.OS === 'ios' ? '700' : '800',
-          },
-        ]}
-        className="font-bold leading-tight"
-      >
-        {title}
-      </Text>
+      <View className="flex-row items-center gap-2.5">
+        {showLogo && <BoundLogo size={Platform.OS === 'ios' ? 32 : 28} />}
+        <Text
+          style={[
+            styles.largeTitle,
+            {
+              letterSpacing: -0.5,
+              color: colors.text,
+              fontSize: Platform.OS === 'ios' ? 34 : 28,
+              fontWeight: Platform.OS === 'ios' ? '700' : '800',
+            },
+          ]}
+          className="font-bold leading-tight"
+        >
+          {title}
+        </Text>
+      </View>
 
       {showSettings && (
         <TouchableOpacity
