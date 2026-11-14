@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useColorScheme as useSystemColorScheme, Platform } from 'react-native';
+import { useColorScheme as useSystemColorScheme, Appearance, Platform } from 'react-native';
 import { colorScheme as nwColorScheme } from 'nativewind';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 
@@ -164,20 +163,34 @@ export const ergonomics = {
   minHitbox: 44,
 };
 
+/**
+ * Synchronizes user theme preference with NativeWind and React Native's Appearance.
+ * When preference is 'system', clears the manual override ('unspecified') so the OS
+ * controls light/dark mode dynamically without being overridden.
+ */
+export function syncThemeWithSystem(themePref: 'system' | 'light' | 'dark') {
+  try {
+    if (themePref === 'system') {
+      nwColorScheme.set('system');
+      Appearance.setColorScheme('unspecified');
+    } else {
+      nwColorScheme.set(themePref);
+      Appearance.setColorScheme(themePref);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function useTheme() {
   const themePref = useAttendanceStore((state) => state.settings.theme);
   const systemScheme = useSystemColorScheme();
 
-  const isDark =
-    themePref === 'dark' || (themePref === 'system' && systemScheme !== 'light');
+  // If systemScheme is null/undefined during cold start, fallback to Appearance.getColorScheme()
+  const activeSystemScheme = systemScheme ?? Appearance.getColorScheme() ?? 'light';
 
-  useEffect(() => {
-    try {
-      nwColorScheme.set(isDark ? 'dark' : 'light');
-    } catch {
-      // ignore
-    }
-  }, [isDark]);
+  const isDark =
+    themePref === 'dark' || (themePref === 'system' && activeSystemScheme === 'dark');
 
   const colors = isDark ? darkPalette : lightPalette;
 

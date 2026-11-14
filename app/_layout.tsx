@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Platform, View, AppState } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,7 +16,7 @@ import {
   Figtree_800ExtraBold,
 } from '@expo-google-fonts/figtree';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
-import { useTheme } from '../src/utils/theme';
+import { useTheme, syncThemeWithSystem } from '../src/utils/theme';
 import {
   setupNotificationCategoriesAndChannels,
   handleNotificationResponse,
@@ -31,7 +31,26 @@ export default function RootLayout() {
   const initialize = useAttendanceStore((state) => state.initialize);
   const isLoading = useAttendanceStore((state) => state.isLoading);
   const hasOnboarded = useAttendanceStore((state) => state.settings.hasOnboarded);
+  const themePref = useAttendanceStore((state) => state.settings.theme);
   const { colors, isDark } = useTheme();
+
+  // Keep NativeWind & React Native Appearance synchronized with user preference
+  useEffect(() => {
+    syncThemeWithSystem(themePref);
+  }, [themePref]);
+
+  // When returning from background, ensure system appearance is re-synced if on system theme
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        const currentPref = useAttendanceStore.getState().settings.theme;
+        if (currentPref === 'system') {
+          syncThemeWithSystem('system');
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const [fontsLoaded, fontError] = useFonts({
     Figtree_400Regular,
@@ -40,6 +59,15 @@ export default function RootLayout() {
     Figtree_700Bold,
     Figtree_800ExtraBold,
   });
+
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFontTimedOut(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     initialize();
@@ -65,16 +93,18 @@ export default function RootLayout() {
     };
   }, [router]);
 
+  const isReady = !isLoading && (fontsLoaded || fontError || fontTimedOut);
+
   useEffect(() => {
-    if (isLoading || (!fontsLoaded && !fontError)) return;
+    if (!isReady) return;
     SplashScreen.hideAsync().catch(() => {});
     const inOnboarding = segments[0] === 'onboarding';
     if (!hasOnboarded && !inOnboarding) {
       router.replace('/onboarding');
     }
-  }, [isLoading, fontsLoaded, fontError, hasOnboarded, segments]);
+  }, [isReady, hasOnboarded, segments]);
 
-  if (isLoading || (!fontsLoaded && !fontError)) {
+  if (!isReady) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.canvas }} />
     );
