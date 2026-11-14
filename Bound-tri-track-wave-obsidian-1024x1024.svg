@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%" style="display:block">
+  <defs>
+        <linearGradient id="bg-64" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1D1E23"/>
+          <stop offset="100%" stop-color="#131418"/>
+        </linearGradient>
+        <linearGradient id="thermal-64" x1="256" y1="246" x2="768" y2="758" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1E9BFF"/>
+          <stop offset="52%" stop-color="#3DDC84"/>
+          <stop offset="100%" stop-color="#FFB020"/>
+        </linearGradient>
+      
+          <clipPath id="waveMedClip-64">
+            <circle cx="512" cy="502" r="250"/>
+          </clipPath>
+        </defs>
+  <rect width="1024" height="1024" fill="url(#bg-64)"/>
+  <g transform="translate(512 502) scale(1.0000) translate(-512 -502)">
+    
+          <!-- Circular Medallion Base -->
+          <circle cx="512" cy="502" r="264" fill="#22242C" stroke="rgba(255,255,255,0.46)" stroke-width="14"/>
+
+          <!-- Three Parallel Harmonic S-Curve Ribbons -->
+          <g clip-path="url(#waveMedClip-64)">
+            <path d="M 190 519 C 340 519, 404 445, 512 445 C 620 445, 684 371, 834 371" fill="none" stroke="#1E9BFF" stroke-width="37" stroke-linecap="round"/>
+            <path d="M 190 576 C 340 576, 404 502, 512 502 C 620 502, 684 428, 834 428"      fill="none" stroke="#3DDC84" stroke-width="37" stroke-linecap="round"/>
+            <path d="M 190 633 C 340 633, 404 559, 512 559 C 620 559, 684 485, 834 485"  fill="none" stroke="#FFB020" stroke-width="37" stroke-linecap="round"/>
+          </g>
+        
+  </g>
+</svg>

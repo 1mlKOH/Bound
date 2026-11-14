@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bound — Brand Identity & Logo Suite Showcase</title>
+  <style>
+    :root {
+      --bg: #0A0B0E;
+      --card-bg: #14161C;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --accent: #3DDC84;
+      --blue: #1E9BFF;
+      --amber: #FFB020;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Figtree", sans-serif;
+      padding: 40px 24px;
+      line-height: 1.5;
+    }
+    .header {
+      max-width: 1080px;
+      margin: 0 auto 40px;
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(61, 220, 132, 0.15);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-preview {
+      padding: 36px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 220px;
+      position: relative;
+    }
+    .card-preview.dark { background: #0F1015; }
+    .card-preview.light { background: #F8F9FA; }
+    .card-preview.grid-pattern {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+    .card-info {
+      padding: 18px 20px;
+      border-top: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .size-ladder {
+      display: flex;
+      align-items: flex-end;
+      gap: 24px;
+    }
+    .size-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .size-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+    .icon-preview {
+      width: 140px;
+      height: 140px;
+      border-radius: 32px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+    .status-bar-sim {
+      width: 100%;
+      max-width: 280px;
+      background: #000000;
+      border-radius: 12px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .status-bar-text {
+      font-size: 12px;
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Official Brand Suite</div>
+    <h1>Bound Identity & Logo Variations</h1>
+    <p class="subtitle">
+      Tri-Track Harmonic Wave on Obsidian Medallion. Scaled, balanced, and rendered for mobile launcher, dark/light themes, notifications, and web favicons.
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1. Master Brand Mark -->
+    <div class="card">
+      <div class="card-preview dark">
+        <div style="width: 160px; height: 160px;">
+          <!-- Inline Master SVG -->
+          <img src="bound-logo-master.svg" width="160" height="160" alt="Master Brand Mark" />
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span>Master App Tile (Obsidian)</span>
+          <span class="tag">Primary</span>
+        </div>
+        <div class="card-desc">1024×1024 vector tile with subtle obsidian gradient and tri-color harmonic ribbons.</div>
+      </div>
+    </div>
+
+    <!-- 2. Transparent Master Symbol -->
+    <div class="card">
+      <div class="card-preview grid-pattern">
+        <div style="width: 150px; height: 150px;">
+          <img src="bound-symbol.svg" width="150" height="150" alt="Transparent Symbol" />
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span>Master Symbol (Transparent)</span>
+          <span class="tag">Versatile</span>
+        </div>
+        <div class="card-desc">Floating medallion without outer container. Layers over app headers, modal sheets, and cards.</div>
+      </div>
+    </div>
+
+    <!-- 3. Monotone Charcoal (Light Mode) -->
+    <div class="card">
+      <div class="card-preview light">
+        <div style="width: 150px; height: 150px;">
+          <img src="bound-symbol-monotone-dark.svg" width="150" height="150" alt="Monotone Dark" />
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span style="color: #0F172A;">Monotone Dark</span>
+          <span class="tag">Light Mode / Print</span>
+        </div>
+        <div class="card-desc">Single-ink charcoal (#0F172A) on light canvas. Ideal for official transcripts, documents, and paper.</div>
+      </div>
+    </div>
+
+    <!-- 4. Monotone White (Reversed) -->
+    <div class="card">
+      <div class="card-preview dark">
+        <div style="width: 150px; height: 150px;">
+          <img src="bound-symbol-monotone-white.svg" width="150" height="150" alt="Monotone White" />
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span>Monotone White</span>
+          <span class="tag">Reversed</span>
+        </div>
+        <div class="card-desc">Pure #FFFFFF outline and ribbons for dark surfaces, footer lockups, and laser engraving.</div>
+      </div>
+    </div>
+
+    <!-- 5. Monotone Brand Emerald -->
+    <div class="card">
+      <div class="card-preview dark">
+        <div style="width: 150px; height: 150px;">
+          <img src="bound-symbol-monotone-emerald.svg" width="150" height="150" alt="Monotone Emerald" />
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span style="color: var(--accent);">Brand Emerald Accent</span>
+          <span class="tag">Accent Badge</span>
+        </div>
+        <div class="card-desc">Rendered in Bound's signature Safe Attendance Emerald (#3DDC84) with 12% tinted glass fill.</div>
+      </div>
+    </div>
+
+    <!-- 6. Favicon Optical Cut Ladder -->
+    <div class="card">
+      <div class="card-preview dark">
+        <div class="size-ladder">
+          <div class="size-step">
+            <img src="bound-favicon.svg" width="64" height="64" />
+            <span class="size-label">64px</span>
+          </div>
+          <div class="size-step">
+            <img src="bound-favicon.svg" width="32" height="32" />
+            <span class="size-label">32px</span>
+          </div>
+          <div class="size-step">
+            <img src="bound-favicon.svg" width="16" height="16" />
+            <span class="size-label">16px</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span>Favicon Optical Cut</span>
+          <span class="tag">16–64px</span>
+        </div>
+        <div class="card-desc">Re-weighted strokes and tight margins so the 3 ribbons remain vibrant and crisp at micro sizes.</div>
+      </div>
+    </div>
+
+    <!-- 7. Android Status Bar Notification Silhouette -->
+    <div class="card">
+      <div class="card-preview dark">
+        <div class="status-bar-sim">
+          <img src="bound-notification-icon.svg" width="22" height="22" style="filter: drop-shadow(0 0 2px rgba(255,255,255,0.4));" />
+          <div class="status-bar-text">Bound • Physics starts in 5m</div>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span>Notification Icon Silhouette</span>
+          <span class="tag">Android</span>
+        </div>
+        <div class="card-desc">Strictly white outline on transparent background. Complies with Android status bar silhouette requirements.</div>
+      </div>
+    </div>
+
+    <!-- 8. Horizontal Lockup (Dark) -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-preview dark" style="padding: 28px;">
+        <img src="bound-lockup-horizontal-dark.svg" style="max-width: 520px; width: 100%; height: auto;" alt="Horizontal Lockup Dark" />
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span>Horizontal Brand Lockup (Dark)</span>
+          <span class="tag">Splash / Web Header</span>
+        </div>
+        <div class="card-desc">Symbol locked to geometric "BOUND" vector wordmark on dark obsidian canvas.</div>
+      </div>
+    </div>
+
+    <!-- 9. Horizontal Lockup (Light) -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-preview light" style="padding: 28px;">
+        <img src="bound-lockup-horizontal-light.svg" style="max-width: 520px; width: 100%; height: auto;" alt="Horizontal Lockup Light" />
+      </div>
+      <div class="card-info">
+        <div class="card-title">
+          <span style="color: #0F172A;">Horizontal Brand Lockup (Light)</span>
+          <span class="tag">Documentation / Letterhead</span>
+        </div>
+        <div class="card-desc">Pure white background pairing with high-contrast charcoal typography.</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

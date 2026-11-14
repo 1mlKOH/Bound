@@ -12,15 +12,21 @@ interface SubjectCardProps {
 
 export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
   const { colors, isDark } = useTheme();
-  const { subject, attended, totalHeld, percentage, isSafe, isClose, statusLabel } =
+  const { subject, attended, totalHeld, percentage, isSafe, isClose, isBelow, canMiss, statusLabel } =
     stats;
 
   const scale = useRef(new Animated.Value(1)).current;
 
   const isZeroState = totalHeld === 0;
+  const isSingleStreak = totalHeld === 1 && attended === 1;
+  const isCutoffEdge = canMiss === 0 && totalHeld > 1 && !isBelow;
 
   const statusColor = isZeroState
     ? colors.textMuted
+    : isSingleStreak
+    ? colors.statusSafe
+    : isCutoffEdge
+    ? colors.statusWarning
     : isSafe
     ? colors.statusSafe
     : isClose
@@ -29,6 +35,10 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
 
   const badgeBg = isZeroState
     ? (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)')
+    : isSingleStreak
+    ? colors.presentBadgeBg
+    : isCutoffEdge
+    ? (isDark ? 'rgba(255, 176, 32, 0.18)' : 'rgba(178, 106, 0, 0.14)')
     : isSafe
     ? colors.presentBadgeBg
     : isClose

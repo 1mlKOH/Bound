@@ -169,6 +169,21 @@ function formatTimeInput(val: string): string {
   return cleaned;
 }
 
+function sanitizeFloat(val: string): string {
+  const cleaned = val.replace(/[^0-9.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    return parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleaned;
+}
+
+function sanitizeInteger(val: string): string {
+  // If user inputs or pastes a decimal (e.g. "2.5"), preserve the integer portion "2" instead of multiplying to "25"
+  const integerPart = val.split('.')[0] || '';
+  return integerPart.replace(/[^0-9]/g, '');
+}
+
 const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   const { colors } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
@@ -193,6 +208,7 @@ const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         activeOpacity={0.85}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -375,7 +391,6 @@ export default function SubjectEditorModal() {
     setBatchSlots((prev) =>
       prev.map((s, i) => {
         if (i !== slotIndex) return s;
-        let nextEnd = s.endTime;
         const [oldSh, oldSm] = s.startTime.split(':').map(Number);
         const [oldEh, oldEm] = s.endTime.split(':').map(Number);
         const durationMins = oldEh * 60 + oldEm - (oldSh * 60 + oldSm);
@@ -383,19 +398,33 @@ export default function SubjectEditorModal() {
 
         const [newSh, newSm] = newStartTime.split(':').map(Number);
         const newStartMins = newSh * 60 + newSm;
-        const [eh, em] = nextEnd.split(':').map(Number);
-        const currentEndMins = eh * 60 + em;
 
-        if (newStartMins >= currentEndMins) {
-          let updatedEndMins = newStartMins + validDuration;
-          if (updatedEndMins >= 24 * 60) {
-            updatedEndMins = 23 * 60 + 59;
-          }
-          const endH = String(Math.floor(updatedEndMins / 60)).padStart(2, '0');
-          const endM = String(updatedEndMins % 60).padStart(2, '0');
-          nextEnd = `${endH}:${endM}`;
+        let updatedEndMins = newStartMins + validDuration;
+        if (updatedEndMins >= 24 * 60) {
+          updatedEndMins = 23 * 60 + 59;
         }
+        const endH = String(Math.floor(updatedEndMins / 60)).padStart(2, '0');
+        const endM = String(updatedEndMins % 60).padStart(2, '0');
+        const nextEnd = `${endH}:${endM}`;
         return { ...s, startTime: newStartTime, endTime: nextEnd };
+      })
+    );
+  };
+
+  const applyDurationPreset = (slotIndex: number, durationMinutes: number) => {
+    Haptics.selectionAsync();
+    setBatchSlots((prev) =>
+      prev.map((s, i) => {
+        if (i !== slotIndex) return s;
+        const [sh, sm] = s.startTime.split(':').map(Number);
+        const startMins = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+        let endMins = startMins + durationMinutes;
+        if (endMins >= 24 * 60) {
+          endMins = 23 * 60 + 59;
+        }
+        const endH = String(Math.floor(endMins / 60)).padStart(2, '0');
+        const endM = String(endMins % 60).padStart(2, '0');
+        return { ...s, endTime: `${endH}:${endM}` };
       })
     );
   };
@@ -435,7 +464,7 @@ export default function SubjectEditorModal() {
 
 
   // Conflict warning across all unrolled timetable slots
-  const hasConflict = useMemo(() => {
+  const hasInternalConflict = useMemo(() => {
     const unrolled: { weekday: number; startTime: string; endTime: string }[] = [];
     for (const b of batchSlots) {
       for (const w of b.weekdays) {
@@ -463,6 +492,36 @@ export default function SubjectEditorModal() {
     }
     return false;
   }, [batchSlots]);
+
+  // Cross-subject conflict detection with other active courses
+  const crossSubjectConflict = useMemo(() => {
+    const unrolled: { weekday: number; startTime: string; endTime: string }[] = [];
+    for (const b of batchSlots) {
+      for (const w of b.weekdays) {
+        unrolled.push({
+          weekday: w,
+          startTime: b.startTime,
+          endTime: b.endTime,
+        });
+      }
+    }
+    const otherSlots = scheduleSlots.filter(
+      (slot) =>
+        slot.subjectId !== subjectId &&
+        (slot.effectiveTo === null || slot.effectiveTo >= getTodayDateString())
+    );
+    for (const u of unrolled) {
+      for (const o of otherSlots) {
+        if (u.weekday === o.weekday && timesOverlap(u.startTime, u.endTime, o.startTime, o.endTime)) {
+          const conflictingSub = subjects.find((s) => s.id === o.subjectId);
+          return conflictingSub?.name || 'Another course';
+        }
+      }
+    }
+    return null;
+  }, [batchSlots, scheduleSlots, subjectId, subjects]);
+
+  const hasConflict = hasInternalConflict;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -528,7 +587,7 @@ export default function SubjectEditorModal() {
     if (isSubmitting) return;
 
     const cleanName = name.replace(/[\r\n]+/g, ' ').trim();
-    const cleanCode = code.replace(/[\r\n]+/g, ' ').trim();
+    const cleanCode = code.replace(/[\r\n]+/g, ' ').trim().toUpperCase();
 
     if (!cleanName) {
       toast.error('Please enter a subject name');
@@ -821,6 +880,7 @@ export default function SubjectEditorModal() {
             Subject Name *
           </Text>
           <TextInput
+            autoFocus={!existingSubject}
             placeholder="e.g. Data Structures"
             placeholderTextColor={colors.placeholderText}
             value={name}
@@ -945,14 +1005,9 @@ export default function SubjectEditorModal() {
                   placeholder={String(settings.globalTargetPct)}
                   placeholderTextColor={colors.placeholderText}
                   value={targetPct}
-                  maxLength={4}
-                  onChangeText={(val) => setTargetPct(val.replace(/[^0-9.]/g, ''))}
-                  onFocus={() => {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({ y: 520, animated: true });
-                    }, 120);
-                  }}
-                  keyboardType="numeric"
+                  maxLength={5}
+                  onChangeText={(val) => setTargetPct(sanitizeFloat(val))}
+                  keyboardType="decimal-pad"
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
                   style={{
@@ -981,15 +1036,10 @@ export default function SubjectEditorModal() {
               <TextInput
                 value={baselinePresent}
                 maxLength={5}
-                onChangeText={(val) => setBaselinePresent(val.replace(/[^0-9]/g, ''))}
+                onChangeText={(val) => setBaselinePresent(sanitizeInteger(val))}
                 placeholder="0"
                 placeholderTextColor={colors.placeholderText}
-                onFocus={() => {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollTo({ y: 520, animated: true });
-                  }, 120);
-                }}
-                keyboardType="numeric"
+                keyboardType="number-pad"
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
                 style={{
@@ -1011,15 +1061,10 @@ export default function SubjectEditorModal() {
               <TextInput
                 value={baselineAbsent}
                 maxLength={5}
-                onChangeText={(val) => setBaselineAbsent(val.replace(/[^0-9]/g, ''))}
+                onChangeText={(val) => setBaselineAbsent(sanitizeInteger(val))}
                 placeholder="0"
                 placeholderTextColor={colors.placeholderText}
-                onFocus={() => {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollTo({ y: 520, animated: true });
-                  }, 120);
-                }}
-                keyboardType="numeric"
+                keyboardType="number-pad"
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
                 style={{
@@ -1080,8 +1125,8 @@ export default function SubjectEditorModal() {
             </TouchableOpacity>
           </View>
 
-          {/* Conflict Warning */}
-          {hasConflict && (
+          {/* Internal Conflict Warning */}
+          {hasInternalConflict && (
             <View
               style={{
                 backgroundColor: isDark
@@ -1094,13 +1139,38 @@ export default function SubjectEditorModal() {
                 style={{ color: isDark ? '#FFB020' : '#D97706' }}
                 className="text-xs font-bold"
               >
-                ⚠️ Conflict Detected
+                ⚠️ Timetable Conflict
               </Text>
               <Text
                 style={{ color: colors.textMuted }}
                 className="text-xs mt-0.5"
               >
-                Two slots on the same day overlap in time.
+                Two slots for this subject on the same day overlap in time.
+              </Text>
+            </View>
+          )}
+
+          {/* Cross-Subject Conflict Warning */}
+          {crossSubjectConflict && (
+            <View
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(245, 158, 11, 0.12)',
+              }}
+              className="p-3 mb-3.5 rounded-xl border border-[rgba(245,158,11,0.25)]"
+            >
+              <Text
+                style={{ color: isDark ? '#FFB020' : '#D97706' }}
+                className="text-xs font-bold"
+              >
+                ⚠️ Cross-Course Overlap
+              </Text>
+              <Text
+                style={{ color: colors.textMuted }}
+                className="text-xs mt-0.5"
+              >
+                This class overlaps with {crossSubjectConflict} scheduled at the same time.
               </Text>
             </View>
           )}
@@ -1181,6 +1251,7 @@ export default function SubjectEditorModal() {
                   {/* Remove Slot Trash Button */}
                   {batchSlots.length > 1 && (
                     <TouchableOpacity
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       activeOpacity={0.7}
                       onPress={() => removeSlot(index)}
                       style={{
@@ -1341,6 +1412,43 @@ export default function SubjectEditorModal() {
                       </Text>
                     </View>
                   </View>
+                </View>
+
+                {/* Quick Duration Presets */}
+                <View className="flex-row items-center gap-1.5 mt-2.5 pt-2 border-t border-black/5 dark:border-white/5">
+                  <Text
+                    style={{ color: colors.textMuted }}
+                    className="text-[10px] font-semibold mr-1"
+                  >
+                    Quick duration:
+                  </Text>
+                  {[
+                    { label: '50m', mins: 50 },
+                    { label: '1h', mins: 60 },
+                    { label: '1h 30m', mins: 90 },
+                    { label: '2h', mins: 120 },
+                  ].map((preset) => (
+                    <TouchableOpacity
+                      key={preset.mins}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                      activeOpacity={0.7}
+                      onPress={() => applyDurationPreset(index, preset.mins)}
+                      style={{
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                      }}
+                      className="px-2 py-0.5"
+                    >
+                      <Text
+                        style={[styles.sfText, { color: colors.textSecondary }]}
+                        className="text-[10px] font-bold"
+                      >
+                        {preset.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
             );

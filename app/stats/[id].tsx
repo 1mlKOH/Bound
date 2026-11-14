@@ -104,6 +104,8 @@ export default function SubjectDetailStatsScreen() {
   } else if (isSafe) {
     if (targetFrac >= 1) {
       safeSkips = 0;
+    } else if (targetFrac <= 0) {
+      safeSkips = 999;
     } else {
       const allowedMiss = (simAttended - targetFrac * simTotalHeld) / targetFrac;
       safeSkips = Math.max(0, Math.floor(allowedMiss));

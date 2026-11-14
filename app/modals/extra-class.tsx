@@ -125,6 +125,7 @@ const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         activeOpacity={0.85}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -176,18 +177,30 @@ export default function ExtraClassModal() {
 
     const [newSh, newSm] = newStartTime.split(':').map(Number);
     const newStartMins = newSh * 60 + newSm;
-    const [eh, em] = endTime.split(':').map(Number);
-    const currentEndMins = eh * 60 + em;
 
-    let nextEnd = endTime;
-    if (newStartMins >= currentEndMins) {
-      const updatedEndMins = (newStartMins + validDuration) % (24 * 60);
-      const endH = String(Math.floor(updatedEndMins / 60)).padStart(2, '0');
-      const endM = String(updatedEndMins % 60).padStart(2, '0');
-      nextEnd = `${endH}:${endM}`;
+    let updatedEndMins = newStartMins + validDuration;
+    if (updatedEndMins >= 24 * 60) {
+      updatedEndMins = 23 * 60 + 59;
     }
+    const endH = String(Math.floor(updatedEndMins / 60)).padStart(2, '0');
+    const endM = String(updatedEndMins % 60).padStart(2, '0');
+    const nextEnd = `${endH}:${endM}`;
+
     setStartTime(newStartTime);
     setEndTime(nextEnd);
+  };
+
+  const applyDurationPreset = (durationMinutes: number) => {
+    Haptics.selectionAsync();
+    const [sh, sm] = startTime.split(':').map(Number);
+    const startMins = (isNaN(sh) ? 15 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+    let endMins = startMins + durationMinutes;
+    if (endMins >= 24 * 60) {
+      endMins = 23 * 60 + 59;
+    }
+    const endH = String(Math.floor(endMins / 60)).padStart(2, '0');
+    const endM = String(endMins % 60).padStart(2, '0');
+    setEndTime(`${endH}:${endM}`);
   };
 
   const openTimePicker = (field: 'startTime' | 'endTime') => {
@@ -688,6 +701,47 @@ export default function ExtraClassModal() {
                 </Text>
               </View>
             </View>
+          </View>
+
+          {/* Quick Duration Presets */}
+          <View className="flex-row items-center gap-1.5 mt-3 pt-2.5 border-t border-black/5 dark:border-white/5">
+            <Text
+              style={{ color: colors.textMuted }}
+              className="text-[10px] font-semibold mr-1"
+            >
+              Quick duration:
+            </Text>
+            {[
+              { label: '50m', mins: 50 },
+              { label: '1h', mins: 60 },
+              { label: '1h 30m', mins: 90 },
+              { label: '2h', mins: 120 },
+            ].map((preset) => (
+              <TouchableOpacity
+                key={preset.mins}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                activeOpacity={0.7}
+                onPress={() => applyDurationPreset(preset.mins)}
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(255, 255, 255, 0.06)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                  borderColor: isDark
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.06)',
+                  borderWidth: 1,
+                  borderRadius: 8,
+                }}
+                className="px-2 py-0.5"
+              >
+                <Text
+                  style={[styles.sfText, { color: colors.textSecondary }]}
+                  className="text-[10px] font-bold"
+                >
+                  {preset.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 

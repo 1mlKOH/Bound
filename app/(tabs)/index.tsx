@@ -119,6 +119,17 @@ export default function AttendanceScreen() {
     return new Map(allSubjectStats.map((st) => [st.subject.id, st]));
   }, [allSubjectStats]);
 
+  const isTogglingHolidayRef = useRef(false);
+  const handleToggleHoliday = () => {
+    if (isTogglingHolidayRef.current) return;
+    isTogglingHolidayRef.current = true;
+    Haptics.selectionAsync();
+    toggleHoliday(selectedDate);
+    setTimeout(() => {
+      isTogglingHolidayRef.current = false;
+    }, 400);
+  };
+
   // Midnight date rollover handler when app resumes
   useEffect(() => {
     let lastKnownToday = getTodayDateString();
@@ -237,7 +248,7 @@ export default function AttendanceScreen() {
                   </Text>
                 </View>
                 <TactilePill
-                  onPress={() => toggleHoliday(selectedDate)}
+                  onPress={handleToggleHoliday}
                   style={{
                     backgroundColor: isDark
                       ? 'rgba(245, 158, 11, 0.20)'
@@ -270,10 +281,12 @@ export default function AttendanceScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                 {/* Batch Mark Pill */}
                 <TactilePill
-                  disabled={activeDaySessions.length === 0}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    if (activeDaySessions.length === 0) return;
+                    if (activeDaySessions.length === 0) {
+                      toast.info("No classes scheduled today. Tap '+ Add Subject' to get started");
+                      return;
+                    }
                     const count = batchMarkDay(selectedDate);
                     if (count > 0) {
                       toast.success(
@@ -292,7 +305,7 @@ export default function AttendanceScreen() {
                       backgroundColor: colors.glassBg,
                       shadowColor: colors.cardShadow,
                       flexDirection: 'row',
-                      opacity: activeDaySessions.length === 0 ? 0.35 : 1,
+                      opacity: activeDaySessions.length === 0 ? 0.6 : 1,
                     },
                   ]}
                 >
@@ -360,7 +373,7 @@ export default function AttendanceScreen() {
                       ),
                       onSelect: () => {
                         const willBeHoliday = !isHoliday;
-                        toggleHoliday(selectedDate);
+                        handleToggleHoliday();
                         if (willBeHoliday) {
                           toast.info('Marked as Holiday', {
                             description: 'Classes excluded from attendance statistics',
@@ -471,6 +484,10 @@ export default function AttendanceScreen() {
           const bufferTier: 'safe' | 'warning' | 'danger' | 'neutral' =
             !st || st.totalHeld === 0
               ? 'neutral'
+              : st.totalHeld === 1 && st.attended === 1
+              ? 'safe'
+              : st.canMiss === 0 && st.totalHeld > 1 && !st.isBelow
+              ? 'warning'
               : st.isSafe
               ? 'safe'
               : st.isClose
@@ -495,7 +512,7 @@ export default function AttendanceScreen() {
         <View
           style={{
             position: 'absolute',
-            bottom: 78,
+            bottom: 96,
             left: 0,
             right: 0,
             alignItems: 'center',

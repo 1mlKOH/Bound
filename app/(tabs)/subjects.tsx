@@ -93,6 +93,7 @@ export default function SubjectsScreen() {
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => {
               Haptics.selectionAsync();
               setSearchQuery('');

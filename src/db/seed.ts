@@ -1,7 +1,7 @@
 import { expoDb } from './client';
 import { generateUUID, getTodayDateString } from '../domain/attendance';
 
-export function seedDemoData(targetDateStr: string = getTodayDateString()) {
+export function seedDemoData(targetDateStr: string = getTodayDateString(), targetPct: number = 75) {
   // Clear any existing data
   expoDb.execSync(`
     DELETE FROM sessions;
@@ -19,15 +19,14 @@ export function seedDemoData(targetDateStr: string = getTodayDateString()) {
   expoDb.runSync(
     `INSERT INTO subjects (id, name, code, color, target_pct, baseline_present, baseline_absent, start_date, end_date, archived_at, created_at)
      VALUES 
-      (?, 'Physics', 'PHY101', '#1E9BFF', 75, 36, 8, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z'),
-      (?, 'Data Structures', 'CS201', '#A25CF2', 75, 17, 7, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z'),
-      (?, 'Economics', 'ECO110', '#FF8A1F', 75, 19, 6, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z'),
-      (?, 'Chemistry', 'CHE102', '#1FB45A', 75, 27, 3, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z')`,
-    [physicsId, dsId, econId, chemId]
+      (?, 'Physics', 'PHY101', '#1E9BFF', ?, 36, 8, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z'),
+      (?, 'Data Structures', 'CS201', '#A25CF2', ?, 17, 7, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z'),
+      (?, 'Economics', 'ECO110', '#FF8A1F', ?, 19, 6, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z'),
+      (?, 'Chemistry', 'CHE102', '#1FB45A', ?, 27, 3, '2026-08-01', NULL, NULL, '2026-08-01T00:00:00Z')`,
+    [physicsId, targetPct, dsId, targetPct, econId, targetPct, chemId, targetPct]
   );
 
   // 2. Schedule slots: Weekdays (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
-  // Target date 2026-11-07 is a Saturday (weekday 6)
   const slotPhysicsSat = 'slot-phy-sat';
   const slotDsSat = 'slot-ds-sat';
   const slotEconSat = 'slot-econ-sat';
@@ -35,6 +34,9 @@ export function seedDemoData(targetDateStr: string = getTodayDateString()) {
   expoDb.runSync(
     `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
      VALUES
+      -- Chemistry: Sun, Tue, Thu (ensures 7-day schedule coverage)
+      ('slot-chem-sun', ?, 0, '10:00', '11:30', '2026-08-01', NULL),
+
       -- Physics: Mon, Wed, Fri, Sat
       ('slot-phy-mon', ?, 1, '09:00', '10:00', '2026-08-01', NULL),
       ('slot-phy-wed', ?, 3, '09:00', '10:00', '2026-08-01', NULL),
@@ -55,6 +57,7 @@ export function seedDemoData(targetDateStr: string = getTodayDateString()) {
       ('slot-chem-tue', ?, 2, '09:00', '10:30', '2026-08-01', NULL),
       ('slot-chem-thu', ?, 4, '09:00', '10:30', '2026-08-01', NULL)`,
     [
+      chemId,
       physicsId, physicsId, physicsId, slotPhysicsSat, physicsId,
       dsId, dsId, slotDsSat, dsId,
       econId, econId, slotEconSat, econId,

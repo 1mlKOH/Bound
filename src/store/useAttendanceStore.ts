@@ -565,9 +565,8 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     sundayDigestEnabled?: boolean;
   }) => {
     if (options.loadSampleData) {
-      seedDemoData(DEFAULT_DATE);
-    } else if (!get().settings.hasOnboarded && get().subjects.length === 0) {
-      // Only purge if it's a genuine fresh cold-start onboarding
+      seedDemoData(getTodayDateString(), options.targetPct);
+    } else {
       expoDb.execSync(`
         DELETE FROM sessions;
         DELETE FROM schedule_slots;

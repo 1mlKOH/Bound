@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <clipPath id="waveMedClip-mono-white">
+      <circle cx="256" cy="256" r="218"/>
+    </clipPath>
+  </defs>
+  <!-- Circular Medallion Base -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#FFFFFF" stroke-width="14"/>
+
+  <!-- Three Parallel Ribbons (Pure White #FFFFFF) -->
+  <g clip-path="url(#waveMedClip-mono-white)">
+    <path d="M -25 271 C 106 271, 162 206, 256 206 C 350 206, 406 142, 537 142" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round"/>
+    <path d="M -25 321 C 106 321, 162 256, 256 256 C 350 256, 406 191, 537 191" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round"/>
+    <path d="M -25 370 C 106 370, 162 306, 256 306 C 350 306, 406 241, 537 241" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round"/>
+  </g>
+</svg>

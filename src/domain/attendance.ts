@@ -28,8 +28,8 @@ export function computeSubjectStats(
     // 'cancelled' and null are intentionally ignored in held counts
   }
 
-  const attended = Math.max(0, (subject.baselinePresent || 0) + presentCount);
-  const absent = Math.max(0, (subject.baselineAbsent || 0) + absentCount);
+  const attended = Math.max(0, (Number(subject.baselinePresent) || 0) + presentCount);
+  const absent = Math.max(0, (Number(subject.baselineAbsent) || 0) + absentCount);
   const totalHeld = attended + absent;
 
   const percentage = totalHeld === 0 ? 100 : (attended / totalHeld) * 100;
@@ -46,7 +46,11 @@ export function computeSubjectStats(
     } else {
       canMiss = Math.max(0, Math.floor(attended / targetFraction) - totalHeld);
     }
-    statusLabel = canMiss > 0 ? `Can miss ${canMiss}` : 'Can miss 0';
+    if (totalHeld === 1 && attended === 1) {
+      statusLabel = '100% Streak';
+    } else {
+      statusLabel = canMiss > 0 ? `Can miss ${canMiss}` : 'Can miss 0';
+    }
   } else {
     if (targetFraction >= 1) {
       mustAttend = 999;

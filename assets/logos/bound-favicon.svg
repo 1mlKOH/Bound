@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg-fav" x1="128" y1="0" x2="128" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1D1E23"/>
+      <stop offset="100%" stop-color="#131418"/>
+    </linearGradient>
+    <clipPath id="fav-clip">
+      <circle cx="128" cy="128" r="102"/>
+    </clipPath>
+  </defs>
+  <!-- Dark Background Tile -->
+  <rect width="256" height="256" rx="54" fill="url(#bg-fav)"/>
+  
+  <!-- Outer Rim with optical weight -->
+  <circle cx="128" cy="128" r="110" fill="#22242C" stroke="rgba(255,255,255,0.55)" stroke-width="9"/>
+
+  <!-- High-contrast bold ribbons -->
+  <g clip-path="url(#fav-clip)">
+    <path d="M -15 136 C 53 136, 81 103, 128 103 C 175 103, 203 70, 271 70" fill="none" stroke="#1E9BFF" stroke-width="21" stroke-linecap="round"/>
+    <path d="M -15 161 C 53 161, 81 128, 128 128 C 175 128, 203 95, 271 95" fill="none" stroke="#3DDC84" stroke-width="21" stroke-linecap="round"/>
+    <path d="M -15 186 C 53 186, 81 153, 128 153 C 175 153, 203 120, 271 120" fill="none" stroke="#FFB020" stroke-width="21" stroke-linecap="round"/>
+  </g>
+</svg>

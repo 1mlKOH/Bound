@@ -223,3 +223,73 @@ test('Negative baseline inputs are clamped to non-negative values and do not cor
   assert.ok(stats.absent >= 0, 'Absent must be non-negative');
   assert.ok(stats.percentage >= 0 && stats.percentage <= 100, 'Percentage must be between 0 and 100');
 });
+
+test('Single attended class (1/1) returns 100% Streak status label', () => {
+  const subject: Subject = {
+    id: 'sub-first',
+    name: 'First Lecture',
+    code: 'FST101',
+    color: '#1E9BFF',
+    targetPct: 75,
+    baselinePresent: 0,
+    baselineAbsent: 0,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  };
+
+  const attendanceLog: Session[] = [
+    {
+      id: 'log-1',
+      subjectId: 'sub-first',
+      slotId: 'slot-1',
+      date: '2026-08-01',
+      startTime: '10:00',
+      endTime: '11:00',
+      status: 'present',
+      markedAt: '2026-08-01T10:00:00Z',
+    },
+  ];
+
+  const stats = computeSubjectStats(subject, attendanceLog, new Set(), 75);
+  assert.equal(stats.attended, 1);
+  assert.equal(stats.totalHeld, 1);
+  assert.equal(stats.percentage, 100);
+  assert.equal(stats.statusLabel, '100% Streak');
+});
+
+test('String baseline inputs are coerced to numbers without string concatenation', () => {
+  const subject: Subject = {
+    id: 'sub-str',
+    name: 'String Test',
+    code: 'STR101',
+    color: '#1E9BFF',
+    targetPct: 75,
+    baselinePresent: '10' as any,
+    baselineAbsent: '2' as any,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  };
+
+  const attendanceLog: Session[] = [
+    {
+      id: 'log-1',
+      subjectId: 'sub-str',
+      slotId: 'slot-1',
+      date: '2026-08-01',
+      startTime: '10:00',
+      endTime: '11:00',
+      status: 'present',
+      markedAt: '2026-08-01T10:00:00Z',
+    },
+  ];
+
+  const stats = computeSubjectStats(subject, attendanceLog, new Set(), 75);
+  assert.equal(stats.attended, 11);
+  assert.equal(stats.absent, 2);
+  assert.equal(stats.totalHeld, 13);
+  assert.equal(Number.isNaN(stats.percentage), false);
+});

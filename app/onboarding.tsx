@@ -362,8 +362,10 @@ export default function OnboardingScreen() {
   // Screen 4: Bell Permission Primer & Smart Alerts state (off by default)
   const [enableReminders, setEnableReminders] = useState<boolean>(false);
   const [enableSundayDigest, setEnableSundayDigest] = useState<boolean>(false);
+  const [loadStarterCourses, setLoadStarterCourses] = useState<boolean>(false);
   const [previewAlertMode, setPreviewAlertMode] = useState<'safe' | 'warning'>('safe');
   const bellFloatAnim = useRef(new Animated.Value(0)).current;
+  const isNavigating = useRef<boolean>(false);
 
   // Screen 4: Request native notification permissions when user enables either switch
   const handleToggleReminders = async (val: boolean) => {
@@ -448,8 +450,14 @@ export default function OnboardingScreen() {
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Smooth programmatic page navigation
+  // Smooth programmatic page navigation with double-click guard
   const goToPage = (pageIndex: number) => {
+    if (isNavigating.current) return;
+    isNavigating.current = true;
+    setTimeout(() => {
+      isNavigating.current = false;
+    }, 280);
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCurrentPage(pageIndex);
     scrollViewRef.current?.scrollTo({
@@ -494,7 +502,7 @@ export default function OnboardingScreen() {
     });
   };
 
-  // Complete onboarding with CLEAN SLATE (no sample data dumped into DB)
+  // Complete onboarding
   const handleFinish = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -511,13 +519,15 @@ export default function OnboardingScreen() {
 
       await completeOnboarding({
         targetPct,
-        loadSampleData: false, // Clean slate: no bloated dummy courses
+        loadSampleData: loadStarterCourses,
         enableReminders,
         sundayDigestEnabled: enableSundayDigest,
       });
 
       toast.success('Welcome to Bound!', {
-        description: 'Clean timetable ready. Add your first subject to start tracking!',
+        description: loadStarterCourses
+          ? 'Starter timetable ready. Mark your classes to see your buffer!'
+          : 'Clean timetable ready. Add your first subject to start tracking!',
       });
 
       router.replace('/(tabs)');
@@ -527,7 +537,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  // Skip onboarding with clean slate
+  // Skip onboarding tour with clean slate
   const handleSkip = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -597,61 +607,100 @@ export default function OnboardingScreen() {
       edges={['top', 'bottom', 'left', 'right']}
     >
       {/* Top Header Bar */}
-      <View className="flex-row items-center justify-between px-6 pt-2 pb-2">
-        {/* Back Button */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          disabled={currentPage === 0}
-          onPress={() => goToPage(currentPage - 1)}
-          style={{ opacity: currentPage > 0 ? 1 : 0 }}
-          className="w-10 h-10 rounded-full items-center justify-center"
-        >
-          <ChevronLeftIcon size={22} color={colors.text} strokeWidth={2.4} />
-        </TouchableOpacity>
-
-        {/* 4-Dot Interactive Progress Indicator */}
-        <View className="flex-row items-center gap-2">
-          {[0, 1, 2, 3].map((idx) => {
-            const isActive = currentPage === idx;
-            return (
-              <TouchableOpacity
-                key={idx}
-                hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
-                activeOpacity={0.8}
-                onPress={() => goToPage(idx)}
-                style={{
-                  width: isActive ? 24 : 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: isActive
-                    ? colors.statusSafe
-                    : isDark
-                    ? 'rgba(255, 255, 255, 0.2)'
-                    : 'rgba(0, 0, 0, 0.15)',
-                }}
-              />
-            );
-          })}
+      <View className="relative flex-row items-center justify-between px-6 pt-2 pb-2 min-h-[44px]">
+        {/* Back Button Slot (Left) */}
+        <View className="z-10" style={{ minWidth: 40, alignItems: 'flex-start' }}>
+          <TouchableOpacity
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            disabled={currentPage === 0}
+            onPress={() => goToPage(currentPage - 1)}
+            style={{
+              opacity: currentPage > 0 ? 1 : 0,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ChevronLeftIcon size={20} color={colors.text} strokeWidth={2.4} />
+          </TouchableOpacity>
         </View>
 
-        {/* Skip Button */}
-        {currentPage < 3 ? (
-          <TouchableOpacity
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-            onPress={handleSkip}
-            className="px-3 py-1.5 rounded-full"
-          >
-            <Text
-              style={[styles.sfText, { color: colors.textSecondary }]}
-              className="text-sm font-semibold"
+        {/* 4-Dot Interactive Progress Indicator (Centered) */}
+        <View
+          pointerEvents="box-none"
+          style={StyleSheet.absoluteFill}
+          className="items-center justify-center"
+        >
+          <View className="flex-row items-center gap-2">
+            {[0, 1, 2, 3].map((idx) => {
+              const isActive = currentPage === idx;
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+                  activeOpacity={0.8}
+                  onPress={() => goToPage(idx)}
+                  style={{
+                    width: isActive ? 24 : 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: isActive
+                      ? colors.statusSafe
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.20)'
+                      : 'rgba(0, 0, 0, 0.15)',
+                  }}
+                />
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Skip Tour Button Slot (Right) */}
+        <View className="z-10" style={{ minWidth: 40, alignItems: 'flex-end' }}>
+          {currentPage < 3 ? (
+            <TouchableOpacity
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+              onPress={handleSkip}
+              style={{
+                flexShrink: 0,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                minHeight: 32,
+                borderRadius: 999,
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              Skip
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <View className="w-10 h-10" />
-        )}
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.sfText,
+                  {
+                    color: isDark ? '#F5F5F7' : '#111114',
+                    opacity: isDark ? 0.85 : 0.80,
+                    includeFontPadding: false,
+                  },
+                ]}
+                className="text-xs font-bold"
+              >
+                Skip Tour
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 36, height: 36 }} />
+          )}
+        </View>
       </View>
 
       {/* Main Gesture-Enabled Horizontal Pager */}
@@ -902,7 +951,7 @@ export default function OnboardingScreen() {
               style={[styles.sfText, { color: colors.text }]}
               className="text-3xl font-extrabold tracking-tight mb-1.5 text-center"
             >
-              Know your exact{'\n'}skip bank.
+              Know your safe{'\n'}absence buffer.
             </Text>
             <Text
               style={[styles.sfText, { color: colors.textSecondary }]}
@@ -969,7 +1018,7 @@ export default function OnboardingScreen() {
                 {/* Ticket Content Overlay */}
                 <View
                   style={StyleSheet.absoluteFill}
-                  className="flex-row items-center px-3.5"
+                  className="flex-row items-center px-2"
                 >
                   {/* Left Body: Subject info and buffer count */}
                   <View style={{ width: notchX - 16 }} className="justify-center py-1.5">
@@ -1060,6 +1109,7 @@ export default function OnboardingScreen() {
                 return (
                   <TouchableOpacity
                     key={course.id}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                     activeOpacity={0.75}
                     onPress={() => selectCourse(idx)}
                     style={{
@@ -1108,8 +1158,7 @@ export default function OnboardingScreen() {
                 style={[styles.sfText, { color: colors.textSecondary }]}
                 className="text-xs text-center leading-4"
               >
-                Tap courses above to preview skip calculations. You'll start with an
-                empty timetable to add your real classes.
+                Tap courses above to preview skip calculations. You can load these starter courses or start clean on the next step.
               </Text>
             </View>
           </ScrollView>
@@ -1281,6 +1330,7 @@ export default function OnboardingScreen() {
               {/* Interactive Mode Switcher Chips */}
               <View className="flex-row items-center justify-center gap-2 mt-3 mb-1">
                 <TouchableOpacity
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                   activeOpacity={0.7}
                   onPress={() => {
                     Haptics.selectionAsync();
@@ -1311,6 +1361,7 @@ export default function OnboardingScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                   activeOpacity={0.7}
                   onPress={() => {
                     Haptics.selectionAsync();
@@ -1454,6 +1505,67 @@ export default function OnboardingScreen() {
                   thumbColor="#FFFFFF"
                 />
               </View>
+
+              {/* Divider */}
+              <View className="h-px bg-black/5 dark:bg-white/10 my-3" />
+
+              {/* Row 3: Starter Courses */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setLoadStarterCourses((prev) => !prev);
+                }}
+                className="flex-row items-center justify-between"
+              >
+                <View className="flex-row items-center gap-3 flex-1 pr-3">
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: loadStarterCourses
+                        ? isDark ? 'rgba(61, 220, 132, 0.15)' : 'rgba(13, 138, 51, 0.12)'
+                        : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CheckIcon
+                      size={16}
+                      color={loadStarterCourses ? colors.statusSafe : colors.textSecondary}
+                      strokeWidth={2.4}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      style={[styles.sfText, { color: colors.text }]}
+                      className="text-sm font-bold mb-0.5"
+                    >
+                      Load Starter Courses
+                    </Text>
+                    <Text
+                      style={[styles.sfText, { color: colors.textSecondary }]}
+                      className="text-xs leading-4"
+                    >
+                      Pre-populate Physics, Data Structures & Calculus demo timetable.
+                    </Text>
+                  </View>
+                </View>
+
+                <Switch
+                  value={loadStarterCourses}
+                  onValueChange={(val) => {
+                    Haptics.selectionAsync();
+                    setLoadStarterCourses(val);
+                  }}
+                  trackColor={{
+                    false: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                    true: colors.statusSafe,
+                  }}
+                  thumbColor="#FFFFFF"
+                />
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
@@ -1496,7 +1608,7 @@ export default function OnboardingScreen() {
               ? 'Continue'
               : isSubmitting
               ? 'Setting up Bound...'
-              : 'Start tracking'}
+              : 'Get Started'}
           </Text>
           {currentPage < 3 && (
             <ChevronRightIcon size={18} color="#06210F" strokeWidth={2.6} />
