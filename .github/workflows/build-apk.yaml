@@ -44,7 +44,7 @@ jobs:
       - name: ⚙️ Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: 🚀 Install EAS CLI
         run: npm install --global eas-cli
@@ -87,6 +87,10 @@ jobs:
           }
           EOF
           echo "✅ Keystore and credentials.json ready for local credential signing."
+
+      - name: 📦 Install dependencies for Config Plugins
+        run: |
+          npm install --legacy-peer-deps --ignore-scripts || npm install --force --ignore-scripts
 
       - name: ☁️ Trigger EAS Cloud Build
         id: eas_build
