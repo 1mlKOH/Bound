@@ -35,6 +35,7 @@ import { SegmentedControl } from '../src/components/SegmentedControl';
 import { toast } from 'sonner-native';
 import { sendTestNotification } from '../src/utils/notifications';
 import { fontFamilyNames } from '../src/utils/typography';
+import { BoundLogo } from '../src/components/BoundLogo';
 
 interface TactileCloseButtonProps {
   onPress: () => void;
@@ -1120,6 +1121,52 @@ export default function SettingsScreen() {
             <TrashIcon size={15} color={isDark ? '#FF6B72' : '#DC2626'} />
           </TouchableOpacity>
         </FoldableSectionCard>
+
+        {/* Brand Logo & About Bound Footer */}
+        <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 28, paddingBottom: 48 }}>
+          <BoundLogo size={52} withTile={true} />
+          <Text
+            style={[
+              styles.sfText,
+              {
+                fontFamily: fontFamilyNames.bold,
+                color: colors.text,
+                fontSize: 15,
+                marginTop: 10,
+                letterSpacing: 0.3,
+              },
+            ]}
+          >
+            Bound
+          </Text>
+          <Text
+            style={[
+              styles.sfText,
+              {
+                fontFamily: fontFamilyNames.medium,
+                color: colors.textMuted,
+                fontSize: 12,
+                marginTop: 2,
+              },
+            ]}
+          >
+            Version 1.0.0 (Build 1)
+          </Text>
+          <Text
+            style={[
+              styles.sfText,
+              {
+                fontFamily: fontFamilyNames.regular,
+                color: colors.textMuted,
+                fontSize: 11,
+                marginTop: 3,
+                opacity: 0.7,
+              },
+            ]}
+          >
+            Tactile Attendance Tracking
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

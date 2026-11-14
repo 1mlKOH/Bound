@@ -194,7 +194,7 @@ export default function AttendanceScreen() {
       edges={['top']}
     >
       {/* Top Header */}
-      <TopHeader title="Attendance" showLogo={true} />
+      <TopHeader title="Bound" showLogo={true} />
 
       {/* Date Navigation Pill */}
       <DatePillSelector
