@@ -34,6 +34,8 @@ jobs:
   build:
     name: Build Android APK on Expo EAS Cloud
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: 📥 Check out repository
@@ -91,13 +93,22 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          PROFILE="${{ github.event.inputs.profile || 'preview' }}"
+          PROFILE="${{ github.event.inputs.profile }}"
+          if [ -z "$PROFILE" ]; then
+            PROFILE="preview"
+          fi
           echo "Triggering EAS build for Android with profile: $PROFILE"
+          BUILD_EXIT_CODE=0
           eas build \
             --platform android \
             --profile "$PROFILE" \
             --non-interactive \
-            --wait 2>&1 | tee eas-build.log
+            --wait > eas-build.log 2>&1 || BUILD_EXIT_CODE=$?
+          cat eas-build.log
+          if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
+            echo "EAS Build failed with code $BUILD_EXIT_CODE"
+            exit $BUILD_EXIT_CODE
+          fi
 
       - name: ⬇️ Download APK from EAS Cloud
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.download_artifact }}
@@ -134,3 +145,21 @@ jobs:
           path: eas-build.log
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: 📢 Report Diagnostics to GitHub Commit
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f eas-build.log ]; then
+            LOG_SNIPPET=$(tail -n 60 eas-build.log)
+            PAYLOAD=$(jq -n --arg body "### 🔍 EAS Build Diagnostic Log
+\`\`\`
+$LOG_SNIPPET
+\`\`\`" '{body: $body}')
+            curl -s -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+              -d "$PAYLOAD" || true
+          fi
