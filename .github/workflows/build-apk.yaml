@@ -107,6 +107,7 @@ jobs:
             --platform android \
             --profile "$PROFILE" \
             --non-interactive \
+            --clear-cache \
             --wait > eas-build.log 2>&1 || BUILD_EXIT_CODE=$?
           cat eas-build.log
           if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
