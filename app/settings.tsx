@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,11 +27,14 @@ import {
   GaugeIcon,
   BellIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
+  SunIcon,
 } from '../src/components/icons';
 import { useTheme } from '../src/utils/theme';
 import { SegmentedControl } from '../src/components/SegmentedControl';
 import { toast } from 'sonner-native';
 import { sendTestNotification } from '../src/utils/notifications';
+import { fontFamilyNames } from '../src/utils/typography';
 
 interface TactileCloseButtonProps {
   onPress: () => void;
@@ -83,6 +86,209 @@ const TactileCloseButton: React.FC<TactileCloseButtonProps> = ({ onPress }) => {
   );
 };
 
+interface FoldableSectionCardProps {
+  title: string;
+  subtitle?: string;
+  summaryBadge?: string;
+  badgeColor?: string;
+  badgeBg?: string;
+  icon?: React.ReactNode;
+  isDanger?: boolean;
+  defaultExpanded?: boolean;
+  children: React.ReactNode;
+}
+
+const FoldableSectionCard: React.FC<FoldableSectionCardProps> = ({
+  title,
+  subtitle,
+  summaryBadge,
+  badgeColor,
+  badgeBg,
+  icon,
+  isDanger = false,
+  defaultExpanded = true,
+  children,
+}) => {
+  const { colors, isDark } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const headerScale = useRef(new Animated.Value(1)).current;
+  const chevronRotation = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(chevronRotation, {
+      toValue: isExpanded ? 1 : 0,
+      damping: 18,
+      stiffness: 220,
+      mass: 0.6,
+      useNativeDriver: true,
+    }).start();
+  }, [isExpanded]);
+
+  const chevronAngle = chevronRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const onPressIn = () => {
+    Animated.timing(headerScale, {
+      toValue: 0.985,
+      duration: 50,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.spring(headerScale, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 240,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleToggle = () => {
+    Haptics.selectionAsync();
+    setIsExpanded((prev) => !prev);
+  };
+
+  const resolvedBorder = isDanger
+    ? isDark ? 'rgba(255, 107, 114, 0.25)' : 'rgba(220, 38, 38, 0.20)'
+    : colors.cardBorder;
+
+  const resolvedBg = isDanger
+    ? isDark ? 'rgba(255, 107, 114, 0.04)' : 'rgba(254, 242, 242, 0.6)'
+    : colors.card;
+
+  return (
+    <View
+      style={[
+        styles.cardContainer,
+        {
+          borderRadius: 24,
+          borderCurve: 'continuous',
+          backgroundColor: resolvedBg,
+          borderColor: resolvedBorder,
+          borderWidth: isDanger ? 1 : 0,
+          shadowColor: colors.cardShadow,
+        },
+      ]}
+      className="my-2 overflow-hidden"
+    >
+      <Animated.View style={{ transform: [{ scale: headerScale }] }}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          delayPressIn={0}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          onPress={handleToggle}
+          className="p-5 flex-row items-center justify-between"
+        >
+          {/* Left: Icon + Title + Subtitle */}
+          <View className="flex-row items-center flex-1 pr-2">
+            {icon && (
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: isDanger
+                    ? isDark ? 'rgba(255, 107, 114, 0.15)' : 'rgba(220, 38, 38, 0.10)'
+                    : colors.actionBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 10,
+                }}
+              >
+                {icon}
+              </View>
+            )}
+            <View className="flex-1">
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    fontFamily: fontFamilyNames.bold,
+                    letterSpacing: -0.3,
+                    color: isDanger
+                      ? isDark ? '#FF6B72' : '#DC2626'
+                      : colors.text,
+                    lineHeight: 22,
+                  },
+                ]}
+                className="text-[17px] font-bold"
+              >
+                {title}
+              </Text>
+              {subtitle && (
+                <Text
+                  style={[
+                    styles.sfText,
+                    {
+                      fontFamily: fontFamilyNames.regular,
+                      color: colors.textMuted,
+                      letterSpacing: -0.1,
+                    },
+                  ]}
+                  className="text-xs mt-0.5"
+                  numberOfLines={1}
+                >
+                  {subtitle}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Right: Summary Badge + Rotating Chevron */}
+          <View className="flex-row items-center">
+            {summaryBadge && (
+              <View
+                style={{
+                  borderRadius: 999,
+                  backgroundColor: badgeBg || colors.actionBg,
+                }}
+                className="px-2.5 py-1 mr-2"
+              >
+                <Text
+                  style={[
+                    styles.sfText,
+                    {
+                      fontFamily: fontFamilyNames.semiBold,
+                      color: badgeColor || colors.textSecondary,
+                    },
+                  ]}
+                  className="text-[11px] font-semibold"
+                >
+                  {summaryBadge}
+                </Text>
+              </View>
+            )}
+            <Animated.View style={{ transform: [{ rotate: chevronAngle }] }}>
+              <ChevronDownIcon
+                size={16}
+                color={isDanger ? (isDark ? '#FF6B72' : '#DC2626') : colors.textMuted}
+                strokeWidth={2.4}
+              />
+            </Animated.View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Expanded Content Body */}
+      {isExpanded && (
+        <View
+          style={{
+            borderTopColor: colors.divider,
+            borderTopWidth: 1,
+          }}
+          className="px-5 pt-4 pb-5"
+        >
+          {children}
+        </View>
+      )}
+    </View>
+  );
+};
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -99,6 +305,12 @@ export default function SettingsScreen() {
   } = useAttendanceStore();
 
   const [targetInput, setTargetInput] = useState(String(settings.globalTargetPct));
+
+  const activeNotificationCount = [
+    settings.dailyReminderEnabled,
+    settings.perClassReminderEnabled,
+    settings.sundayDigestEnabled,
+  ].filter(Boolean).length;
 
   const handleImportJSON = async () => {
     try {
@@ -274,53 +486,91 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Card 1: Appearance */}
-        <View
-          style={[
-            styles.cardContainer,
-            {
-              borderRadius: 24,
-              borderCurve: 'continuous',
-              backgroundColor: colors.card,
-              shadowColor: colors.cardShadow,
-            },
-          ]}
-          className="p-5 my-2"
+        {/* Category 1: Appearance & Display */}
+        <FoldableSectionCard
+          title="Appearance & Display"
+          subtitle="Theme, class card labels, and haptics"
+          summaryBadge={`${settings.theme.charAt(0).toUpperCase() + settings.theme.slice(1)} · ${settings.primaryCardLabel === 'name' ? 'Name' : 'Code'}`}
+          icon={<SunIcon size={16} color={colors.textSecondary} />}
+          defaultExpanded={true}
         >
-          <Text
-            style={[
-              styles.sfText,
-              { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
-            ]}
-            className="text-[17px] font-semibold mb-3"
+          {/* Theme selector */}
+          <View className="mb-4">
+            <Text
+              style={[
+                styles.sfText,
+                { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+              ]}
+              className="text-sm font-semibold mb-2"
+            >
+              Theme
+            </Text>
+            <SegmentedControl
+              options={[
+                { label: 'System', value: 'system' },
+                { label: 'Light', value: 'light' },
+                { label: 'Dark', value: 'dark' },
+              ]}
+              selectedValue={settings.theme}
+              onSelect={(mode) => updateSettings({ theme: mode })}
+              containerClass="relative flex-row p-1"
+            />
+          </View>
+
+          {/* Class Card Label */}
+          <View
+            style={{ borderTopColor: colors.divider }}
+            className="pt-4 border-t mb-4"
           >
-            Appearance
-          </Text>
-          <SegmentedControl
-            options={[
-              { label: 'System', value: 'system' },
-              { label: 'Light', value: 'light' },
-              { label: 'Dark', value: 'dark' },
-            ]}
-            selectedValue={settings.theme}
-            onSelect={(mode) => updateSettings({ theme: mode })}
-            containerClass="relative flex-row p-1 mb-1"
-          />
+            <Text
+              style={[
+                styles.sfText,
+                { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+              ]}
+              className="text-sm font-semibold mb-0.5"
+            >
+              Class Card Labels
+            </Text>
+            <Text
+              style={[
+                styles.sfText,
+                { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+              ]}
+              className="text-xs mb-2.5"
+            >
+              Choose what primary text to display on class cards
+            </Text>
+            <SegmentedControl
+              options={[
+                { label: 'Subject Name', value: 'name' },
+                { label: 'Course Code', value: 'code' },
+              ]}
+              selectedValue={settings.primaryCardLabel}
+              onSelect={(val) => updateSettings({ primaryCardLabel: val })}
+              containerClass="relative flex-row p-1"
+            />
+          </View>
 
           {/* Haptic Feedback Toggle */}
           <View
             style={{ borderTopColor: colors.divider }}
-            className="flex-row items-center justify-between pt-4 mt-4 border-t"
+            className="flex-row items-center justify-between pt-4 border-t"
           >
             <View className="flex-1 pr-3">
               <Text
-                style={[styles.sfText, { color: colors.text }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                ]}
                 className="text-sm font-semibold"
               >
                 Haptic Feedback
               </Text>
               <Text
-                style={[styles.sfText, { color: colors.textMuted }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                ]}
                 className="text-xs mt-0.5"
               >
                 Tactile vibrations on button taps, date changes, and actions
@@ -341,56 +591,35 @@ export default function SettingsScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
-        </View>
+        </FoldableSectionCard>
 
-        {/* Card 2: Attendance Target */}
-        <View
-          style={[
-            styles.cardContainer,
-            {
-              borderRadius: 24,
-              borderCurve: 'continuous',
-              backgroundColor: colors.card,
-              shadowColor: colors.cardShadow,
-            },
-          ]}
-          className="p-5 my-2"
+        {/* Category 2: Attendance Rules */}
+        <FoldableSectionCard
+          title="Attendance Rules"
+          subtitle="Default cutoff threshold and margin calculation"
+          summaryBadge={`${settings.globalTargetPct}%`}
+          icon={<GaugeIcon size={16} color={colors.textSecondary} />}
+          defaultExpanded={true}
         >
-          <View className="flex-row items-center mb-1">
-            <View
-              style={{
-                width: 20,
-                height: 22,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: Platform.OS === 'android' ? 1 : 0,
-              }}
-            >
-              <GaugeIcon size={17} color={colors.textSecondary} />
-            </View>
-            <Text
-              style={[
-                styles.sfText,
-                { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
-              ]}
-              className="text-[17px] font-semibold ml-2"
-            >
-              Attendance Target
-            </Text>
-          </View>
-          <View className="flex-row items-center justify-between mt-2">
+          <View className="flex-row items-center justify-between">
             <View className="flex-1 pr-3">
               <Text
-                style={[styles.sfText, { color: colors.text }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                ]}
                 className="text-sm font-semibold"
               >
-                Global Target %
+                Global Target Cutoff
               </Text>
               <Text
-                style={[styles.sfText, { color: colors.textMuted }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                ]}
                 className="text-xs mt-0.5"
               >
-                Used as default threshold when calculating safe attendance
+                Default threshold used to compute safe skips and recovery classes
               </Text>
             </View>
             <View
@@ -409,107 +638,45 @@ export default function SettingsScreen() {
                 maxLength={3}
                 style={[
                   styles.sfText,
-                  { color: colors.text },
+                  { fontFamily: fontFamilyNames.bold, color: colors.text },
                 ]}
                 className="text-base font-bold text-center p-0"
               />
             </View>
           </View>
-        </View>
+        </FoldableSectionCard>
 
-        {/* Card 3: Class Card Labels */}
-        <View
-          style={[
-            styles.cardContainer,
-            {
-              borderRadius: 24,
-              borderCurve: 'continuous',
-              backgroundColor: colors.card,
-              shadowColor: colors.cardShadow,
-            },
-          ]}
-          className="p-5 my-2"
+        {/* Category 3: Notifications & Reminders */}
+        <FoldableSectionCard
+          title="Notifications & Reminders"
+          subtitle="Schedule alerts, evening catch-ups & digests"
+          summaryBadge={activeNotificationCount > 0 ? `${activeNotificationCount} active` : 'Off'}
+          icon={<BellIcon size={16} color={colors.textSecondary} strokeWidth={2} />}
+          defaultExpanded={true}
         >
-          <Text
-            style={[
-              styles.sfText,
-              { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
-            ]}
-            className="text-[17px] font-semibold mb-0.5"
-          >
-            Class Card Labels
-          </Text>
-          <Text
-            style={[styles.sfText, { color: colors.textMuted }]}
-            className="text-xs mb-3"
-          >
-            Choose what primary text to show on class cards
-          </Text>
-
-          <SegmentedControl
-            options={[
-              { label: 'Subject Name', value: 'name' },
-              { label: 'Course Code', value: 'code' },
-            ]}
-            selectedValue={settings.primaryCardLabel}
-            onSelect={(val) => updateSettings({ primaryCardLabel: val })}
-            containerClass="relative flex-row p-1"
-          />
-        </View>
-
-        {/* Card 4: Notifications & Reminders */}
-        <View
-          style={[
-            styles.cardContainer,
-            {
-              borderRadius: 24,
-              borderCurve: 'continuous',
-              backgroundColor: colors.card,
-              shadowColor: colors.cardShadow,
-            },
-          ]}
-          className="p-5 my-2"
-        >
-          <View className="flex-row items-center mb-3">
-            <View
-              style={{
-                width: 20,
-                height: 22,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: Platform.OS === 'android' ? 1 : 0,
-              }}
-            >
-              <BellIcon size={17} color={colors.textSecondary} strokeWidth={2} />
-            </View>
-            <Text
-              style={[
-                styles.sfText,
-                { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
-              ]}
-              className="text-[17px] font-semibold ml-2"
-            >
-              Notifications & Reminders
-            </Text>
-          </View>
-
           {/* Unmarked Class Reminder */}
           <View
             style={{ borderBottomColor: colors.divider }}
-            className="flex-row items-center justify-between py-2 border-b"
+            className="flex-row items-center justify-between pb-3 border-b"
           >
             <View className="flex-1 pr-3">
               <Text
-                style={[styles.sfText, { color: colors.text }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                ]}
                 className="text-sm font-semibold"
               >
                 Unmarked Class Reminder
               </Text>
               <Text
-                style={[styles.sfText, { color: colors.textMuted }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                ]}
                 className="text-xs mt-0.5"
               >
-                Only reminds you in the evening if any classes are left unmarked for the day
+                Reminds you in the evening only if any classes are left unmarked for the day
               </Text>
             </View>
             <Switch
@@ -529,21 +696,27 @@ export default function SettingsScreen() {
           {/* Per-class Quick-Mark Alert */}
           <View
             style={{ borderBottomColor: colors.divider }}
-            className="py-2.5 border-b"
+            className="py-3 border-b"
           >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 pr-3">
                 <Text
-                  style={[styles.sfText, { color: colors.text }]}
+                  style={[
+                    styles.sfText,
+                    { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                  ]}
                   className="text-sm font-semibold"
                 >
                   Per-class Quick-Mark Alert
                 </Text>
                 <Text
-                  style={[styles.sfText, { color: colors.textMuted }]}
+                  style={[
+                    styles.sfText,
+                    { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                  ]}
                   className="text-xs mt-0.5"
                 >
-                  Heads-up reminder before class starts or ends
+                  Heads-up reminder before class starts
                 </Text>
               </View>
               <Switch
@@ -564,12 +737,15 @@ export default function SettingsScreen() {
             {settings.perClassReminderEnabled && (
               <View className="mt-3 pt-2">
                 <Text
-                  style={[styles.sfText, { color: colors.textMuted }]}
+                  style={[
+                    styles.sfText,
+                    { fontFamily: fontFamilyNames.medium, color: colors.textMuted },
+                  ]}
                   className="text-xs font-medium mb-2"
                 >
-                  Notify Timing
+                  Alert Offset
                 </Text>
-                <View className="flex-row space-x-2">
+                <View className="flex-row">
                   <TouchableOpacity
                     activeOpacity={0.7}
                     onPress={() => {
@@ -577,7 +753,7 @@ export default function SettingsScreen() {
                       updateSettings({ perClassReminderOffsetMinutes: 5 });
                     }}
                     style={{
-                      borderRadius: 16,
+                      borderRadius: 14,
                       borderCurve: 'continuous',
                       backgroundColor:
                         settings.perClassReminderOffsetMinutes === 5
@@ -590,6 +766,7 @@ export default function SettingsScreen() {
                       style={[
                         styles.sfText,
                         {
+                          fontFamily: fontFamilyNames.semiBold,
                           color:
                             settings.perClassReminderOffsetMinutes === 5
                               ? colors.presentBadgeText
@@ -609,7 +786,7 @@ export default function SettingsScreen() {
                       updateSettings({ perClassReminderOffsetMinutes: 15 });
                     }}
                     style={{
-                      borderRadius: 16,
+                      borderRadius: 14,
                       borderCurve: 'continuous',
                       backgroundColor:
                         settings.perClassReminderOffsetMinutes === 15
@@ -622,6 +799,7 @@ export default function SettingsScreen() {
                       style={[
                         styles.sfText,
                         {
+                          fontFamily: fontFamilyNames.semiBold,
                           color:
                             settings.perClassReminderOffsetMinutes === 15
                               ? colors.presentBadgeText
@@ -639,19 +817,25 @@ export default function SettingsScreen() {
           </View>
 
           {/* Weekly Sunday Digest */}
-          <View className="flex-row items-center justify-between py-2 mt-1">
+          <View className="flex-row items-center justify-between py-3">
             <View className="flex-1 pr-3">
               <Text
-                style={[styles.sfText, { color: colors.text }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                ]}
                 className="text-sm font-semibold"
               >
                 Weekly Sunday Digest
               </Text>
               <Text
-                style={[styles.sfText, { color: colors.textMuted }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                ]}
                 className="text-xs mt-0.5"
               >
-                Highlights low-attendance subjects every Sunday at 19:00
+                Highlights low-attendance subjects every Sunday evening at 19:00
               </Text>
             </View>
             <Switch
@@ -671,17 +855,23 @@ export default function SettingsScreen() {
           {/* Test Notification Row */}
           <View
             style={{ borderTopColor: colors.divider }}
-            className="pt-3 mt-2 border-t"
+            className="pt-3.5 mt-1 border-t"
           >
             <View className="mb-2">
               <Text
-                style={[styles.sfText, { color: colors.text }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                ]}
                 className="text-xs font-semibold"
               >
                 Test Live Notifications
               </Text>
               <Text
-                style={[styles.sfText, { color: colors.textMuted }]}
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                ]}
                 className="text-[11px] mt-0.5"
               >
                 Inspect lockscreen action buttons, sounds, and math copy
@@ -705,7 +895,7 @@ export default function SettingsScreen() {
                 <Text
                   style={[
                     styles.sfText,
-                    { color: colors.presentBadgeText },
+                    { fontFamily: fontFamilyNames.semiBold, color: colors.presentBadgeText },
                   ]}
                   className="text-xs font-semibold"
                 >
@@ -729,7 +919,7 @@ export default function SettingsScreen() {
                 <Text
                   style={[
                     styles.sfText,
-                    { color: colors.absentBadgeText },
+                    { fontFamily: fontFamilyNames.semiBold, color: colors.absentBadgeText },
                   ]}
                   className="text-xs font-semibold"
                 >
@@ -753,7 +943,7 @@ export default function SettingsScreen() {
                 <Text
                   style={[
                     styles.sfText,
-                    { color: colors.textSecondary },
+                    { fontFamily: fontFamilyNames.semiBold, color: colors.textSecondary },
                   ]}
                   className="text-xs font-semibold"
                 >
@@ -762,31 +952,15 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </FoldableSectionCard>
 
-        {/* Card 5: Data & Backup */}
-        <View
-          style={[
-            styles.cardContainer,
-            {
-              borderRadius: 24,
-              borderCurve: 'continuous',
-              backgroundColor: colors.card,
-              shadowColor: colors.cardShadow,
-            },
-          ]}
-          className="p-5 my-2"
+        {/* Category 4: Backup & Data */}
+        <FoldableSectionCard
+          title="Backup & Data"
+          subtitle="Export, import, and tour review"
+          icon={<ExportIcon size={16} color={colors.textSecondary} />}
+          defaultExpanded={false}
         >
-          <Text
-            style={[
-              styles.sfText,
-              { letterSpacing: -0.3, color: colors.text, lineHeight: 22 },
-            ]}
-            className="text-[17px] font-semibold mb-3"
-          >
-            Data & Backup
-          </Text>
-
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleExportJSON}
@@ -798,7 +972,10 @@ export default function SettingsScreen() {
             className="py-3 px-4 flex-row items-center justify-between my-1"
           >
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+              ]}
               className="text-xs font-semibold"
             >
               Export Backup (JSON)
@@ -817,7 +994,10 @@ export default function SettingsScreen() {
             className="py-3 px-4 flex-row items-center justify-between my-1"
           >
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+              ]}
               className="text-xs font-semibold"
             >
               Import Backup (JSON)
@@ -836,7 +1016,10 @@ export default function SettingsScreen() {
             className="py-3 px-4 flex-row items-center justify-between my-1"
           >
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+              ]}
               className="text-xs font-semibold"
             >
               Export Attendance Log (CSV)
@@ -862,7 +1045,10 @@ export default function SettingsScreen() {
             <Text
               style={[
                 styles.sfText,
-                { color: isDark ? '#3DDC84' : '#0D8A33' },
+                {
+                  fontFamily: fontFamilyNames.semiBold,
+                  color: isDark ? '#3DDC84' : '#0D8A33',
+                },
               ]}
               className="text-xs font-semibold"
             >
@@ -870,7 +1056,19 @@ export default function SettingsScreen() {
             </Text>
             <ChevronRightIcon size={15} color={isDark ? '#3DDC84' : '#0D8A33'} />
           </TouchableOpacity>
+        </FoldableSectionCard>
 
+        {/* Category 5: Danger Zone */}
+        <FoldableSectionCard
+          title="Danger Zone"
+          subtitle="Reset demo timetable or erase attendance records"
+          summaryBadge="Destructive"
+          badgeColor={isDark ? '#FF6B72' : '#DC2626'}
+          badgeBg={isDark ? 'rgba(255, 107, 114, 0.15)' : 'rgba(220, 38, 38, 0.10)'}
+          icon={<TrashIcon size={16} color={isDark ? '#FF6B72' : '#DC2626'} />}
+          isDanger={true}
+          defaultExpanded={false}
+        >
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={confirmResetDemo}
@@ -878,7 +1076,7 @@ export default function SettingsScreen() {
               borderRadius: 14,
               borderCurve: 'continuous',
               backgroundColor: isDark
-                ? 'rgba(245, 158, 11, 0.10)'
+                ? 'rgba(245, 158, 11, 0.12)'
                 : 'rgba(245, 158, 11, 0.08)',
             }}
             className="py-3 px-4 flex-row items-center justify-between my-1"
@@ -886,7 +1084,10 @@ export default function SettingsScreen() {
             <Text
               style={[
                 styles.sfText,
-                { color: isDark ? '#FFB020' : '#D97706' },
+                {
+                  fontFamily: fontFamilyNames.semiBold,
+                  color: isDark ? '#FFB020' : '#D97706',
+                },
               ]}
               className="text-xs font-semibold"
             >
@@ -902,7 +1103,7 @@ export default function SettingsScreen() {
               borderRadius: 14,
               borderCurve: 'continuous',
               backgroundColor: isDark
-                ? 'rgba(244, 63, 94, 0.10)'
+                ? 'rgba(244, 63, 94, 0.12)'
                 : 'rgba(244, 63, 94, 0.08)',
             }}
             className="py-3 px-4 flex-row items-center justify-between my-1"
@@ -910,7 +1111,10 @@ export default function SettingsScreen() {
             <Text
               style={[
                 styles.sfText,
-                { color: isDark ? '#FF6B72' : '#DC2626' },
+                {
+                  fontFamily: fontFamilyNames.semiBold,
+                  color: isDark ? '#FF6B72' : '#DC2626',
+                },
               ]}
               className="text-xs font-semibold"
             >
@@ -918,7 +1122,7 @@ export default function SettingsScreen() {
             </Text>
             <TrashIcon size={15} color={isDark ? '#FF6B72' : '#DC2626'} />
           </TouchableOpacity>
-        </View>
+        </FoldableSectionCard>
       </ScrollView>
     </SafeAreaView>
   );
@@ -938,7 +1142,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.medium,
     includeFontPadding: false,
   },
 });
