@@ -57,6 +57,8 @@ jobs:
 
       - name: ☁️ Trigger EAS Cloud Build
         id: eas_build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           PROFILE="${{ github.event.inputs.profile || 'preview' }}"
           echo "Triggering EAS build for Android with profile: $PROFILE"
@@ -68,6 +70,8 @@ jobs:
 
       - name: ⬇️ Download APK from EAS Cloud
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.download_artifact }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           echo "Downloading built APK from EAS servers..."
           eas build:download --platform android --non-interactive
