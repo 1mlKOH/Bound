@@ -106,7 +106,7 @@ const FoldableSectionCard: React.FC<FoldableSectionCardProps> = ({
   badgeBg,
   icon,
   isDanger = false,
-  defaultExpanded = true,
+  defaultExpanded = false,
   children,
 }) => {
   const { colors, isDark } = useTheme();
@@ -492,7 +492,6 @@ export default function SettingsScreen() {
           subtitle="Theme, class card labels, and haptics"
           summaryBadge={`${settings.theme.charAt(0).toUpperCase() + settings.theme.slice(1)} · ${settings.primaryCardLabel === 'name' ? 'Name' : 'Code'}`}
           icon={<SunIcon size={16} color={colors.textSecondary} />}
-          defaultExpanded={true}
         >
           {/* Theme selector */}
           <View className="mb-4">
@@ -599,7 +598,6 @@ export default function SettingsScreen() {
           subtitle="Default cutoff threshold and margin calculation"
           summaryBadge={`${settings.globalTargetPct}%`}
           icon={<GaugeIcon size={16} color={colors.textSecondary} />}
-          defaultExpanded={true}
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-1 pr-3">
@@ -652,7 +650,6 @@ export default function SettingsScreen() {
           subtitle="Schedule alerts, evening catch-ups & digests"
           summaryBadge={activeNotificationCount > 0 ? `${activeNotificationCount} active` : 'Off'}
           icon={<BellIcon size={16} color={colors.textSecondary} strokeWidth={2} />}
-          defaultExpanded={true}
         >
           {/* Unmarked Class Reminder */}
           <View
