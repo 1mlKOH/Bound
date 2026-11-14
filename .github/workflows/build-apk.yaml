@@ -108,6 +108,7 @@ jobs:
             --profile "$PROFILE" \
             --non-interactive \
             --clear-cache \
+            --verbose-logs \
             --wait > eas-build.log 2>&1 || BUILD_EXIT_CODE=$?
           cat eas-build.log
           if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
@@ -158,7 +159,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const log = fs.existsSync("eas-build.log") ? fs.readFileSync("eas-build.log", "utf8").slice(-3000) : "No log found";
+            const log = fs.existsSync("eas-build.log") ? fs.readFileSync("eas-build.log", "utf8").slice(-15000) : "No log found";
             const body = "### 🔍 EAS Build Diagnostic Log\n```\n" + log + "\n```";
             fs.writeFileSync("/tmp/comment.json", JSON.stringify({ body }));
           '
