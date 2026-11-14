@@ -8,6 +8,8 @@ yarn-error.*
 *.p8
 *.p12
 *.key
+*.keystore
+credentials.json
 *.mobileprovision
 *.orig.*
 web-build/

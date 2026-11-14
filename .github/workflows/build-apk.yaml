@@ -58,6 +58,34 @@ jobs:
           echo "EXPO_TOKEN secret detected (length: ${#EXPO_TOKEN}). Verifying account with EAS..."
           eas whoami
 
+      - name: 🔑 Set up Android Keystore & Credentials
+        run: |
+          mkdir -p android/keystores
+          keytool -genkey -v \
+            -storetype JKS \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass bound123456 \
+            -keypass bound123456 \
+            -alias bound-key \
+            -keystore android/keystores/release.keystore \
+            -dname "CN=Bound,OU=Mobile,O=BoundApp,L=SanFrancisco,S=CA,C=US"
+          
+          cat << 'EOF' > credentials.json
+          {
+            "android": {
+              "keystore": {
+                "keystorePath": "android/keystores/release.keystore",
+                "keystorePassword": "bound123456",
+                "keyAlias": "bound-key",
+                "keyPassword": "bound123456"
+              }
+            }
+          }
+          EOF
+          echo "✅ Keystore and credentials.json ready for local credential signing."
+
       - name: ☁️ Trigger EAS Cloud Build
         id: eas_build
         env:
@@ -69,7 +97,7 @@ jobs:
             --platform android \
             --profile "$PROFILE" \
             --non-interactive \
-            --wait
+            --wait 2>&1 | tee eas-build.log
 
       - name: ⬇️ Download APK from EAS Cloud
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.download_artifact }}
@@ -97,3 +125,12 @@ jobs:
           path: ./bound-testing.apk
           if-no-files-found: warn
           retention-days: 14
+
+      - name: 📋 Upload Build Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-build-failure-log
+          path: eas-build.log
+          if-no-files-found: ignore
+          retention-days: 7
