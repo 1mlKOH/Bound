@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, Platform, StyleSheet, Animated } from 'react-native';
+import { View, Text, Platform, StyleSheet, Animated, Easing } from 'react-native';
 import { NumberFlow } from 'number-flow-react-native';
 import { PooledStats } from '../types';
 import { useTheme } from '../utils/theme';
@@ -66,11 +66,10 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
   ).current;
 
   useEffect(() => {
-    Animated.spring(animatedPercent, {
+    Animated.timing(animatedPercent, {
       toValue: targetPercent,
-      damping: 20,
-      stiffness: 150,
-      mass: 0.6,
+      duration: 450,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
   }, [targetPercent]);
@@ -78,6 +77,7 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
   const animatedWidth = animatedPercent.interpolate({
     inputRange: [0, 100],
     outputRange: ['0%', '100%'],
+    extrapolate: 'clamp',
   });
 
   const summarySubtitle = isZeroState
