@@ -57,10 +57,11 @@ export const settings = sqliteTable('settings', {
   primaryCardLabel: text('primary_card_label').notNull().default('name'), // 'name' | 'code'
   dailyReminderEnabled: integer('daily_reminder_enabled').notNull().default(0),
   dailyReminderTime: text('daily_reminder_time').notNull().default('18:00'),
-  perClassReminderEnabled: integer('per_class_reminder_enabled').notNull().default(1),
+  perClassReminderEnabled: integer('per_class_reminder_enabled').notNull().default(0),
   perClassReminderOffsetMinutes: integer('per_class_reminder_offset_minutes').notNull().default(5),
-  sundayDigestEnabled: integer('sunday_digest_enabled').notNull().default(1),
+  sundayDigestEnabled: integer('sunday_digest_enabled').notNull().default(0),
   hapticFeedbackEnabled: integer('haptic_feedback_enabled').notNull().default(1),
   hasSeededDemo: integer('has_seeded_demo').notNull().default(0),
   hasOnboarded: integer('has_onboarded').notNull().default(0),
+  lastBackupAt: text('last_backup_at'),
 });

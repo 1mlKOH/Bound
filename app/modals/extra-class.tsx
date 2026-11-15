@@ -125,6 +125,8 @@ const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Close modal"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         activeOpacity={0.85}
         onPressIn={onPressIn}
@@ -379,6 +381,9 @@ export default function ExtraClassModal() {
         <View className="w-16 items-end">
           <TouchableOpacity
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Save extra class"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             onPress={handleSave}
             disabled={isSubmitting || activeSubjects.length === 0}
             style={{ opacity: isSubmitting || activeSubjects.length === 0 ? 0.45 : 1 }}

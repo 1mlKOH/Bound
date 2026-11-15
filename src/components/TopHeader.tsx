@@ -44,10 +44,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               letterSpacing: -0.5,
               color: colors.text,
               fontSize: Platform.OS === 'ios' ? 34 : 28,
-              fontWeight: Platform.OS === 'ios' ? '700' : '800',
+              fontWeight: Platform.OS === 'ios' ? '700' : undefined,
             },
           ]}
-          className="font-bold leading-tight"
+          className="leading-tight"
         >
           {title}
         </Text>
@@ -56,6 +56,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       {showSettings && (
         <TouchableOpacity
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={rightAction === 'sun' ? 'Toggle theme' : 'Open settings'}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={handlePress}
           style={[
             styles.actionButton,

@@ -247,6 +247,8 @@ export const DayLogSheet: React.FC<DayLogSheetProps> = ({
             {/* Close Button */}
             <TouchableOpacity
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Close day log sheet"
               onPress={handleDismiss}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={{

@@ -71,6 +71,9 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ stats, onPress }) => {
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
         activeOpacity={0.88}
+        accessibilityRole="button"
+        accessibilityLabel={`${subject.name}, ${subject.code || ''}, ${attended} of ${totalHeld} attended, ${isZeroState ? 'No classes yet' : `${percentage}%`}, ${statusLabel}. Tap to view analytics.`}
+        accessibilityHint="Navigates to subject details and attendance history"
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={handlePress}

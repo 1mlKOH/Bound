@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: 'EAS Build Profile (default: preview generates APK for testing)'
+        description: 'EAS Build Profile (preview = APK, production = Play AAB)'
         required: true
         default: 'preview'
         type: choice
@@ -13,18 +13,15 @@ on:
           - preview
           - apk
           - development
+          - production
       download_artifact:
-        description: 'Download APK artifact and attach to GitHub Actions summary'
+        description: 'Download APK/AAB artifact and attach to GitHub Actions summary'
         required: true
         default: true
         type: boolean
   push:
-    branches:
-      - master
-      - main
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
+    tags:
+      - 'v*'
 
 concurrency:
   group: eas-build-android-${{ github.ref }}
@@ -32,7 +29,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Android APK on Expo EAS Cloud
+    name: Build Android on Expo EAS Cloud
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -60,37 +57,17 @@ jobs:
           echo "EXPO_TOKEN secret detected (length: ${#EXPO_TOKEN}). Verifying account with EAS..."
           eas whoami
 
-      - name: 🔑 Set up Android Keystore & Credentials
-        run: |
-          mkdir -p android/keystores
-          keytool -genkey -v \
-            -storetype JKS \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass bound123456 \
-            -keypass bound123456 \
-            -alias bound-key \
-            -keystore android/keystores/release.keystore \
-            -dname "CN=Bound,OU=Mobile,O=BoundApp,L=SanFrancisco,S=CA,C=US"
-          
-          cat << 'EOF' > credentials.json
-          {
-            "android": {
-              "keystore": {
-                "keystorePath": "android/keystores/release.keystore",
-                "keystorePassword": "bound123456",
-                "keyAlias": "bound-key",
-                "keyPassword": "bound123456"
-              }
-            }
-          }
-          EOF
-          echo "✅ Keystore and credentials.json ready for local credential signing."
-
-      - name: 📦 Install dependencies for Config Plugins
+      - name: 📦 Install dependencies
         run: |
           npm install --legacy-peer-deps --ignore-scripts || npm install --force --ignore-scripts
+
+      - name: 🧪 Run Quality & Type Checks
+        run: |
+          echo "Running unit tests..."
+          npm test
+          echo "Running TypeScript type checks..."
+          node node_modules/typescript/bin/tsc --noEmit
+          echo "✅ All automated checks passed."
 
       - name: ☁️ Trigger EAS Cloud Build
         id: eas_build

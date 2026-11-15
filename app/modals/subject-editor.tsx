@@ -35,7 +35,9 @@ import {
   TrashIcon,
   ArrowRightIcon,
   ClockIcon,
+  AlertTriangleIcon,
 } from '../../src/components/icons';
+import { fontFamilyNames } from '../../src/utils/typography';
 import { useTheme } from '../../src/utils/theme';
 import { Haptics } from '../../src/utils/haptics';
 import {
@@ -208,6 +210,8 @@ const TactileCloseButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Close editor"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         activeOpacity={0.85}
         onPressIn={onPressIn}
@@ -746,6 +750,8 @@ export default function SubjectEditorModal() {
         <View className="w-16 items-end">
           <TouchableOpacity
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Save subject"
             onPress={handleSave}
             disabled={isSubmitting || !name.trim()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -1130,23 +1136,48 @@ export default function SubjectEditorModal() {
             <View
               style={{
                 backgroundColor: isDark
-                  ? 'rgba(245, 158, 11, 0.15)'
-                  : 'rgba(245, 158, 11, 0.12)',
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(245, 158, 11, 0.08)',
+                borderColor: isDark
+                  ? 'rgba(245, 158, 11, 0.28)'
+                  : 'rgba(217, 119, 6, 0.22)',
               }}
-              className="p-3 mb-3.5 rounded-xl border border-[rgba(245,158,11,0.25)]"
+              className="p-3 mb-3.5 rounded-xl border flex-row items-start"
             >
-              <Text
-                style={{ color: isDark ? '#FFB020' : '#D97706' }}
-                className="text-xs font-bold"
+              <View
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.20)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                }}
+                className="w-7 h-7 rounded-lg items-center justify-center mr-2.5 mt-0.5"
               >
-                ⚠️ Timetable Conflict
-              </Text>
-              <Text
-                style={{ color: colors.textMuted }}
-                className="text-xs mt-0.5"
-              >
-                Two slots for this subject on the same day overlap in time.
-              </Text>
+                <AlertTriangleIcon
+                  size={14}
+                  color={isDark ? '#FBBF24' : '#D97706'}
+                  strokeWidth={2.4}
+                />
+              </View>
+              <View className="flex-1">
+                <Text
+                  style={{
+                    color: isDark ? '#FBBF24' : '#D97706',
+                    fontFamily: fontFamilyNames.bold,
+                  }}
+                  className="text-xs"
+                >
+                  Timetable Conflict
+                </Text>
+                <Text
+                  style={{
+                    color: colors.textMuted,
+                    fontFamily: fontFamilyNames.regular,
+                  }}
+                  className="text-xs mt-0.5 leading-4"
+                >
+                  Two slots for this subject on the same day overlap in time.
+                </Text>
+              </View>
             </View>
           )}
 
@@ -1155,23 +1186,48 @@ export default function SubjectEditorModal() {
             <View
               style={{
                 backgroundColor: isDark
-                  ? 'rgba(245, 158, 11, 0.15)'
-                  : 'rgba(245, 158, 11, 0.12)',
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(245, 158, 11, 0.08)',
+                borderColor: isDark
+                  ? 'rgba(245, 158, 11, 0.28)'
+                  : 'rgba(217, 119, 6, 0.22)',
               }}
-              className="p-3 mb-3.5 rounded-xl border border-[rgba(245,158,11,0.25)]"
+              className="p-3 mb-3.5 rounded-xl border flex-row items-start"
             >
-              <Text
-                style={{ color: isDark ? '#FFB020' : '#D97706' }}
-                className="text-xs font-bold"
+              <View
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.20)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                }}
+                className="w-7 h-7 rounded-lg items-center justify-center mr-2.5 mt-0.5"
               >
-                ⚠️ Cross-Course Overlap
-              </Text>
-              <Text
-                style={{ color: colors.textMuted }}
-                className="text-xs mt-0.5"
-              >
-                This class overlaps with {crossSubjectConflict} scheduled at the same time.
-              </Text>
+                <AlertTriangleIcon
+                  size={14}
+                  color={isDark ? '#FBBF24' : '#D97706'}
+                  strokeWidth={2.4}
+                />
+              </View>
+              <View className="flex-1">
+                <Text
+                  style={{
+                    color: isDark ? '#FBBF24' : '#D97706',
+                    fontFamily: fontFamilyNames.bold,
+                  }}
+                  className="text-xs"
+                >
+                  Cross-Course Overlap
+                </Text>
+                <Text
+                  style={{
+                    color: colors.textMuted,
+                    fontFamily: fontFamilyNames.regular,
+                  }}
+                  className="text-xs mt-0.5 leading-4"
+                >
+                  This class overlaps with {crossSubjectConflict} scheduled at the same time.
+                </Text>
+              </View>
             </View>
           )}
 
@@ -1561,6 +1617,8 @@ export default function SubjectEditorModal() {
         <View className="mt-3 mb-6">
           <TouchableOpacity
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={existingSubject ? 'Save Changes' : 'Save Subject'}
             onPress={handleSave}
             disabled={isSubmitting || !name.trim()}
             style={{

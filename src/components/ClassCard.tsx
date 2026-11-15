@@ -71,6 +71,8 @@ const ActionPressButton: React.FC<ActionPressButtonProps> = ({
     >
       <TouchableOpacity
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`Mark as ${label}`}
         hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -277,6 +279,9 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       {/* Header Row */}
       <TouchableOpacity
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={`${title}, ${session.startTime} to ${session.endTime}, currently ${session.status || 'unmarked'}. Tap to ${isExpanded ? 'collapse' : 'expand'} actions.`}
+        accessibilityState={{ expanded: isExpanded }}
         onPressIn={onHeaderPressIn}
         onPressOut={onHeaderPressOut}
         onPress={toggleExpand}

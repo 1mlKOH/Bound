@@ -1,10 +1,9 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, FlatList, TouchableOpacity, Platform, StyleSheet, Animated, AppState } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Haptics } from '../../src/utils/haptics';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
-import { TopHeader } from '../../src/components/TopHeader';
 import { DatePillSelector } from '../../src/components/DatePillSelector';
 import { HeroAttendanceCard } from '../../src/components/HeroAttendanceCard';
 import { getTodayDateString } from '../../src/domain/attendance';
@@ -28,6 +27,8 @@ interface TactilePillProps {
   className?: string;
   hitSlop?: any;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityRole?: any;
   children: React.ReactNode;
 }
 
@@ -37,6 +38,8 @@ const TactilePill: React.FC<TactilePillProps> = ({
   className = '',
   hitSlop = { top: 8, bottom: 8, left: 6, right: 6 },
   disabled = false,
+  accessibilityLabel,
+  accessibilityRole = 'button',
   children,
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
@@ -64,6 +67,8 @@ const TactilePill: React.FC<TactilePillProps> = ({
     <Animated.View style={{ transform: [{ scale }], justifyContent: 'center', alignItems: 'center' }}>
       <TouchableOpacity
         activeOpacity={0.85}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
         disabled={disabled}
         hitSlop={hitSlop}
         onPressIn={onPressIn}
@@ -77,14 +82,6 @@ const TactilePill: React.FC<TactilePillProps> = ({
     </Animated.View>
   );
 };
-import {
-  WORST_CASE_SUBJECTS,
-  WORST_CASE_SESSIONS,
-  WORST_CASE_POOLED_STATS,
-  EMPTY_FIXTURE,
-  ONE_FIXTURE,
-  generateHugeFixture,
-} from '../../src/fixtures/worstCaseData';
 
 export default function AttendanceScreen() {
   const router = useRouter();
@@ -148,54 +145,12 @@ export default function AttendanceScreen() {
     return () => sub.remove();
   }, [setSelectedDate]);
 
-  // Dev-only data boundary switch for adversarial testing
-  const [dataMode, setDataMode] = useState<'demo' | 'worst' | 'empty' | 'one' | 'huge'>('demo');
-
-  const { activePooledStats, activeDaySessions, activeSubjectMap } = useMemo(() => {
-    if (dataMode === 'worst') {
-      return {
-        activePooledStats: WORST_CASE_POOLED_STATS,
-        activeDaySessions: WORST_CASE_SESSIONS,
-        activeSubjectMap: new Map(WORST_CASE_SUBJECTS.map((s) => [s.id, s])),
-      };
-    }
-    if (dataMode === 'empty') {
-      return {
-        activePooledStats: EMPTY_FIXTURE.pooledStats,
-        activeDaySessions: EMPTY_FIXTURE.sessions,
-        activeSubjectMap: new Map(),
-      };
-    }
-    if (dataMode === 'one') {
-      return {
-        activePooledStats: ONE_FIXTURE.pooledStats,
-        activeDaySessions: ONE_FIXTURE.sessions,
-        activeSubjectMap: new Map(ONE_FIXTURE.subjects.map((s) => [s.id, s])),
-      };
-    }
-    if (dataMode === 'huge') {
-      const huge = generateHugeFixture();
-      return {
-        activePooledStats: huge.pooledStats,
-        activeDaySessions: huge.sessions,
-        activeSubjectMap: new Map(huge.subjects.map((s) => [s.id, s])),
-      };
-    }
-    return {
-      activePooledStats: pooledStats,
-      activeDaySessions: daySessions,
-      activeSubjectMap: subjectMap,
-    };
-  }, [dataMode, pooledStats, daySessions, subjectMap]);
+  const activePooledStats = pooledStats;
+  const activeDaySessions = daySessions;
+  const activeSubjectMap = subjectMap;
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.canvas }}
-      edges={['top']}
-    >
-      {/* Top Header */}
-      <TopHeader title="Bound" showLogo={true} />
-
+    <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       {/* Date Navigation Pill */}
       <DatePillSelector
         selectedDate={selectedDate}
@@ -281,6 +236,8 @@ export default function AttendanceScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                 {/* Batch Mark Pill */}
                 <TactilePill
+                  accessibilityRole="button"
+                  accessibilityLabel="Mark all classes present"
                   onPress={() => {
                     Haptics.selectionAsync();
                     if (activeDaySessions.length === 0) {
@@ -462,6 +419,8 @@ export default function AttendanceScreen() {
             {subjects.length === 0 && (
               <TouchableOpacity
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Add Your First Subject"
                 onPress={() => router.push('/modals/subject-editor')}
                 style={{
                   backgroundColor: '#00BF63',
@@ -507,78 +466,7 @@ export default function AttendanceScreen() {
         }}
       />
 
-      {/* Dev-only break-ui adversarial dataset toggle */}
-      {__DEV__ && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 96,
-            left: 0,
-            right: 0,
-            alignItems: 'center',
-            zIndex: 9999,
-          }}
-          pointerEvents="box-none"
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              backgroundColor: isDark ? 'rgba(30, 32, 40, 0.95)' : 'rgba(235, 238, 242, 0.95)',
-              padding: 3,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 6,
-              elevation: 8,
-            }}
-          >
-            {(['demo', 'worst', 'empty', 'one', 'huge'] as const).map((mode) => {
-              const labels: Record<string, string> = {
-                demo: 'Demo',
-                worst: 'Worst case',
-                empty: 'Empty',
-                one: 'One',
-                huge: '1,000',
-              };
-              const active = dataMode === mode;
-              return (
-                <TouchableOpacity
-                  key={mode}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setDataMode(mode);
-                  }}
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 14,
-                    backgroundColor: active
-                      ? (isDark ? '#FFFFFF' : '#0F172A')
-                      : 'transparent',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      fontWeight: active ? '700' : '500',
-                      color: active
-                        ? (isDark ? '#000000' : '#FFFFFF')
-                        : colors.textMuted,
-                    }}
-                  >
-                    {labels[mode]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      )}
-    </SafeAreaView>
+    </View>
   );
 }
 

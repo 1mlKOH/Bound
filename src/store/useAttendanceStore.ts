@@ -21,6 +21,7 @@ import {
   getTodayDateString,
 } from '../domain/attendance';
 import { syncScheduledNotifications } from '../utils/notifications';
+import { validateBackupPayload } from '../domain/backup';
 
 let notificationSyncTimer: ReturnType<typeof setTimeout> | null = null;
 const debouncedSyncNotifications = (
@@ -48,6 +49,7 @@ interface AttendanceStoreState {
   selectedDate: string;
   statsFilter: 'month' | 'week';
   isLoading: boolean;
+  initError: string | null;
 
   // Actions
   initialize: () => void;
@@ -109,12 +111,13 @@ const DEFAULT_SETTINGS: Settings = {
   primaryCardLabel: 'name',
   dailyReminderEnabled: false,
   dailyReminderTime: '18:00',
-  perClassReminderEnabled: true,
+  perClassReminderEnabled: false,
   perClassReminderOffsetMinutes: 5,
-  sundayDigestEnabled: true,
+  sundayDigestEnabled: false,
   hapticFeedbackEnabled: true,
   hasSeededDemo: false,
   hasOnboarded: false,
+  lastBackupAt: null,
 };
 
 // Default reference date is dynamic real-time today
@@ -129,9 +132,11 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   selectedDate: DEFAULT_DATE,
   statsFilter: 'week',
   isLoading: true,
+  initError: null,
 
   initialize: () => {
     try {
+      set({ isLoading: true, initError: null });
       initDatabase();
 
       // Read settings
@@ -152,6 +157,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
           hapticFeedbackEnabled: s.haptic_feedback_enabled !== undefined ? Boolean(s.haptic_feedback_enabled) : true,
           hasSeededDemo: Boolean(s.has_seeded_demo),
           hasOnboarded: Boolean(s.has_onboarded),
+          lastBackupAt: s.last_backup_at ?? null,
         };
       }
 
@@ -213,6 +219,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         settings: currentSettings,
         selectedDate: today,
         isLoading: false,
+        initError: null,
       });
 
       // Ensure sessions for today are generated
@@ -220,9 +227,9 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
       // Reschedule reminders
       syncScheduledNotifications(currentSettings, subjects, scheduleSlots, sessions, holidays);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to initialize database:', e);
-      set({ isLoading: false });
+      set({ isLoading: false, initError: e?.message || 'Failed to initialize database' });
     }
   },
 
@@ -531,7 +538,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         daily_reminder_enabled = ?, daily_reminder_time = ?,
         per_class_reminder_enabled = ?, per_class_reminder_offset_minutes = ?,
         sunday_digest_enabled = ?, haptic_feedback_enabled = ?,
-        has_seeded_demo = ?, has_onboarded = ?
+        has_seeded_demo = ?, has_onboarded = ?, last_backup_at = ?
        WHERE id = 1`,
       [
         updated.globalTargetPct,
@@ -545,6 +552,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         updated.hapticFeedbackEnabled ? 1 : 0,
         updated.hasSeededDemo ? 1 : 0,
         updated.hasOnboarded ? 1 : 0,
+        updated.lastBackupAt ?? null,
       ]
     );
 
@@ -619,19 +627,21 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
   restoreFromBackup: (payload: any): boolean => {
     try {
-      if (!payload || payload.version !== 1) {
+      // 1. Strict validation upfront before touching the database
+      if (!validateBackupPayload(payload)) {
         return false;
       }
 
-      expoDb.execSync(`
-        DELETE FROM sessions;
-        DELETE FROM schedule_slots;
-        DELETE FROM subjects;
-        DELETE FROM holidays;
-      `);
+      // 2. Atomic transaction: deletes and inserts succeed together, or all roll back
+      expoDb.withTransactionSync(() => {
+        expoDb.execSync(`
+          DELETE FROM sessions;
+          DELETE FROM schedule_slots;
+          DELETE FROM subjects;
+          DELETE FROM holidays;
+        `);
 
-      // Restore subjects
-      if (Array.isArray(payload.subjects)) {
+        // Restore subjects
         for (const sub of payload.subjects) {
           expoDb.runSync(
             `INSERT INTO subjects (id, name, code, color, target_pct, baseline_present, baseline_absent, start_date, end_date, archived_at, created_at)
@@ -639,73 +649,94 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
             [
               sub.id,
               sub.name,
-              sub.code,
-              sub.color,
-              sub.targetPct,
-              sub.baselinePresent,
-              sub.baselineAbsent,
+              sub.code || '',
+              sub.color || '#1FB45A',
+              sub.targetPct ?? null,
+              sub.baselinePresent || 0,
+              sub.baselineAbsent || 0,
               sub.startDate,
-              sub.endDate,
-              sub.archivedAt,
-              sub.createdAt,
+              sub.endDate || null,
+              sub.archivedAt || null,
+              sub.createdAt || new Date().toISOString(),
             ]
           );
         }
-      }
 
-      // Restore slots
-      if (Array.isArray(payload.scheduleSlots)) {
-        for (const slot of payload.scheduleSlots) {
+        // Restore slots
+        if (Array.isArray(payload.scheduleSlots)) {
+          for (const slot of payload.scheduleSlots) {
+            expoDb.runSync(
+              `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                slot.id,
+                slot.subjectId,
+                slot.weekday,
+                slot.startTime,
+                slot.endTime,
+                slot.effectiveFrom,
+                slot.effectiveTo || null,
+              ]
+            );
+          }
+        }
+
+        // Restore sessions
+        if (Array.isArray(payload.sessions)) {
+          for (const ses of payload.sessions) {
+            expoDb.runSync(
+              `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                ses.id,
+                ses.subjectId,
+                ses.slotId || null,
+                ses.date,
+                ses.startTime,
+                ses.endTime,
+                ses.status || null,
+                ses.markedAt || null,
+              ]
+            );
+          }
+        }
+
+        // Restore holidays
+        if (Array.isArray(payload.holidays)) {
+          for (const h of payload.holidays) {
+            expoDb.runSync(
+              'INSERT OR REPLACE INTO holidays (date, label) VALUES (?, ?)',
+              [h.date, h.label || '']
+            );
+          }
+        }
+
+        // Restore settings if present
+        if (payload.settings && typeof payload.settings === 'object') {
+          const s = payload.settings;
           expoDb.runSync(
-            `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `UPDATE settings SET
+              global_target_pct = ?, theme = ?, primary_card_label = ?,
+              daily_reminder_enabled = ?, daily_reminder_time = ?,
+              per_class_reminder_enabled = ?, per_class_reminder_offset_minutes = ?,
+              sunday_digest_enabled = ?, haptic_feedback_enabled = ?,
+              has_seeded_demo = ?, has_onboarded = 1
+             WHERE id = 1`,
             [
-              slot.id,
-              slot.subjectId,
-              slot.weekday,
-              slot.startTime,
-              slot.endTime,
-              slot.effectiveFrom,
-              slot.effectiveTo,
+              s.globalTargetPct ?? 75.0,
+              s.theme ?? 'system',
+              s.primaryCardLabel ?? 'name',
+              s.dailyReminderEnabled ? 1 : 0,
+              s.dailyReminderTime || '18:00',
+              s.perClassReminderEnabled ? 1 : 0,
+              s.perClassReminderOffsetMinutes || 5,
+              s.sundayDigestEnabled ? 1 : 0,
+              s.hapticFeedbackEnabled !== undefined ? (s.hapticFeedbackEnabled ? 1 : 0) : 1,
+              s.hasSeededDemo ? 1 : 0,
             ]
           );
         }
-      }
-
-      // Restore sessions
-      if (Array.isArray(payload.sessions)) {
-        for (const ses of payload.sessions) {
-          expoDb.runSync(
-            `INSERT INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              ses.id,
-              ses.subjectId,
-              ses.slotId,
-              ses.date,
-              ses.startTime,
-              ses.endTime,
-              ses.status,
-              ses.markedAt,
-            ]
-          );
-        }
-      }
-
-      // Restore holidays
-      if (Array.isArray(payload.holidays)) {
-        for (const h of payload.holidays) {
-          expoDb.runSync(
-            'INSERT OR REPLACE INTO holidays (date, label) VALUES (?, ?)',
-            [h.date, h.label]
-          );
-        }
-      }
-
-      // Restore settings if present
-      if (payload.settings) {
-        get().updateSettings(payload.settings);
-      }
+      });
 
       get().initialize();
       return true;

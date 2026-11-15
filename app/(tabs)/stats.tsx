@@ -1,8 +1,7 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
-import { TopHeader } from '../../src/components/TopHeader';
 import { CalendarCard } from '../../src/components/CalendarCard';
 import { BySubjectBreakdownCard } from '../../src/components/BySubjectBreakdownCard';
 import { useTheme } from '../../src/utils/theme';
@@ -28,13 +27,7 @@ export default function StatsScreen() {
   const scrollBottomPadding = Math.max(insets.bottom, 16) + 70 + 24;
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.canvas }}
-      edges={['top']}
-    >
-      {/* Top Header */}
-      <TopHeader title="Stats" />
-
+    <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
@@ -57,6 +50,6 @@ export default function StatsScreen() {
           todayDate={getTodayDateString()}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

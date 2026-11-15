@@ -121,6 +121,14 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
 }
 
 /**
+ * Silently inspects notification permission status without prompting the user.
+ */
+export async function checkNotificationPermissions(): Promise<boolean> {
+  const { status } = await Notifications.getPermissionsAsync();
+  return status === 'granted';
+}
+
+/**
  * Requests notification permissions from the OS.
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
@@ -146,15 +154,27 @@ export async function syncScheduledNotifications(
   holidays: Holiday[] = []
 ): Promise<void> {
   try {
+    // If user has not finished onboarding yet or all reminder toggles are disabled,
+    // cancel any existing scheduled notifications and exit without requesting permissions.
+    const anyReminderEnabled =
+      Boolean(settings.dailyReminderEnabled) ||
+      Boolean(settings.perClassReminderEnabled) ||
+      Boolean(settings.sundayDigestEnabled);
+
+    if (!settings.hasOnboarded || !anyReminderEnabled) {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      return;
+    }
+
+    // Silently check if permission was granted. Never trigger OS permission dialog during background sync.
+    const hasPermission = await checkNotificationPermissions();
+    if (!hasPermission) return;
+
     // 0. Ensure channels and categories are initialized
     await setupNotificationCategoriesAndChannels();
 
     // 1. Cancel all previously scheduled notifications
     await Notifications.cancelAllScheduledNotificationsAsync();
-
-    // If notifications are totally disabled or permissions not granted, exit early
-    const hasPermission = await requestNotificationPermissions();
-    if (!hasPermission) return;
 
     const activeSubjects = subjects.filter((s) => !s.archivedAt);
     const activeSubjectsMap = new Map(activeSubjects.map((s) => [s.id, s]));
@@ -249,12 +269,11 @@ export async function syncScheduledNotifications(
           },
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
           channelId: NOTIFICATION_CHANNELS.WEEKLY_DIGEST,
           weekday: 1, // Sunday in standard triggers (1 = Sunday)
           hour: 19,
           minute: 0,
-          repeats: true,
         },
       });
     }
@@ -280,14 +299,18 @@ export async function syncScheduledNotifications(
         const [startH, startM] = slot.startTime.split(':').map(Number);
         let notifyH = startH;
         let notifyM = startM - offsetMin;
+        let slotWeekday = slot.weekday;
         if (notifyM < 0) {
           notifyM += 60;
           notifyH -= 1;
         }
-        if (notifyH < 0) continue;
+        if (notifyH < 0) {
+          notifyH += 24;
+          slotWeekday = (slotWeekday + 6) % 7;
+        }
 
         // Convert weekday (0=Sun..6=Sat) to Notification trigger (1=Sun..7=Sat)
-        const triggerWeekday = slot.weekday + 1;
+        const triggerWeekday = slotWeekday + 1;
 
         await Notifications.scheduleNotificationAsync({
           content: {
@@ -305,12 +328,11 @@ export async function syncScheduledNotifications(
             },
           },
           trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
             channelId: NOTIFICATION_CHANNELS.CLASS_REMINDERS,
             weekday: triggerWeekday,
             hour: notifyH,
             minute: notifyM,
-            repeats: true,
           },
         });
       }

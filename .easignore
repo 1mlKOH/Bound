@@ -34,3 +34,10 @@ bound_backup.json
 bound_sessions.csv
 *.apk
 *.aab
+
+# Large media, documentation & concept assets
+assets/logos/
+*.mp4
+Record_*.mp4
+.impeccable/
+plans/

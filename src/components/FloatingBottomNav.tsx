@@ -60,6 +60,9 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
         activeOpacity={0.85}
+        accessibilityRole="tab"
+        accessibilityLabel={`${label} tab`}
+        accessibilityState={{ selected: isActive }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={onPress}

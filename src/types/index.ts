@@ -57,6 +57,7 @@ export interface Settings {
   hapticFeedbackEnabled: boolean;
   hasSeededDemo: boolean;
   hasOnboarded: boolean;
+  lastBackupAt?: string | null;
 }
 
 export interface SubjectStats {

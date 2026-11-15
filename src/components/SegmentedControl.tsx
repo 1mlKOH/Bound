@@ -111,6 +111,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           <TouchableOpacity
             key={opt.value}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={opt.label}
+            accessibilityState={{ selected: isSelected }}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
             onPress={() => handleSelect(opt.value)}
             style={{
               borderRadius: 20,

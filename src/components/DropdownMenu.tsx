@@ -195,6 +195,9 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
 
                   <TouchableOpacity
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityHint={item.description}
                     onPress={() => handleSelect(item)}
                     style={[
                       styles.menuItem,

@@ -100,8 +100,9 @@ function getDaySummary(daySessions: Session[]): {
  */
 const TactileChevronButton: React.FC<{
   onPress: () => void;
+  accessibilityLabel?: string;
   children: React.ReactNode;
-}> = ({ onPress, children }) => {
+}> = ({ onPress, accessibilityLabel, children }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
@@ -127,6 +128,8 @@ const TactileChevronButton: React.FC<{
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={onPress}
@@ -422,7 +425,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
     <View>
       {/* Month Header with Navigation */}
       <View className="flex-row items-center justify-between mb-4">
-        <TactileChevronButton onPress={prevMonth}>
+        <TactileChevronButton onPress={prevMonth} accessibilityLabel="Previous month">
           <ChevronLeftIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
         </TactileChevronButton>
         <Animated.View
@@ -438,7 +441,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
             {MONTH_NAMES[currentMonth]} {currentYear}
           </Text>
         </Animated.View>
-        <TactileChevronButton onPress={nextMonth}>
+        <TactileChevronButton onPress={nextMonth} accessibilityLabel="Next month">
           <ChevronRightIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
         </TactileChevronButton>
       </View>
@@ -482,6 +485,9 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
                 <TouchableOpacity
                   key={cellIdx}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${formatCardDate(cellDateStr)}${status ? `, attendance: ${status}` : ''}${isSelected ? ', selected' : ''}`}
+                  accessibilityState={{ selected: isSelected }}
                   onPress={() => {
                     Haptics.selectionAsync();
                     onSelectDate(cellDateStr);
@@ -573,7 +579,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
       <View>
         {/* Week Header with Stepper */}
         <View className="flex-row items-center justify-between mb-4">
-          <TactileChevronButton onPress={prevWeek}>
+          <TactileChevronButton onPress={prevWeek} accessibilityLabel="Previous week">
             <ChevronLeftIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
           </TactileChevronButton>
           <Animated.View
@@ -592,7 +598,7 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({
               {weekRangeLabel}
             </Text>
           </Animated.View>
-          <TactileChevronButton onPress={nextWeek}>
+          <TactileChevronButton onPress={nextWeek} accessibilityLabel="Next week">
             <ChevronRightIcon size={16} color={colors.textSecondary} strokeWidth={2.4} />
           </TactileChevronButton>
         </View>
@@ -747,6 +753,7 @@ interface WeekDateCellProps {
 }
 
 const WeekDateCell: React.FC<WeekDateCellProps> = ({
+  dateStr,
   isSelected,
   isSunday,
   dayNum,
@@ -777,6 +784,10 @@ const WeekDateCell: React.FC<WeekDateCellProps> = ({
   return (
     <TouchableOpacity
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`${formatCardDate(dateStr)}${status ? `, attendance: ${status}` : ''}${isSelected ? ', selected' : ''}`}
+      accessibilityState={{ selected: isSelected }}
+      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
@@ -925,6 +936,8 @@ const CollapsibleDayCard: React.FC<CollapsibleDayCardProps> = ({
         >
           <TouchableOpacity
             activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel={`${dayTitle}, no classes recorded${isToday ? ', today' : ''}`}
             onPressIn={onPressIn}
             onPressOut={onPressOut}
             onPress={() => {
@@ -990,6 +1003,9 @@ const CollapsibleDayCard: React.FC<CollapsibleDayCardProps> = ({
       <Animated.View style={{ transform: [{ scale: headerScale }] }}>
         <TouchableOpacity
           activeOpacity={0.88}
+          accessibilityRole="button"
+          accessibilityLabel={`${dayTitle}, ${summary ? summary.text : `${sessions.length} classes`}. Tap to ${isCollapsed ? 'expand' : 'collapse'}.`}
+          accessibilityState={{ expanded: !isCollapsed }}
           onPressIn={onPressIn}
           onPressOut={onPressOut}
           onPress={handleHeaderPress}

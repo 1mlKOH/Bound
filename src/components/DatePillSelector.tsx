@@ -72,6 +72,8 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
       <Animated.View style={{ transform: [{ scale: leftScale }] }}>
         <TouchableOpacity
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 6 }}
           onPressIn={() => animatePress(leftScale, 0.92)}
           onPressOut={() => animatePress(leftScale, 1)}
@@ -95,6 +97,8 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
       <Animated.View style={{ transform: [{ scale: centerScale }] }}>
         <TouchableOpacity
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`Current date: ${formatDisplay()}. Tap to jump to today.`}
           hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
           onPressIn={() => animatePress(centerScale, 0.95)}
           onPressOut={() => animatePress(centerScale, 1)}
@@ -130,6 +134,8 @@ export const DatePillSelector: React.FC<DatePillSelectorProps> = ({
       <Animated.View style={{ transform: [{ scale: rightScale }] }}>
         <TouchableOpacity
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
           hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
           onPressIn={() => animatePress(rightScale, 0.92)}
           onPressOut={() => animatePress(rightScale, 1)}

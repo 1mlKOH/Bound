@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Platform, StyleSheet, Animated } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Haptics } from '../../src/utils/haptics';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
-import { TopHeader } from '../../src/components/TopHeader';
 import { SubjectCard } from '../../src/components/SubjectCard';
 import { SearchIcon, CloseIcon, SubjectsIcon, BookPlusIcon } from '../../src/components/icons';
 import { useTheme } from '../../src/utils/theme';
@@ -52,13 +51,7 @@ export default function SubjectsScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.canvas }}
-      edges={['top']}
-    >
-      {/* Top Header */}
-      <TopHeader title="Subjects" />
-
+    <View style={{ flex: 1, backgroundColor: colors.canvas }}>
       {/* Search Bar with Apple liquid glass styling and subtle focus highlight */}
       <View
         style={[
@@ -93,6 +86,8 @@ export default function SubjectsScreen() {
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Clear search query"
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => {
               Haptics.selectionAsync();
@@ -179,6 +174,8 @@ export default function SubjectsScreen() {
       >
         <TouchableOpacity
           activeOpacity={0.88}
+          accessibilityRole="button"
+          accessibilityLabel="Add subject"
           onPressIn={onFabPressIn}
           onPressOut={onFabPressOut}
           onPress={() => {
@@ -208,7 +205,7 @@ export default function SubjectsScreen() {
           </Text>
         </TouchableOpacity>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 }
 

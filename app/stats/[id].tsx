@@ -186,6 +186,9 @@ export default function SubjectDetailStatsScreen() {
       >
         <TouchableOpacity
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Back to all stats"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={() => {
             Haptics.selectionAsync();
             router.back();
@@ -207,6 +210,9 @@ export default function SubjectDetailStatsScreen() {
         {isSimulationActive && (
           <TouchableOpacity
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Reset What-If simulation"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => {
               Haptics.selectionAsync();
               setSimAttendDelta(0);

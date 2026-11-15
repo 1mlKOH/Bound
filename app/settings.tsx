@@ -17,6 +17,7 @@ import { Haptics } from '../src/utils/haptics';
 import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
+import Constants from 'expo-constants';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import {
   CloseIcon,
@@ -33,7 +34,7 @@ import {
 import { useTheme } from '../src/utils/theme';
 import { SegmentedControl } from '../src/components/SegmentedControl';
 import { toast } from 'sonner-native';
-import { sendTestNotification } from '../src/utils/notifications';
+import { sendTestNotification, requestNotificationPermissions } from '../src/utils/notifications';
 import { fontFamilyNames } from '../src/utils/typography';
 import { BoundLogo } from '../src/components/BoundLogo';
 
@@ -66,6 +67,9 @@ const TactileCloseButton: React.FC<TactileCloseButtonProps> = ({ onPress }) => {
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Close settings"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onPress={() => {
@@ -313,6 +317,28 @@ export default function SettingsScreen() {
     settings.sundayDigestEnabled,
   ].filter(Boolean).length;
 
+  const handleToggleReminderSetting = async (
+    key: 'dailyReminderEnabled' | 'perClassReminderEnabled' | 'sundayDigestEnabled',
+    val: boolean
+  ) => {
+    Haptics.selectionAsync();
+    if (val) {
+      try {
+        const granted = await requestNotificationPermissions();
+        if (!granted) {
+          toast.info('Notification permission not granted', {
+            description: 'Please enable notifications in device settings to receive reminders.',
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('Error requesting notification permissions:', err);
+        return;
+      }
+    }
+    updateSettings({ [key]: val });
+  };
+
   const handleImportJSON = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
@@ -384,6 +410,9 @@ export default function SettingsScreen() {
 
       const file = new File(Paths.cache, 'bound_backup.json');
       await file.write(JSON.stringify(payload, null, 2));
+
+      const now = new Date().toISOString();
+      updateSettings({ lastBackupAt: now });
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, {
@@ -680,8 +709,7 @@ export default function SettingsScreen() {
             <Switch
               value={settings.dailyReminderEnabled}
               onValueChange={(val) => {
-                Haptics.selectionAsync();
-                updateSettings({ dailyReminderEnabled: val });
+                handleToggleReminderSetting('dailyReminderEnabled', val);
               }}
               trackColor={{
                 false: isDark ? '#3A3B45' : '#D1D5DB',
@@ -720,8 +748,7 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.perClassReminderEnabled}
                 onValueChange={(val) => {
-                  Haptics.selectionAsync();
-                  updateSettings({ perClassReminderEnabled: val });
+                  handleToggleReminderSetting('perClassReminderEnabled', val);
                 }}
                 trackColor={{
                   false: isDark ? '#3A3B45' : '#D1D5DB',
@@ -839,8 +866,7 @@ export default function SettingsScreen() {
             <Switch
               value={settings.sundayDigestEnabled}
               onValueChange={(val) => {
-                Haptics.selectionAsync();
-                updateSettings({ sundayDigestEnabled: val });
+                handleToggleReminderSetting('sundayDigestEnabled', val);
               }}
               trackColor={{
                 false: isDark ? '#3A3B45' : '#D1D5DB',
@@ -850,106 +876,114 @@ export default function SettingsScreen() {
             />
           </View>
 
-          {/* Test Notification Row */}
-          <View
-            style={{ borderTopColor: colors.divider }}
-            className="pt-3.5 mt-1 border-t"
-          >
-            <View className="mb-2">
-              <Text
-                style={[
-                  styles.sfText,
-                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
-                ]}
-                className="text-xs font-semibold"
-              >
-                Test Live Notifications
-              </Text>
-              <Text
-                style={[
-                  styles.sfText,
-                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
-                ]}
-                className="text-[11px] mt-0.5"
-              >
-                Inspect lockscreen action buttons, sounds, and math copy
-              </Text>
+          {/* Test Notification Row (Dev Only) */}
+          {__DEV__ && (
+            <View
+              style={{ borderTopColor: colors.divider }}
+              className="pt-3.5 mt-1 border-t"
+            >
+              <View className="mb-2">
+                <Text
+                  style={[
+                    styles.sfText,
+                    { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                  ]}
+                  className="text-xs font-semibold"
+                >
+                  Test Live Notifications
+                </Text>
+                <Text
+                  style={[
+                    styles.sfText,
+                    { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                  ]}
+                  className="text-[11px] mt-0.5"
+                >
+                  Inspect lockscreen action buttons, sounds, and math copy
+                </Text>
+              </View>
+
+              <View className="flex-row gap-2 mt-1">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send safe test notification"
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    sendTestNotification('safe');
+                  }}
+                  style={{
+                    borderRadius: 14,
+                    borderCurve: 'continuous',
+                    backgroundColor: colors.presentBadgeBg,
+                  }}
+                  className="flex-1 py-2 items-center justify-center"
+                >
+                  <Text
+                    style={[
+                      styles.sfText,
+                      { fontFamily: fontFamilyNames.semiBold, color: colors.presentBadgeText },
+                    ]}
+                    className="text-xs font-semibold"
+                  >
+                    Safe Alert
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send risk test notification"
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    sendTestNotification('risk');
+                  }}
+                  style={{
+                    borderRadius: 14,
+                    borderCurve: 'continuous',
+                    backgroundColor: colors.absentBadgeBg,
+                  }}
+                  className="flex-1 py-2 items-center justify-center"
+                >
+                  <Text
+                    style={[
+                      styles.sfText,
+                      { fontFamily: fontFamilyNames.semiBold, color: colors.absentBadgeText },
+                    ]}
+                    className="text-xs font-semibold"
+                  >
+                    Risk Alert
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send catch-up daily test notification"
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    sendTestNotification('daily');
+                  }}
+                  style={{
+                    borderRadius: 14,
+                    borderCurve: 'continuous',
+                    backgroundColor: colors.actionBg,
+                  }}
+                  className="flex-1 py-2 items-center justify-center"
+                >
+                  <Text
+                    style={[
+                      styles.sfText,
+                      { fontFamily: fontFamilyNames.semiBold, color: colors.textSecondary },
+                    ]}
+                    className="text-xs font-semibold"
+                  >
+                    Catch-up
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <View className="flex-row gap-2 mt-1">
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  sendTestNotification('safe');
-                }}
-                style={{
-                  borderRadius: 14,
-                  borderCurve: 'continuous',
-                  backgroundColor: colors.presentBadgeBg,
-                }}
-                className="flex-1 py-2 items-center justify-center"
-              >
-                <Text
-                  style={[
-                    styles.sfText,
-                    { fontFamily: fontFamilyNames.semiBold, color: colors.presentBadgeText },
-                  ]}
-                  className="text-xs font-semibold"
-                >
-                  Safe Alert
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  sendTestNotification('risk');
-                }}
-                style={{
-                  borderRadius: 14,
-                  borderCurve: 'continuous',
-                  backgroundColor: colors.absentBadgeBg,
-                }}
-                className="flex-1 py-2 items-center justify-center"
-              >
-                <Text
-                  style={[
-                    styles.sfText,
-                    { fontFamily: fontFamilyNames.semiBold, color: colors.absentBadgeText },
-                  ]}
-                  className="text-xs font-semibold"
-                >
-                  Risk Alert
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  sendTestNotification('daily');
-                }}
-                style={{
-                  borderRadius: 14,
-                  borderCurve: 'continuous',
-                  backgroundColor: colors.actionBg,
-                }}
-                className="flex-1 py-2 items-center justify-center"
-              >
-                <Text
-                  style={[
-                    styles.sfText,
-                    { fontFamily: fontFamilyNames.semiBold, color: colors.textSecondary },
-                  ]}
-                  className="text-xs font-semibold"
-                >
-                  Catch-up
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          )}
         </FoldableSectionCard>
 
         {/* Category 4: Backup & Data */}
@@ -961,6 +995,8 @@ export default function SettingsScreen() {
         >
           <TouchableOpacity
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Export backup as JSON"
             onPress={handleExportJSON}
             style={{
               borderRadius: 14,
@@ -969,20 +1005,40 @@ export default function SettingsScreen() {
             }}
             className="py-3 px-4 flex-row items-center justify-between my-1"
           >
-            <Text
-              style={[
-                styles.sfText,
-                { fontFamily: fontFamilyNames.semiBold, color: colors.text },
-              ]}
-              className="text-xs font-semibold"
-            >
-              Export Backup (JSON)
-            </Text>
+            <View>
+              <Text
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.semiBold, color: colors.text },
+                ]}
+                className="text-xs font-semibold"
+              >
+                Export Backup (JSON)
+              </Text>
+              <Text
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textMuted },
+                ]}
+                className="text-[10px] mt-0.5"
+              >
+                {settings.lastBackupAt
+                  ? `Last exported: ${new Date(settings.lastBackupAt).toLocaleDateString([], {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : 'Manual export — no off-device backup saved yet'}
+              </Text>
+            </View>
             <ExportIcon size={15} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Import backup from JSON"
             onPress={handleImportJSON}
             style={{
               borderRadius: 14,
@@ -1005,6 +1061,8 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Export attendance as CSV"
             onPress={handleExportCSV}
             style={{
               borderRadius: 14,
@@ -1150,7 +1208,7 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            Version 1.0.0 (Build 1)
+            Version {Constants.expoConfig?.version ?? '1.0.0'} (Build {Constants.expoConfig?.android?.versionCode ?? 1})
           </Text>
           <Text
             style={[

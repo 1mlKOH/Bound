@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, View, AppState } from 'react-native';
+import { Platform, View, AppState, Text, TouchableOpacity } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const initialize = useAttendanceStore((state) => state.initialize);
   const isLoading = useAttendanceStore((state) => state.isLoading);
+  const initError = useAttendanceStore((state) => state.initError);
   const hasOnboarded = useAttendanceStore((state) => state.settings.hasOnboarded);
   const themePref = useAttendanceStore((state) => state.settings.theme);
   const { colors, isDark } = useTheme();
@@ -99,10 +100,66 @@ export default function RootLayout() {
     if (!isReady) return;
     SplashScreen.hideAsync().catch(() => {});
     const inOnboarding = segments[0] === 'onboarding';
-    if (!hasOnboarded && !inOnboarding) {
+    if (!hasOnboarded && !inOnboarding && !initError) {
       router.replace('/onboarding');
     }
-  }, [isReady, hasOnboarded, segments]);
+  }, [isReady, hasOnboarded, segments, initError]);
+
+  if (initError) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.canvas,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        }}
+      >
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: 20,
+            fontWeight: '700',
+            marginBottom: 8,
+            textAlign: 'center',
+          }}
+        >
+          Database Error
+        </Text>
+        <Text
+          style={{
+            color: colors.textMuted,
+            fontSize: 14,
+            textAlign: 'center',
+            marginBottom: 24,
+            lineHeight: 20,
+          }}
+        >
+          {initError}
+        </Text>
+        <TouchableOpacity
+          onPress={() => initialize()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading database"
+          style={{
+            backgroundColor: '#3DDC84',
+            paddingVertical: 12,
+            paddingHorizontal: 28,
+            borderRadius: 14,
+            minHeight: 44,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#0F1015', fontWeight: '700', fontSize: 15 }}>
+            Retry Loading
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!isReady) {
     return (
@@ -173,5 +230,61 @@ export default function RootLayout() {
         />
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: '#0F1015',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+      }}
+    >
+      <Text
+        style={{
+          color: '#FFFFFF',
+          fontSize: 20,
+          fontWeight: '700',
+          marginBottom: 8,
+          textAlign: 'center',
+        }}
+      >
+        Something went wrong
+      </Text>
+      <Text
+        style={{
+          color: '#9CA3AF',
+          fontSize: 14,
+          textAlign: 'center',
+          marginBottom: 24,
+          lineHeight: 20,
+        }}
+      >
+        {error?.message || 'An unexpected error occurred.'}
+      </Text>
+      <TouchableOpacity
+        onPress={retry}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Restart app after error"
+        style={{
+          backgroundColor: '#3DDC84',
+          paddingVertical: 12,
+          paddingHorizontal: 28,
+          borderRadius: 14,
+          minHeight: 44,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ color: '#0F1015', fontWeight: '700', fontSize: 15 }}>
+          Restart App
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }
