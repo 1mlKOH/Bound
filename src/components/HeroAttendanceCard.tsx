@@ -1,8 +1,9 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, Platform, StyleSheet, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, Platform, StyleSheet } from 'react-native';
 import { NumberFlow } from 'number-flow-react-native';
 import { PooledStats } from '../types';
 import { useTheme } from '../utils/theme';
+import { ProgressBar } from './ProgressBar';
 
 interface HeroAttendanceCardProps {
   stats: PooledStats;
@@ -58,27 +59,6 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
   };
 
   const currentTier = isZeroState ? tierConfig.neutral : (tierConfig[stats.statusTier] || tierConfig.safe);
-
-  const targetPercent = isZeroState ? 0 : Math.min(100, Math.max(0, stats.pooledPercentage));
-
-  const animatedPercent = useRef(
-    new Animated.Value(targetPercent)
-  ).current;
-
-  useEffect(() => {
-    Animated.timing(animatedPercent, {
-      toValue: targetPercent,
-      duration: 450,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [targetPercent]);
-
-  const animatedWidth = animatedPercent.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
-  });
 
   const summarySubtitle = isZeroState
     ? `Target ${stats.globalTarget}% · No classes recorded yet`
@@ -173,20 +153,14 @@ export const HeroAttendanceCard: React.FC<HeroAttendanceCardProps> = ({ stats })
         </View>
       )}
 
-      {/* Progress Bar Track with Smooth Liquid Fill */}
-      <View
-        style={{ backgroundColor: currentTier.trackBg }}
-        className="w-full h-2.5 rounded-full overflow-hidden my-3"
-      >
-        <Animated.View
-          style={{
-            width: animatedWidth,
-            backgroundColor: currentTier.progressColor,
-            height: '100%',
-            borderRadius: 999,
-          }}
-        />
-      </View>
+      {/* Progress Bar Track with Arc-inspired GPU-driven Fill */}
+      <ProgressBar
+        value={stats.pooledPercentage}
+        tier={stats.statusTier}
+        isZeroState={isZeroState}
+        height={10}
+        className="my-3"
+      />
 
       {/* Target and Below-Target Counter */}
       <Text

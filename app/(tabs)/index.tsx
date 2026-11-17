@@ -19,6 +19,7 @@ import {
 } from '../../src/components/icons';
 import { DropdownMenu } from '../../src/components/DropdownMenu';
 import { useTheme } from '../../src/utils/theme';
+import { fontFamilyNames } from '../../src/utils/typography';
 import { toast } from 'sonner-native';
 
 interface TactilePillProps {
@@ -401,15 +402,21 @@ export default function AttendanceScreen() {
               <CalendarIcon size={32} color={colors.textMuted} />
             </View>
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                { color: colors.text, fontFamily: fontFamilyNames.bold },
+              ]}
               className="text-base font-semibold mb-1 text-center"
             >
-              {subjects.length === 0 ? 'Your timetable is empty' : 'No classes scheduled today'}
+              {subjects.length === 0 ? 'No subjects yet' : 'No classes today'}
             </Text>
 
             <Text
-              style={{ color: colors.textMuted }}
-              className="text-xs text-center mb-4"
+              style={{
+                color: colors.textMuted,
+                fontFamily: fontFamilyNames.regular,
+              }}
+              className={`text-xs text-center ${subjects.length === 0 ? 'mb-4' : 'mb-1'}`}
             >
               {subjects.length === 0
                 ? 'Add your subjects to start tracking attendance and safe skips.'
@@ -489,6 +496,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.semiBold,
   },
 });

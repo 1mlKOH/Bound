@@ -98,11 +98,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!isReady) return;
-    SplashScreen.hideAsync().catch(() => {});
     const inOnboarding = segments[0] === 'onboarding';
     if (!hasOnboarded && !inOnboarding && !initError) {
       router.replace('/onboarding');
+      return;
     }
+    SplashScreen.hideAsync().catch(() => {});
   }, [isReady, hasOnboarded, segments, initError]);
 
   if (initError) {

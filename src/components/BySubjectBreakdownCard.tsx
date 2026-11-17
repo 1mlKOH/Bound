@@ -1,11 +1,12 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Platform, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Haptics } from '../utils/haptics';
 import { SubjectStats } from '../types';
 import { useTheme } from '../utils/theme';
-import { ChevronRightIcon } from './icons';
+import { ChevronRightIcon, SubjectsIcon } from './icons';
 import { fontFamilyNames } from '../utils/typography';
+import { ProgressBar } from './ProgressBar';
 
 interface BySubjectBreakdownCardProps {
   statsList: SubjectStats[];
@@ -20,24 +21,13 @@ const SubjectRow: React.FC<{
   const { colors, isDark } = useTheme();
   const { subject, percentage, isSafe, isClose } = item;
 
-  const animWidth = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    Animated.timing(animWidth, {
-      toValue: Math.min(100, Math.max(0, percentage)),
-      duration: 320,
-      delay: index * 40,
-      useNativeDriver: false,
-    }).start();
-  }, [percentage, index]);
+  const isZeroState = item.totalHeld === 0;
 
-  const progressWidth = animWidth.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
-
-  const statusColor = isSafe
+  const statusColor = isZeroState
+    ? colors.textMuted
+    : isSafe
     ? isDark ? '#3DDC84' : '#15803D'
     : isClose
     ? isDark ? '#FFB020' : '#D97706'
@@ -106,15 +96,52 @@ const SubjectRow: React.FC<{
           </View>
 
           <View className="flex-row items-center">
+            {/* Attendance Margin status + Pct + Chevron */}
+            {isZeroState ? (
+              <Text
+                style={[
+                  styles.sfText,
+                  { letterSpacing: 0, color: colors.textMuted, marginRight: 8 },
+                ]}
+                className="text-[12px]"
+              >
+                No classes yet
+              </Text>
+            ) : item.canMiss > 0 ? (
+              <Text
+                style={[
+                  styles.sfText,
+                  { letterSpacing: 0, color: colors.textMuted, marginRight: 8 },
+                ]}
+                className="text-[12px]"
+              >
+                +{item.canMiss} safe
+              </Text>
+            ) : item.statusLabel ? (
+              <Text
+                style={[
+                  styles.sfText,
+                  { letterSpacing: 0, color: colors.textMuted, marginRight: 8 },
+                ]}
+                className="text-[12px]"
+              >
+                {item.statusLabel}
+              </Text>
+            ) : null}
+
             {/* Percentage & Chevron */}
             <Text
               style={[
                 styles.sfText,
-                { color: colors.text, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
+                {
+                  color: isZeroState ? colors.textMuted : colors.text,
+                  letterSpacing: -0.3,
+                  fontVariant: ['tabular-nums'],
+                },
               ]}
               className="text-[15px] font-bold"
             >
-              {Math.round(percentage)}%
+              {isZeroState ? '—%' : `${Math.round(percentage)}%`}
             </Text>
             <View className="ml-1">
               <ChevronRightIcon size={13} color={colors.textMuted} strokeWidth={2.4} />
@@ -123,26 +150,15 @@ const SubjectRow: React.FC<{
         </View>
 
         {/* Full-width Animated Subject Colored Progress Bar */}
-        <View
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(255, 255, 255, 0.08)'
-              : 'rgba(0, 0, 0, 0.06)',
-            height: 4,
-            borderRadius: 999,
-            overflow: 'hidden',
-          }}
-          className="w-full my-1"
-        >
-          <Animated.View
-            style={{
-              width: progressWidth,
-              backgroundColor: subject.color || statusColor,
-              height: '100%',
-              borderRadius: 999,
-            }}
-          />
-        </View>
+        <ProgressBar
+          value={percentage}
+          isZeroState={isZeroState}
+          fillColor={subject.color || statusColor}
+          height={4}
+          delay={index * 40}
+          duration={340}
+          className="my-1"
+        />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -151,9 +167,14 @@ const SubjectRow: React.FC<{
 export const BySubjectBreakdownCard: React.FC<BySubjectBreakdownCardProps> = ({
   statsList,
 }) => {
-  const { colors } = useTheme();
-  // Sort lowest attendance first
-  const sortedStats = [...statsList].sort((a, b) => a.percentage - b.percentage);
+  const { colors, isDark } = useTheme();
+  // Sort subjects with classes held lowest first; zero-state subjects at the bottom
+  const sortedStats = [...statsList].sort((a, b) => {
+    if (a.totalHeld === 0 && b.totalHeld > 0) return 1;
+    if (a.totalHeld > 0 && b.totalHeld === 0) return -1;
+    if (a.totalHeld === 0 && b.totalHeld === 0) return a.subject.name.localeCompare(b.subject.name);
+    return a.percentage - b.percentage;
+  });
 
   return (
     <View
@@ -172,7 +193,7 @@ export const BySubjectBreakdownCard: React.FC<BySubjectBreakdownCardProps> = ({
       <Text
         style={[
           styles.sfText,
-          { letterSpacing: -0.4, color: colors.text },
+          { letterSpacing: -0.4, color: colors.text, fontFamily: fontFamilyNames.bold },
         ]}
         className="text-[19px] font-bold"
       >
@@ -181,22 +202,68 @@ export const BySubjectBreakdownCard: React.FC<BySubjectBreakdownCardProps> = ({
       <Text
         style={[
           styles.sfText,
-          { letterSpacing: 0, color: colors.textMuted },
+          { letterSpacing: 0, color: colors.textMuted, fontFamily: fontFamilyNames.regular },
         ]}
         className="text-[12px] mt-0.5 mb-3.5"
       >
-        Tap a course for detailed statistics & skip runway
+        {sortedStats.length === 0
+          ? 'Course analytics & skip runway'
+          : 'Tap a course for detailed statistics & skip runway'}
       </Text>
 
-      {/* Subject rows with staggered fluid entrance */}
-      {sortedStats.map((item, index) => (
-        <SubjectRow
-          key={item.subject.id}
-          item={item}
-          index={index}
-          isLast={index === sortedStats.length - 1}
-        />
-      ))}
+      {/* Subject rows with staggered fluid entrance or dedicated empty state */}
+      {sortedStats.length === 0 ? (
+        <View className="items-center justify-center py-6 px-4">
+          <View
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(255, 255, 255, 0.06)'
+                : 'rgba(0, 0, 0, 0.04)',
+              borderRadius: 20,
+              borderCurve: 'continuous',
+            }}
+            className="w-12 h-12 items-center justify-center mb-2.5"
+          >
+            <SubjectsIcon size={24} color={colors.textMuted} />
+          </View>
+          <Text
+            style={[
+              styles.sfText,
+              {
+                letterSpacing: -0.2,
+                color: colors.text,
+                fontFamily: fontFamilyNames.bold,
+              },
+            ]}
+            className="text-[14px] font-bold text-center mb-1"
+          >
+            No subjects added yet
+          </Text>
+          <Text
+            style={[
+              styles.sfText,
+              {
+                letterSpacing: 0,
+                color: colors.textMuted,
+                fontFamily: fontFamilyNames.regular,
+                lineHeight: 18,
+              },
+            ]}
+            className="text-[12px] text-center max-w-[280px]"
+          >
+            Detailed attendance percentage, subject charts, and safe skip buffers will appear here once you add courses.
+          </Text>
+        </View>
+      ) : (
+        sortedStats.map((item, index) => (
+          <SubjectRow
+            key={item.subject.id}
+            item={item}
+            index={index}
+            isLast={index === sortedStats.length - 1}
+          />
+        ))
+      )}
     </View>
   );
 };

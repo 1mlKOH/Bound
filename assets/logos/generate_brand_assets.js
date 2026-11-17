@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const { PNG } = require('pngjs');
 const imageUtils = require('@expo/image-utils');
 
@@ -251,6 +252,36 @@ const SVG_MAP = {
   'bound-lockup-horizontal-dark.svg': LOCKUP_HORIZONTAL_DARK_SVG,
   'bound-lockup-horizontal-light.svg': LOCKUP_HORIZONTAL_LIGHT_SVG,
   'bound-lockup-stacked-dark.svg': LOCKUP_STACKED_DARK_SVG,
+  'splash-dark.svg': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="splash-clip-dark">
+      <circle cx="256" cy="256" r="218"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(256 256) scale(0.587) translate(-256 -256)">
+    <circle cx="256" cy="256" r="230" fill="#22242C" stroke="rgba(255,255,255,0.46)" stroke-width="12"/>
+    <g clip-path="url(#splash-clip-dark)">
+      <path d="M -25 271 C 106 271, 162 206, 256 206 C 350 206, 406 142, 537 142" fill="none" stroke="#1E9BFF" stroke-width="32" stroke-linecap="round"/>
+      <path d="M -25 321 C 106 321, 162 256, 256 256 C 350 256, 406 191, 537 191" fill="none" stroke="#3DDC84" stroke-width="32" stroke-linecap="round"/>
+      <path d="M -25 370 C 106 370, 162 306, 256 306 C 350 306, 406 241, 537 241" fill="none" stroke="#FFB020" stroke-width="32" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>`,
+  'splash-light.svg': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="splash-clip-light">
+      <circle cx="256" cy="256" r="218"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(256 256) scale(0.587) translate(-256 -256)">
+    <circle cx="256" cy="256" r="230" fill="#F1F3F5" stroke="#0F172A" stroke-width="14"/>
+    <g clip-path="url(#splash-clip-light)">
+      <path d="M -25 271 C 106 271, 162 206, 256 206 C 350 206, 406 142, 537 142" fill="none" stroke="#1E9BFF" stroke-width="32" stroke-linecap="round"/>
+      <path d="M -25 321 C 106 321, 162 256, 256 256 C 350 256, 406 191, 537 191" fill="none" stroke="#3DDC84" stroke-width="32" stroke-linecap="round"/>
+      <path d="M -25 370 C 106 370, 162 306, 256 306 C 350 306, 406 241, 537 241" fill="none" stroke="#FFB020" stroke-width="32" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>`,
 };
 
 for (const [filename, content] of Object.entries(SVG_MAP)) {
@@ -312,13 +343,11 @@ async function generateAllPngs() {
   console.log('Saved assets/adaptive-icon.png (512x512 transparent foreground)');
   fs.unlinkSync(tempAdaptivePath);
 
-  // 3. Splash Screen: 512x512 branded splash icon
-  const splashRes = await imageUtils.generateImageAsync(
-    { projectRoot: PROJECT_ROOT, cacheType: 'icons' },
-    { src: USER_UPLOADED_PNG, width: 512, height: 512, resizeMode: 'contain', backgroundColor: 'transparent' }
-  );
-  fs.writeFileSync(path.join(ASSETS_DIR, 'splash.png'), splashRes.source);
-  console.log('Saved assets/splash.png (512x512)');
+  // 3. Splash Screen: 512x512 branded splash icons (Dark, Light, and Fallback)
+  spawnSync('rsvg-convert', ['-w', '512', '-h', '512', path.join(LOGOS_DIR, 'splash-dark.svg'), '-o', path.join(ASSETS_DIR, 'splash-dark.png')]);
+  spawnSync('rsvg-convert', ['-w', '512', '-h', '512', path.join(LOGOS_DIR, 'splash-light.svg'), '-o', path.join(ASSETS_DIR, 'splash-light.png')]);
+  fs.copyFileSync(path.join(ASSETS_DIR, 'splash-light.png'), path.join(ASSETS_DIR, 'splash.png'));
+  console.log('Saved assets/splash-dark.png, assets/splash-light.png, and assets/splash.png (512x512 transparent)');
 
   // 4. Notification Icon: 96x96 pure white silhouette for Android status bar
   const notifPng = new PNG({ width: masterPng.width, height: masterPng.height });

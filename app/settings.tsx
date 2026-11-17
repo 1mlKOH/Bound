@@ -30,6 +30,7 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
   SunIcon,
+  ZapIcon,
 } from '../src/components/icons';
 import { useTheme } from '../src/utils/theme';
 import { SegmentedControl } from '../src/components/SegmentedControl';
@@ -989,7 +990,7 @@ export default function SettingsScreen() {
         {/* Category 4: Backup & Data */}
         <FoldableSectionCard
           title="Backup & Data"
-          subtitle="Export, import, and tour review"
+          subtitle="Export JSON, import backups, and CSV logs"
           icon={<ExportIcon size={16} color={colors.textSecondary} />}
           defaultExpanded={false}
         >
@@ -1083,41 +1084,12 @@ export default function SettingsScreen() {
             <ExportIcon size={15} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/onboarding');
-            }}
-            style={{
-              borderRadius: 14,
-              borderCurve: 'continuous',
-              backgroundColor: isDark
-                ? 'rgba(61, 220, 132, 0.12)'
-                : 'rgba(13, 138, 51, 0.08)',
-            }}
-            className="py-3 px-4 flex-row items-center justify-between my-1"
-          >
-            <Text
-              style={[
-                styles.sfText,
-                {
-                  fontFamily: fontFamilyNames.semiBold,
-                  color: isDark ? '#3DDC84' : '#0D8A33',
-                },
-              ]}
-              className="text-xs font-semibold"
-            >
-              Review Welcome Tour & Cutoffs
-            </Text>
-            <ChevronRightIcon size={15} color={isDark ? '#3DDC84' : '#0D8A33'} />
-          </TouchableOpacity>
         </FoldableSectionCard>
 
         {/* Category 5: Danger Zone */}
         <FoldableSectionCard
           title="Danger Zone"
-          subtitle="Reset demo timetable or erase attendance records"
+          subtitle="Permanently erase attendance records"
           summaryBadge="Destructive"
           badgeColor={isDark ? '#FF6B72' : '#DC2626'}
           badgeBg={isDark ? 'rgba(255, 107, 114, 0.15)' : 'rgba(220, 38, 38, 0.10)'}
@@ -1125,33 +1097,6 @@ export default function SettingsScreen() {
           isDanger={true}
           defaultExpanded={false}
         >
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={confirmResetDemo}
-            style={{
-              borderRadius: 14,
-              borderCurve: 'continuous',
-              backgroundColor: isDark
-                ? 'rgba(245, 158, 11, 0.12)'
-                : 'rgba(245, 158, 11, 0.08)',
-            }}
-            className="py-3 px-4 flex-row items-center justify-between my-1"
-          >
-            <Text
-              style={[
-                styles.sfText,
-                {
-                  fontFamily: fontFamilyNames.semiBold,
-                  color: isDark ? '#FFB020' : '#D97706',
-                },
-              ]}
-              className="text-xs font-semibold"
-            >
-              Reset to Sample Demo Data
-            </Text>
-            <RefreshIcon size={15} color={isDark ? '#FFB020' : '#D97706'} />
-          </TouchableOpacity>
-
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={confirmClearAll}
@@ -1179,6 +1124,76 @@ export default function SettingsScreen() {
             <TrashIcon size={15} color={isDark ? '#FF6B72' : '#DC2626'} />
           </TouchableOpacity>
         </FoldableSectionCard>
+
+        {/* Category 6: Developer Utilities (Debug builds only) */}
+        {__DEV__ && (
+          <FoldableSectionCard
+            title="Developer"
+            subtitle="Internal test tools & sample demo seeds"
+            summaryBadge="DEV ONLY"
+            badgeColor={isDark ? '#38BDF8' : '#0284C7'}
+            badgeBg={isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.10)'}
+            icon={<ZapIcon size={16} color={isDark ? '#38BDF8' : '#0284C7'} />}
+            defaultExpanded={false}
+          >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={confirmResetDemo}
+              style={{
+                borderRadius: 14,
+                borderCurve: 'continuous',
+                backgroundColor: isDark
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(245, 158, 11, 0.08)',
+              }}
+              className="py-3 px-4 flex-row items-center justify-between my-1"
+            >
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    fontFamily: fontFamilyNames.semiBold,
+                    color: isDark ? '#FFB020' : '#D97706',
+                  },
+                ]}
+                className="text-xs font-semibold"
+              >
+                Reset to Sample Demo Data
+              </Text>
+              <RefreshIcon size={15} color={isDark ? '#FFB020' : '#D97706'} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/onboarding');
+              }}
+              style={{
+                borderRadius: 14,
+                borderCurve: 'continuous',
+                backgroundColor: isDark
+                  ? 'rgba(61, 220, 132, 0.12)'
+                  : 'rgba(13, 138, 51, 0.08)',
+              }}
+              className="py-3 px-4 flex-row items-center justify-between my-1"
+            >
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    fontFamily: fontFamilyNames.semiBold,
+                    color: isDark ? '#3DDC84' : '#0D8A33',
+                  },
+                ]}
+                className="text-xs font-semibold"
+              >
+                Review Welcome Tour & Cutoffs
+              </Text>
+              <ChevronRightIcon size={15} color={isDark ? '#3DDC84' : '#0D8A33'} />
+            </TouchableOpacity>
+          </FoldableSectionCard>
+        )}
 
         {/* Brand Logo & About Bound Footer */}
         <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 28, paddingBottom: 48 }}>

@@ -293,3 +293,31 @@ test('String baseline inputs are coerced to numbers without string concatenation
   assert.equal(stats.totalHeld, 13);
   assert.equal(Number.isNaN(stats.percentage), false);
 });
+
+test('Subject with 0 classes held returns 0% percentage, neutral status, and No classes yet label', () => {
+  const subject: Subject = {
+    id: 'sub-zero',
+    name: 'Zero Subject',
+    code: 'ZERO101',
+    color: '#1E9BFF',
+    targetPct: 75,
+    baselinePresent: 0,
+    baselineAbsent: 0,
+    startDate: '2026-08-01',
+    endDate: null,
+    archivedAt: null,
+    createdAt: '2026-08-01T00:00:00Z',
+  };
+
+  const stats = computeSubjectStats(subject, [], new Set(), 75);
+  assert.equal(stats.attended, 0);
+  assert.equal(stats.absent, 0);
+  assert.equal(stats.totalHeld, 0);
+  assert.equal(stats.percentage, 0);
+  assert.equal(stats.isSafe, false);
+  assert.equal(stats.isBelow, false);
+  assert.equal(stats.isClose, false);
+  assert.equal(stats.canMiss, 0);
+  assert.equal(stats.mustAttend, 0);
+  assert.equal(stats.statusLabel, 'No classes yet');
+});

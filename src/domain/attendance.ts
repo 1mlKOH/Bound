@@ -32,7 +32,24 @@ export function computeSubjectStats(
   const absent = Math.max(0, (Number(subject.baselineAbsent) || 0) + absentCount);
   const totalHeld = attended + absent;
 
-  const percentage = totalHeld === 0 ? 100 : (attended / totalHeld) * 100;
+  if (totalHeld === 0) {
+    return {
+      subject,
+      attended: 0,
+      absent: 0,
+      totalHeld: 0,
+      percentage: 0,
+      effectiveTarget,
+      isSafe: false,
+      isClose: false,
+      isBelow: false,
+      canMiss: 0,
+      mustAttend: 0,
+      statusLabel: 'No classes yet',
+    };
+  }
+
+  const percentage = (attended / totalHeld) * 100;
   const roundedPct = Math.round(percentage * 10) / 10;
 
   const targetFraction = effectiveTarget / 100;

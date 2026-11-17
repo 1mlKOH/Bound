@@ -5,10 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FloatingBottomNav } from '../../src/components/FloatingBottomNav';
 import { TopHeader } from '../../src/components/TopHeader';
 import { useTheme } from '../../src/utils/theme';
+import { useAttendanceStore } from '../../src/store/useAttendanceStore';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   const pathname = usePathname();
+  const hasOnboarded = useAttendanceStore((state) => state.settings.hasOnboarded);
+
+  if (!hasOnboarded) {
+    return <View style={{ flex: 1, backgroundColor: colors.canvas }} />;
+  }
 
   const isSubjects = pathname.includes('subjects');
   const isStats = pathname.includes('stats');

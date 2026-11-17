@@ -18,6 +18,7 @@ import { Haptics } from '../../src/utils/haptics';
 import { ChevronLeftIcon, RefreshIcon, PlusIcon, MinusIcon } from '../../src/components/icons';
 import { AttendanceStatus } from '../../src/types';
 import { fontFamilyNames } from '../../src/utils/typography';
+import { ProgressBar } from '../../src/components/ProgressBar';
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -356,18 +357,32 @@ export default function SubjectDetailStatsScreen() {
 
           {/* Hero Numbers Row: Large NumberFlow Percentage + Margin */}
           <View className="flex-row items-center justify-between mt-1 mb-2">
-            <NumberFlow
-              value={percentage}
-              suffix="%"
-              format={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
-              style={{
-                fontFamily: fontFamilyNames.extraBold,
-                fontSize: 44,
-                fontWeight: '800',
-                color: statusColor,
-                letterSpacing: -1.3,
-              }}
-            />
+            {simTotalHeld === 0 ? (
+              <Text
+                style={{
+                  fontFamily: fontFamilyNames.extraBold,
+                  fontSize: 44,
+                  fontWeight: '800',
+                  color: statusColor,
+                  letterSpacing: -1.3,
+                }}
+              >
+                —%
+              </Text>
+            ) : (
+              <NumberFlow
+                value={percentage}
+                suffix="%"
+                format={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
+                style={{
+                  fontFamily: fontFamilyNames.extraBold,
+                  fontSize: 44,
+                  fontWeight: '800',
+                  color: statusColor,
+                  letterSpacing: -1.3,
+                }}
+              />
+            )}
 
             <View className="items-end">
               <Text
@@ -404,45 +419,15 @@ export default function SubjectDetailStatsScreen() {
 
           {/* Target Cutoff Notch Progress Bar */}
           <View className="my-2.5">
-            <View
-              style={{
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : 'rgba(0, 0, 0, 0.06)',
-                height: 8,
-                borderRadius: 999,
-                position: 'relative',
-              }}
-              className="w-full justify-center"
-            >
-              {/* Progress Fill */}
-              <View
-                style={{
-                  width: `${Math.min(100, Math.max(0, percentage))}%`,
-                  backgroundColor: statusColor,
-                  height: '100%',
-                  borderRadius: 999,
-                }}
-              />
-
-              {/* Vertical Cutoff Notch Line at Target % */}
-              <View
-                style={{
-                  position: 'absolute',
-                  left: `${targetPercentage}%`,
-                  width: 2.5,
-                  height: 16,
-                  borderRadius: 1.5,
-                  backgroundColor: isDark ? '#FFFFFF' : '#111114',
-                  top: -4,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 2,
-                  elevation: 2,
-                }}
-              />
-            </View>
+            <ProgressBar
+              value={percentage}
+              isZeroState={simTotalHeld === 0}
+              target={targetPercentage}
+              fillColor={activeSubject?.color || statusColor}
+              showNotch={true}
+              notchValue={targetPercentage}
+              height={8}
+            />
 
             {/* Notch legend guide */}
             <View className="flex-row items-center justify-between mt-1 px-0.5">
