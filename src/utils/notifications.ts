@@ -90,27 +90,20 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
       });
     }
 
-    // Register interactive quick actions for class alerts
+    // Register interactive quick actions for class alerts (streamlined 2-button row)
     await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.CLASS_REMINDER, [
       {
         identifier: NOTIFICATION_ACTIONS.MARK_PRESENT,
-        buttonTitle: 'Attended',
+        buttonTitle: 'Present',
         options: {
           opensAppToForeground: true,
         },
       },
       {
         identifier: NOTIFICATION_ACTIONS.MARK_ABSENT,
-        buttonTitle: 'Missed',
+        buttonTitle: 'Absent',
         options: {
           isDestructive: true,
-          opensAppToForeground: true,
-        },
-      },
-      {
-        identifier: NOTIFICATION_ACTIONS.VIEW_TIMETABLE,
-        buttonTitle: 'View Today',
-        options: {
           opensAppToForeground: true,
         },
       },
@@ -336,9 +329,108 @@ export async function syncScheduledNotifications(
           },
         });
       }
+
+      // 4b. Schedule Reminders for Upcoming Unmarked Extra Classes (one-shot DATE triggers)
+      const nowMs = Date.now();
+      const horizonDays = 14;
+      const horizonMs = nowMs + horizonDays * 24 * 60 * 60 * 1000;
+
+      for (const ses of sessions) {
+        // Extra classes have slotId === null and haven't been marked yet
+        if (ses.slotId !== null || ses.status !== null) continue;
+        const subject = activeSubjectsMap.get(ses.subjectId);
+        if (!subject) continue;
+
+        const [y, m, d] = ses.date.split('-').map(Number);
+        const [startH, startM] = ses.startTime.split(':').map(Number);
+        if (!y || !m || !d || isNaN(startH) || isNaN(startM)) continue;
+
+        const classStartDate = new Date(y, m - 1, d, startH, startM, 0, 0);
+        const classStartMs = classStartDate.getTime();
+
+        // Skip if class already started or is past the 14-day horizon
+        if (classStartMs <= nowMs || classStartMs > horizonMs) continue;
+
+        // Target notification time with offset
+        let notifyDate = new Date(classStartMs - offsetMin * 60 * 1000);
+
+        // If reminder time has already passed (e.g. created 3 mins before class with 5 min offset),
+        // trigger in 2 seconds so the student still receives the notification
+        if (notifyDate.getTime() <= nowMs) {
+          notifyDate = new Date(nowMs + 2000);
+        }
+
+        const stats =
+          statsMap.get(subject.id) ||
+          computeSubjectStats(subject, sessions, holidaysSet, settings.globalTargetPct);
+
+        const { title, body } = generateClassReminderCopy(
+          subject,
+          stats,
+          ses.startTime,
+          offsetMin
+        );
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `Extra Class · ${title}`,
+            body,
+            sound: true,
+            categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
+            data: {
+              type: 'CLASS_REMINDER',
+              isExtra: true,
+              sessionId: ses.id,
+              subjectId: subject.id,
+              subjectName: subject.name,
+              startTime: ses.startTime,
+              date: ses.date,
+            },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: notifyDate,
+            channelId: NOTIFICATION_CHANNELS.CLASS_REMINDERS,
+          },
+        });
+      }
     }
   } catch (error) {
     console.warn('Failed to schedule notifications:', error);
+  }
+}
+
+/**
+ * Automatically dismisses any delivered notifications in the status bar/tray
+ * matching a specific session, slot, or subject (e.g. when marked in-app).
+ */
+export async function dismissPresentedNotificationForSession(session: {
+  id?: string;
+  slotId?: string | null;
+  subjectId?: string;
+}): Promise<void> {
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    for (const item of presented) {
+      const data = item.request.content.data as {
+        sessionId?: string;
+        slotId?: string;
+        subjectId?: string;
+      } | undefined;
+      if (!data) continue;
+
+      const matchesSession = Boolean(session.id && data.sessionId === session.id);
+      const matchesSlot = Boolean(session.slotId && data.slotId === session.slotId);
+      const matchesSubject = Boolean(
+        !session.slotId && !session.id && session.subjectId && data.subjectId === session.subjectId
+      );
+
+      if (matchesSession || matchesSlot || matchesSubject) {
+        await Notifications.dismissNotificationAsync(item.request.identifier).catch(() => {});
+      }
+    }
+  } catch {
+    // Graceful fallback if notifications are unsupported in current runtime
   }
 }
 
@@ -357,16 +449,25 @@ export async function handleNotificationResponse(
     lastHandledResponseId = responseId;
 
     const { actionIdentifier, notification } = response;
+
+    // Immediately dismiss the notification from the tray so it doesn't linger or allow double entries
+    if (notification?.request?.identifier) {
+      await Notifications.dismissNotificationAsync(notification.request.identifier).catch(() => {});
+    }
+
     const data = (notification.request.content.data || {}) as {
       type?: string;
+      isExtra?: boolean;
+      sessionId?: string;
       subjectId?: string;
       subjectName?: string;
       slotId?: string;
       startTime?: string;
+      date?: string;
     };
 
     const store = getStore().getState();
-    const today = getTodayDateString();
+    const targetDate = data.date || getTodayDateString();
 
     if (
       actionIdentifier === NOTIFICATION_ACTIONS.MARK_PRESENT ||
@@ -376,25 +477,31 @@ export async function handleNotificationResponse(
       const targetStatus = isPresent ? 'present' : 'absent';
 
       // Ensure today's sessions exist
-      const daySessions = store.getSessionsForDate(today);
+      const daySessions = store.getSessionsForDate(targetDate);
       const session = daySessions.find(
         (s: Session) =>
-          (data.slotId && s.slotId === data.slotId) || s.subjectId === data.subjectId
+          (data.sessionId && s.id === data.sessionId) ||
+          (data.slotId && s.slotId === data.slotId) ||
+          s.subjectId === data.subjectId
       );
 
       if (session) {
         store.markSession(session.id, targetStatus);
       }
 
+      const displaySubject = data.isExtra
+        ? `Extra Class (${data.subjectName || 'Class'})`
+        : (data.subjectName || 'Class');
+
       if (isPresent) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.success(`Marked ${data.subjectName || 'Class'} as Present`, {
-          description: `Logged for today's ${data.startTime || 'session'}`,
+        toast.success(`Marked ${displaySubject} as Present`, {
+          description: `Logged for ${data.startTime || 'session'}`,
         });
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        toast.error(`Marked ${data.subjectName || 'Class'} as Absent`, {
-          description: `Logged for today's ${data.startTime || 'session'}`,
+        toast.error(`Marked ${displaySubject} as Absent`, {
+          description: `Logged for ${data.startTime || 'session'}`,
         });
       }
 
@@ -462,12 +569,10 @@ export async function sendTestNotification(
   }
 
   const isSafe = variant === 'safe';
-  const title = isSafe
-    ? `${sampleSubject.name} starts in 15m`
-    : `${sampleSubject.name} starts in 15m (${isSafe ? '82.0%' : '74.0%'})`;
+  const title = `${sampleSubject.name} · 10:00`;
   const body = isSafe
-    ? 'Safe buffer: +4 skips banked. Class starts at 10:00.'
-    : 'Cutoff is 75%. Attendance required today. Need next 2 classes to recover.';
+    ? 'Can miss 4 classes · 82% attendance'
+    : 'Must attend next 2 classes · Currently 74%';
 
   await Notifications.scheduleNotificationAsync({
     content: {

@@ -20,7 +20,10 @@ import {
   isSubjectActiveOnDate,
   getTodayDateString,
 } from '../domain/attendance';
-import { syncScheduledNotifications } from '../utils/notifications';
+import {
+  syncScheduledNotifications,
+  dismissPresentedNotificationForSession,
+} from '../utils/notifications';
 import { validateBackupPayload } from '../domain/backup';
 
 let notificationSyncTimer: ReturnType<typeof setTimeout> | null = null;
@@ -284,6 +287,11 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       [finalStatus, markedAt, sessionId]
     );
 
+    // If marked as present or absent, clear any lingering notification from the tray
+    if (finalStatus) {
+      dismissPresentedNotificationForSession(existing);
+    }
+
     // Reschedule notifications to reflect updated attendance calculations
     debouncedSyncNotifications(
       get().settings,
@@ -321,6 +329,11 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         'UPDATE sessions SET status = "present", marked_at = ? WHERE id = ?',
         [now, id]
       );
+    }
+
+    // Clear any active notifications for today's sessions from the status bar
+    for (const s of daySessions) {
+      dismissPresentedNotificationForSession(s);
     }
 
     // Reschedule notifications to reflect updated attendance calculations

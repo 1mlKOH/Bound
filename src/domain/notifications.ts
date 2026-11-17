@@ -8,37 +8,37 @@ export function generateClassReminderCopy(
   subject: Subject,
   stats: SubjectStats,
   startTime: string,
-  offsetMin: number
+  _offsetMin?: number
 ): { title: string; body: string } {
-  const timeLabel = offsetMin > 0 ? `starts in ${offsetMin}m` : `starts at ${startTime}`;
+  const title = `${subject.name} · ${startTime}`;
+
+  if (stats.totalHeld === 0) {
+    return {
+      title,
+      body: `First class today · Target is ${stats.effectiveTarget}%`,
+    };
+  }
 
   if (stats.isBelow) {
     const classWord = stats.mustAttend === 1 ? 'class' : 'classes';
     return {
-      title: `${subject.name} ${timeLabel} (${stats.percentage}%)`,
-      body: `Cutoff is ${stats.effectiveTarget}%. Need next ${stats.mustAttend} ${classWord} to recover. Attendance required today.`,
+      title,
+      body: `Must attend next ${stats.mustAttend} ${classWord} · Currently ${stats.percentage}%`,
     };
   }
 
-  if (stats.isClose) {
+  if (stats.isClose || stats.canMiss === 0) {
     return {
-      title: `${subject.name} ${timeLabel} (${stats.percentage}%)`,
-      body: `Near your ${stats.effectiveTarget}% target cutoff. Missing today will drop you below target.`,
+      title,
+      body: `Cannot miss today · Currently at ${stats.effectiveTarget}% target`,
     };
   }
 
   // Safe status
-  if (stats.canMiss > 0) {
-    const skipWord = stats.canMiss === 1 ? 'skip' : 'skips';
-    return {
-      title: `${subject.name} ${timeLabel}`,
-      body: `Safe buffer: +${stats.canMiss} ${skipWord} available (${stats.percentage}%). Class starts at ${startTime}.`,
-    };
-  }
-
+  const classWord = stats.canMiss === 1 ? 'class' : 'classes';
   return {
-    title: `${subject.name} ${timeLabel} (${stats.percentage}%)`,
-    body: `Currently on target (${stats.effectiveTarget}%). Class starts at ${startTime}.`,
+    title,
+    body: `Can miss ${stats.canMiss} ${classWord} · ${stats.percentage}% attendance`,
   };
 }
 

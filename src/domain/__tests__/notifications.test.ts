@@ -38,10 +38,8 @@ test('generateClassReminderCopy formats safe buffer alerts correctly without emo
   };
 
   const copy = generateClassReminderCopy(dummySubject, safeStats, '10:00', 15);
-  assert.equal(copy.title, 'Physics starts in 15m');
-  assert.match(copy.body, /Safe buffer: \+4 skips available/);
-  assert.match(copy.body, /82\.2%/);
-  assert.match(copy.body, /Class starts at 10:00/);
+  assert.equal(copy.title, 'Physics · 10:00');
+  assert.equal(copy.body, 'Can miss 4 classes · 82.2% attendance');
 });
 
 test('generateClassReminderCopy formats zero-skip safe buffer correctly without emojis', () => {
@@ -61,9 +59,8 @@ test('generateClassReminderCopy formats zero-skip safe buffer correctly without 
   };
 
   const copy = generateClassReminderCopy(dummySubject, zeroSkipStats, '11:30', 5);
-  assert.equal(copy.title, 'Physics starts in 5m (75%)');
-  assert.match(copy.body, /Near your 75% target cutoff/);
-  assert.match(copy.body, /Missing today will drop you below target\./);
+  assert.equal(copy.title, 'Physics · 11:30');
+  assert.equal(copy.body, 'Cannot miss today · Currently at 75% target');
 });
 
 test('generateClassReminderCopy formats at-risk alert when below cutoff without emojis', () => {
@@ -83,10 +80,8 @@ test('generateClassReminderCopy formats at-risk alert when below cutoff without 
   };
 
   const copy = generateClassReminderCopy(dummySubject, riskStats, '14:00', 10);
-  assert.equal(copy.title, 'Physics starts in 10m (70.8%)');
-  assert.match(copy.body, /Cutoff is 75%/);
-  assert.match(copy.body, /Need next 4 classes to recover/);
-  assert.match(copy.body, /Attendance required today\./);
+  assert.equal(copy.title, 'Physics · 14:00');
+  assert.equal(copy.body, 'Must attend next 4 classes · Currently 70.8%');
 });
 
 test('generateClassReminderCopy handles singular class recovery grammar', () => {
@@ -106,7 +101,29 @@ test('generateClassReminderCopy handles singular class recovery grammar', () => 
   };
 
   const copy = generateClassReminderCopy(dummySubject, riskStatsSingular, '09:00', 5);
-  assert.match(copy.body, /Need next 1 class to recover/);
+  assert.equal(copy.title, 'Physics · 09:00');
+  assert.equal(copy.body, 'Must attend next 1 class · Currently 73.3%');
+});
+
+test('generateClassReminderCopy formats zero-held class notification correctly', () => {
+  const zeroStats: SubjectStats = {
+    subject: dummySubject,
+    attended: 0,
+    absent: 0,
+    totalHeld: 0,
+    percentage: 0,
+    effectiveTarget: 75,
+    isSafe: false,
+    isClose: false,
+    isBelow: false,
+    canMiss: 0,
+    mustAttend: 0,
+    statusLabel: 'No classes yet',
+  };
+
+  const copy = generateClassReminderCopy(dummySubject, zeroStats, '09:00', 10);
+  assert.equal(copy.title, 'Physics · 09:00');
+  assert.equal(copy.body, 'First class today · Target is 75%');
 });
 
 test('generateUnmarkedCatchupCopy formats single unmarked class with subject name', () => {
