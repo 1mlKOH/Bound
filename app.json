@@ -19,7 +19,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bound.attendance",
-      "userInterfaceStyle": "automatic"
+      "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "package": "com.bound.attendance",
