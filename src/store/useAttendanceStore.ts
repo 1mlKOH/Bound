@@ -23,6 +23,7 @@ import {
 import {
   syncScheduledNotifications,
   dismissPresentedNotificationForSession,
+  NOTIFICATION_ACTIONS,
 } from '../utils/notifications';
 import { validateBackupPayload } from '../domain/backup';
 
@@ -60,6 +61,15 @@ interface AttendanceStoreState {
   setSelectedDate: (date: string) => void;
   setStatsFilter: (filter: 'month' | 'week') => void;
   markSession: (sessionId: string, status: AttendanceStatus) => void;
+  setSessionStatus: (sessionId: string, status: AttendanceStatus) => void;
+  recordAttendanceFromNotification: (payload: {
+    actionIdentifier: string;
+    sessionId?: string;
+    slotId?: string;
+    subjectId?: string;
+    startTime?: string;
+    date: string;
+  }) => boolean;
   batchMarkDay: (dateStr: string) => number;
   toggleHoliday: (dateStr: string, label?: string) => void;
   addExtraClass: (
@@ -300,6 +310,123 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       updatedSessions,
       get().holidays
     );
+  },
+
+  setSessionStatus: (sessionId: string, newStatus: AttendanceStatus) => {
+    const { sessions } = get();
+    const existing = sessions.find((s) => s.id === sessionId);
+    if (!existing) return;
+
+    const markedAt = newStatus ? new Date().toISOString() : null;
+
+    // Direct non-toggling assignment
+    const updatedSessions = sessions.map((s) =>
+      s.id === sessionId ? { ...s, status: newStatus, markedAt } : s
+    );
+    set({ sessions: updatedSessions });
+
+    // Persist to SQLite
+    expoDb.runSync(
+      'UPDATE sessions SET status = ?, marked_at = ? WHERE id = ?',
+      [newStatus, markedAt, sessionId]
+    );
+
+    // If marked as present or absent, clear any lingering notification from the tray
+    if (newStatus) {
+      dismissPresentedNotificationForSession(existing);
+    }
+
+    // Reschedule notifications to reflect updated attendance calculations
+    debouncedSyncNotifications(
+      get().settings,
+      get().subjects,
+      get().scheduleSlots,
+      updatedSessions,
+      get().holidays
+    );
+  },
+
+  recordAttendanceFromNotification: ({
+    actionIdentifier,
+    sessionId,
+    slotId,
+    subjectId,
+    startTime,
+    date,
+  }: {
+    actionIdentifier: string;
+    sessionId?: string;
+    slotId?: string;
+    subjectId?: string;
+    startTime?: string;
+    date: string;
+  }): boolean => {
+    // 1. Ensure database and store tables are loaded into memory
+    if (get().isLoading || get().subjects.length === 0) {
+      get().initialize();
+    }
+
+    const isPresent = actionIdentifier === NOTIFICATION_ACTIONS.MARK_PRESENT;
+    const isAbsent = actionIdentifier === NOTIFICATION_ACTIONS.MARK_ABSENT;
+    if (!isPresent && !isAbsent) return false;
+
+    const targetStatus: AttendanceStatus = isPresent ? 'present' : 'absent';
+    const targetDate = date || getTodayDateString();
+
+    // 2. Ensure sessions for this date are generated from schedule slots
+    let daySessions = get().getSessionsForDate(targetDate);
+
+    // 3. Find matching session
+    let session = daySessions.find(
+      (s: Session) =>
+        (sessionId && s.id === sessionId) ||
+        (slotId && s.slotId === slotId) ||
+        (subjectId && s.subjectId === subjectId && (!startTime || s.startTime === startTime)) ||
+        (subjectId && s.subjectId === subjectId)
+    );
+
+    // 4. If still not found, but we have a valid subject (e.g. test alert or extra class),
+    // create the session for targetDate so the attendance action is never lost
+    if (!session && subjectId) {
+      const subject = get().subjects.find((s) => s.id === subjectId);
+      if (subject) {
+        const newSessionId = sessionId || generateUUID();
+        const start = startTime || '10:00';
+        const [sh, sm] = start.split(':').map(Number);
+        const endH = isNaN(sh) ? 11 : (sh + 1) % 24;
+        const end = `${String(endH).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`;
+
+        try {
+          expoDb.runSync(
+            `INSERT OR IGNORE INTO sessions (id, subject_id, slot_id, date, start_time, end_time, status, marked_at)
+             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
+            [
+              newSessionId,
+              subject.id,
+              slotId && slotId !== 'test-slot' ? slotId : null,
+              targetDate,
+              start,
+              end,
+            ]
+          );
+        } catch (e) {
+          console.warn('Failed to insert session from notification:', e);
+        }
+
+        daySessions = get().getSessionsForDate(targetDate);
+        session = daySessions.find(
+          (s: Session) => s.id === newSessionId || (s.subjectId === subject.id && s.date === targetDate)
+        );
+      }
+    }
+
+    if (!session) {
+      return false;
+    }
+
+    // 5. Explicitly assign status (no toggle)
+    get().setSessionStatus(session.id, targetStatus);
+    return true;
   },
 
   batchMarkDay: (dateStr: string): number => {

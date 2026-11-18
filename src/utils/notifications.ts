@@ -90,13 +90,13 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
       });
     }
 
-    // Register interactive quick actions for class alerts (streamlined 2-button row)
+    // Register interactive quick actions for class alerts (streamlined 2-button row, silent background actions)
     await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORIES.CLASS_REMINDER, [
       {
         identifier: NOTIFICATION_ACTIONS.MARK_PRESENT,
         buttonTitle: 'Present',
         options: {
-          opensAppToForeground: true,
+          opensAppToForeground: false,
         },
       },
       {
@@ -104,7 +104,7 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
         buttonTitle: 'Absent',
         options: {
           isDestructive: true,
-          opensAppToForeground: true,
+          opensAppToForeground: false,
         },
       },
     ]);
@@ -474,41 +474,39 @@ export async function handleNotificationResponse(
       actionIdentifier === NOTIFICATION_ACTIONS.MARK_ABSENT
     ) {
       const isPresent = actionIdentifier === NOTIFICATION_ACTIONS.MARK_PRESENT;
-      const targetStatus = isPresent ? 'present' : 'absent';
-
-      // Ensure today's sessions exist
-      const daySessions = store.getSessionsForDate(targetDate);
-      const session = daySessions.find(
-        (s: Session) =>
-          (data.sessionId && s.id === data.sessionId) ||
-          (data.slotId && s.slotId === data.slotId) ||
-          s.subjectId === data.subjectId
-      );
-
-      if (session) {
-        store.markSession(session.id, targetStatus);
-      }
-
       const displaySubject = data.isExtra
         ? `Extra Class (${data.subjectName || 'Class'})`
         : (data.subjectName || 'Class');
 
-      if (isPresent) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.success(`Marked ${displaySubject} as Present`, {
-          description: `Logged for ${data.startTime || 'session'}`,
-        });
+      const success = store.recordAttendanceFromNotification({
+        actionIdentifier,
+        sessionId: data.sessionId,
+        slotId: data.slotId,
+        subjectId: data.subjectId,
+        startTime: data.startTime,
+        date: targetDate,
+      });
+
+      if (success) {
+        if (isPresent) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          toast.success(`Marked ${displaySubject} as Present`, {
+            description: `Logged for ${data.startTime || 'session'}`,
+          });
+        } else {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          toast.error(`Marked ${displaySubject} as Absent`, {
+            description: `Logged for ${data.startTime || 'session'}`,
+          });
+        }
       } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        toast.error(`Marked ${displaySubject} as Absent`, {
-          description: `Logged for ${data.startTime || 'session'}`,
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        toast.error('Could not log attendance', {
+          description: `No matching class found for ${displaySubject}.`,
         });
       }
 
       store.resetToToday();
-      if (router) {
-        router.push('/(tabs)');
-      }
       return;
     }
 
@@ -544,21 +542,35 @@ export async function sendTestNotification(
   }
 
   const store = getStore().getState();
-  const subjects = store.subjects;
-  const sampleSubject = subjects[0] || {
-    id: 'test-sub',
-    name: variant === 'safe' ? 'Physics · PHY101' : 'Calculus · MAT102',
-    code: variant === 'safe' ? 'PHY101' : 'MAT102',
-  };
+  if (store.isLoading || store.subjects.length === 0) {
+    store.initialize();
+  }
+
+  const today = getTodayDateString();
+  const todaySessions: Session[] = store.getSessionsForDate(today);
+
+  // Pick an unmarked session from today if one exists, otherwise first session or first subject
+  const todaySession = todaySessions.find((s: Session) => s.status === null) || todaySessions[0];
+  const sampleSubject =
+    (todaySession && store.subjects.find((s: Subject) => s.id === todaySession.subjectId)) ||
+    store.subjects[0] || {
+      id: 'test-sub',
+      name: variant === 'safe' ? 'Physics · PHY101' : 'Calculus · MAT102',
+      code: variant === 'safe' ? 'PHY101' : 'MAT102',
+    };
+  const testTime = todaySession ? todaySession.startTime : '10:00';
 
   if (variant === 'daily') {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Unmarked Classes Remaining',
-        body: 'You have 2 classes left to mark today (Physics, Calculus). Tap to log your attendance.',
+        body: `You have 1 class left to mark today (${sampleSubject.name}). Tap to log your attendance.`,
         sound: true,
         categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
-        data: { type: 'UNMARKED_CHECK' },
+        data: {
+          type: 'UNMARKED_CHECK',
+          date: today,
+        },
       },
       trigger: {
         channelId: NOTIFICATION_CHANNELS.DAILY_CHECK,
@@ -569,7 +581,7 @@ export async function sendTestNotification(
   }
 
   const isSafe = variant === 'safe';
-  const title = `${sampleSubject.name} · 10:00`;
+  const title = `${sampleSubject.name} · ${testTime}`;
   const body = isSafe
     ? 'Can miss 4 classes · 82% attendance'
     : 'Must attend next 2 classes · Currently 74%';
@@ -582,10 +594,12 @@ export async function sendTestNotification(
       categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
       data: {
         type: 'CLASS_REMINDER',
+        sessionId: todaySession ? todaySession.id : undefined,
         subjectId: sampleSubject.id,
         subjectName: sampleSubject.name,
-        slotId: 'test-slot',
-        startTime: '10:00',
+        slotId: todaySession ? todaySession.slotId || undefined : undefined,
+        startTime: testTime,
+        date: today,
       },
     },
     trigger: {
