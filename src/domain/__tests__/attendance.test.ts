@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeSubjectStats, computePooledStats } from '../attendance.ts';
+import { computeSubjectStats, computePooledStats, formatTime12h, formatTimeRange12h } from '../attendance.ts';
 import type { Subject, Session } from '../../types/index.ts';
 
 test('Physics attendance matches screenshot (37/45 -> 82%, Can miss 4)', () => {
@@ -320,4 +320,30 @@ test('Subject with 0 classes held returns 0% percentage, neutral status, and No 
   assert.equal(stats.canMiss, 0);
   assert.equal(stats.mustAttend, 0);
   assert.equal(stats.statusLabel, 'No classes yet');
+});
+
+test('formatTime12h formats 24h time strings to 12h format with AM/PM', () => {
+  assert.equal(formatTime12h('00:00'), '12:00 AM');
+  assert.equal(formatTime12h('00:15'), '12:15 AM');
+  assert.equal(formatTime12h('09:00'), '9:00 AM');
+  assert.equal(formatTime12h('09:05'), '9:05 AM');
+  assert.equal(formatTime12h('11:59'), '11:59 AM');
+  assert.equal(formatTime12h('12:00'), '12:00 PM');
+  assert.equal(formatTime12h('12:30'), '12:30 PM');
+  assert.equal(formatTime12h('13:00'), '1:00 PM');
+  assert.equal(formatTime12h('14:00'), '2:00 PM');
+  assert.equal(formatTime12h('15:45'), '3:45 PM');
+  assert.equal(formatTime12h('23:59'), '11:59 PM');
+  assert.equal(formatTime12h(''), '');
+  assert.equal(formatTime12h(null), '');
+  assert.equal(formatTime12h(undefined), '');
+});
+
+test('formatTimeRange12h formats start and end time ranges to 12h format', () => {
+  assert.equal(formatTimeRange12h('09:00', '10:00'), '9:00 AM - 10:00 AM');
+  assert.equal(formatTimeRange12h('13:00', '14:30'), '1:00 PM - 2:30 PM');
+  assert.equal(formatTimeRange12h('11:00', '13:00', ' – '), '11:00 AM – 1:00 PM');
+  assert.equal(formatTimeRange12h('14:00', null), '2:00 PM');
+  assert.equal(formatTimeRange12h(null, '15:00'), '3:00 PM');
+  assert.equal(formatTimeRange12h(null, null), '');
 });

@@ -19,6 +19,7 @@ import { ChevronLeftIcon, RefreshIcon, PlusIcon, MinusIcon } from '../../src/com
 import { AttendanceStatus } from '../../src/types';
 import { fontFamilyNames } from '../../src/utils/typography';
 import { ProgressBar } from '../../src/components/ProgressBar';
+import { formatTime12h } from '../../src/domain/attendance';
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -136,13 +137,14 @@ export default function SubjectDetailStatsScreen() {
     ? isDark ? '#FFB020' : '#D97706'
     : isDark ? '#FF6B72' : '#DC2626';
 
-  // Fast date formatting without Hermes Intl overhead: "Nov 3  Tue · 11:00"
+  // Fast date formatting without Hermes Intl overhead: "Nov 3  Tue · 11:00 AM"
   const formatSessionLabel = (dateStr: string, time?: string) => {
     const [y, m, d] = dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     const monthStr = SHORT_MONTHS[m - 1] || '';
     const weekdayStr = SHORT_DAYS[dateObj.getDay()] || '';
-    const timeStr = time ? ` · ${time}` : '';
+    const formattedTime = time ? formatTime12h(time) : '';
+    const timeStr = formattedTime ? ` · ${formattedTime}` : '';
     return `${monthStr} ${d}  ${weekdayStr}${timeStr}`;
   };
 

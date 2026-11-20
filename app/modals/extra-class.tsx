@@ -20,6 +20,7 @@ import RNDateTimePicker, {
   DateTimePickerAndroid,
 } from '@react-native-community/datetimepicker';
 import { useAttendanceStore } from '../../src/store/useAttendanceStore';
+import { formatTime12h, formatTimeRange12h } from '../../src/domain/attendance';
 import {
   CloseIcon,
   CalendarPlusIcon,
@@ -341,7 +342,7 @@ export default function ExtraClassModal() {
 
     addExtraClass(selectedSubjectId, date, startTime, endTime);
     toast.success('Extra class added', {
-      description: `${sub.name} (${startTime} - ${endTime})`,
+      description: `${sub.name} (${formatTimeRange12h(startTime, endTime)})`,
     });
     router.back();
   };
@@ -602,7 +603,7 @@ export default function ExtraClassModal() {
                     }}
                     className="text-sm font-bold ml-1.5"
                   >
-                    {startTime}
+                    {formatTime12h(startTime)}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -649,7 +650,7 @@ export default function ExtraClassModal() {
                     }}
                     className="text-sm font-bold ml-1.5"
                   >
-                    {endTime}
+                    {formatTime12h(endTime)}
                   </Text>
                 </TouchableOpacity>
               </View>

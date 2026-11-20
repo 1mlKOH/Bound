@@ -29,6 +29,7 @@ import {
   getWeekDates,
   formatCardDate,
   getTodayDateString,
+  formatTime12h,
 } from '../domain/attendance';
 
 if (
@@ -1130,7 +1131,7 @@ const CollapsibleDayCard: React.FC<CollapsibleDayCardProps> = ({
                     ]}
                     className="text-xs font-medium"
                   >
-                    {ses.startTime}
+                    {formatTime12h(ses.startTime)}
                   </Text>
                 </View>
 

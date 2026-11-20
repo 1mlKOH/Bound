@@ -12,6 +12,7 @@ import {
 import { Haptics } from '../utils/haptics';
 import { Session, Subject, AttendanceStatus } from '../types';
 import { useTheme } from '../utils/theme';
+import { formatTime12h, formatTimeRange12h } from '../domain/attendance';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -280,7 +281,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       <TouchableOpacity
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel={`${title}, ${session.startTime} to ${session.endTime}, currently ${session.status || 'unmarked'}. Tap to ${isExpanded ? 'collapse' : 'expand'} actions.`}
+        accessibilityLabel={`${title}, ${formatTime12h(session.startTime)} to ${formatTime12h(session.endTime)}, currently ${session.status || 'unmarked'}. Tap to ${isExpanded ? 'collapse' : 'expand'} actions.`}
         accessibilityState={{ expanded: isExpanded }}
         onPressIn={onHeaderPressIn}
         onPressOut={onHeaderPressOut}
@@ -328,7 +329,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                 ]}
                 className="text-[12px] mr-2"
               >
-                {session.startTime} - {session.endTime}
+                {formatTimeRange12h(session.startTime, session.endTime)}
               </Text>
               {bufferLabel && (
                 <View

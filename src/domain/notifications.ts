@@ -1,5 +1,5 @@
 import type { Subject, SubjectStats, ScheduleSlot, Session } from '../types/index.ts';
-import { isSlotEffectiveOnDate, isSubjectActiveOnDate } from './attendance.ts';
+import { isSlotEffectiveOnDate, isSubjectActiveOnDate, formatTime12h } from './attendance.ts';
 
 /**
  * Generates clean, intelligent copy for class reminder notifications (Option 3: zero emojis/symbols).
@@ -10,7 +10,8 @@ export function generateClassReminderCopy(
   startTime: string,
   _offsetMin?: number
 ): { title: string; body: string } {
-  const title = `${subject.name} · ${startTime}`;
+  const formattedTime = formatTime12h(startTime) || startTime;
+  const title = `${subject.name} · ${formattedTime}`;
 
   if (stats.totalHeld === 0) {
     return {

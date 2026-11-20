@@ -16,7 +16,7 @@ import { useTheme } from '../utils/theme';
 import { fontFamilyNames } from '../utils/typography';
 import { Session, Subject, Holiday } from '../types';
 import { CloseIcon } from './icons';
-import { getTodayDateString } from '../domain/attendance';
+import { getTodayDateString, formatTimeRange12h } from '../domain/attendance';
 
 export interface DayLogSheetProps {
   visible: boolean;
@@ -334,9 +334,7 @@ export const DayLogSheet: React.FC<DayLogSheetProps> = ({
                 const subName = sub?.name || 'Class';
                 const isLast = idx === sessions.length - 1;
 
-                const timeStr = ses.startTime && ses.endTime
-                  ? `${ses.startTime} – ${ses.endTime}`
-                  : ses.startTime || '';
+                const timeStr = formatTimeRange12h(ses.startTime, ses.endTime, ' – ');
 
                 const status = ses.status;
 

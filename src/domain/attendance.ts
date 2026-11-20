@@ -236,4 +236,38 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Formats a 24-hour time string ("HH:mm") into 12-hour format with AM/PM (e.g. "14:00" -> "2:00 PM", "09:30" -> "9:30 AM").
+ */
+export function formatTime12h(timeStr?: string | null): string {
+  if (!timeStr || typeof timeStr !== 'string') return '';
+  const trimmed = timeStr.trim();
+  const parts = trimmed.split(':');
+  if (parts.length < 2) return trimmed;
+
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return trimmed;
+
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const minuteStr = String(m).padStart(2, '0');
+
+  return `${hour12}:${minuteStr} ${period}`;
+}
+
+/**
+ * Formats a start and end time range in 12-hour format (e.g. "1:00 PM - 2:00 PM" or "1:00 PM – 2:00 PM").
+ */
+export function formatTimeRange12h(
+  startTime?: string | null,
+  endTime?: string | null,
+  separator: string = ' - '
+): string {
+  if (!startTime && !endTime) return '';
+  if (!endTime) return formatTime12h(startTime);
+  if (!startTime) return formatTime12h(endTime);
+  return `${formatTime12h(startTime)}${separator}${formatTime12h(endTime)}`;
+}
+
 

@@ -27,6 +27,8 @@ import {
   getWeekDates,
   formatCardDate,
   getTodayDateString,
+  formatTime12h,
+  formatTimeRange12h,
 } from '../../src/domain/attendance';
 import {
   CloseIcon,
@@ -612,7 +614,7 @@ export default function SubjectEditorModal() {
       if (slot.weekdays.length === 0) {
         Alert.alert(
           'Incomplete Slot',
-          `Please select at least one day for the ${slot.startTime} – ${slot.endTime} slot, or remove it.`
+          `Please select at least one day for the ${formatTimeRange12h(slot.startTime, slot.endTime, ' – ')} slot, or remove it.`
         );
         return;
       }
@@ -623,7 +625,7 @@ export default function SubjectEditorModal() {
       if (slot.startTime >= slot.endTime) {
         Alert.alert(
           'Invalid Time',
-          `Slot end time (${slot.endTime}) must be later than start time (${slot.startTime}).`
+          `Slot end time (${formatTime12h(slot.endTime)}) must be later than start time (${formatTime12h(slot.startTime)}).`
         );
         return;
       }
@@ -1346,7 +1348,7 @@ export default function SubjectEditorModal() {
                           borderColor: colors.inputBorder,
                           height: 40,
                         }}
-                        className="px-2 rounded-xl border flex-row items-center justify-center min-w-[72px] max-w-[88px]"
+                        className="px-2 rounded-xl border flex-row items-center justify-center min-w-[76px]"
                       >
                         <ClockIcon
                           size={13}
@@ -1360,7 +1362,7 @@ export default function SubjectEditorModal() {
                           }}
                           className="text-sm font-bold ml-1.5"
                         >
-                          {slot.startTime}
+                          {formatTime12h(slot.startTime)}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -1393,7 +1395,7 @@ export default function SubjectEditorModal() {
                           borderColor: colors.inputBorder,
                           height: 40,
                         }}
-                        className="px-2 rounded-xl border flex-row items-center justify-center min-w-[72px] max-w-[88px]"
+                        className="px-2 rounded-xl border flex-row items-center justify-center min-w-[76px]"
                       >
                         <ClockIcon
                           size={13}
@@ -1407,7 +1409,7 @@ export default function SubjectEditorModal() {
                           }}
                           className="text-sm font-bold ml-1.5"
                         >
-                          {slot.endTime}
+                          {formatTime12h(slot.endTime)}
                         </Text>
                       </TouchableOpacity>
                     </View>

@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { Settings, ScheduleSlot, Subject, Session, Holiday, SubjectStats } from '../types';
-import { computeSubjectStats, computePooledStats, getTodayDateString } from '../domain/attendance';
+import { computeSubjectStats, computePooledStats, getTodayDateString, formatTime12h } from '../domain/attendance';
 import {
   generateClassReminderCopy,
   generateUnmarkedCatchupCopy,
@@ -491,12 +491,12 @@ export async function handleNotificationResponse(
         if (isPresent) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           toast.success(`Marked ${displaySubject} as Present`, {
-            description: `Logged for ${data.startTime || 'session'}`,
+            description: `Logged for ${data.startTime ? formatTime12h(data.startTime) : 'session'}`,
           });
         } else {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           toast.error(`Marked ${displaySubject} as Absent`, {
-            description: `Logged for ${data.startTime || 'session'}`,
+            description: `Logged for ${data.startTime ? formatTime12h(data.startTime) : 'session'}`,
           });
         }
       } else {
@@ -581,7 +581,7 @@ export async function sendTestNotification(
   }
 
   const isSafe = variant === 'safe';
-  const title = `${sampleSubject.name} · ${testTime}`;
+  const title = `${sampleSubject.name} · ${formatTime12h(testTime)}`;
   const body = isSafe
     ? 'Can miss 4 classes · 82% attendance'
     : 'Must attend next 2 classes · Currently 74%';
