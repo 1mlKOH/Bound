@@ -29,8 +29,8 @@ export const darkPalette = {
   placeholderText: '#6E6E78',
 
   // Bottom Navigation
-  navBg: 'rgba(27, 28, 33, 0.85)',
-  navBorder: 'rgba(255, 255, 255, 0.14)',
+  navBg: 'rgba(27, 28, 33, 0.92)',
+  navBorder: 'transparent',
   navBorderTop: 'transparent',
   navActiveBg: '#2C2E37', // navActive #2C2E37
   navActiveBorder: 'transparent',
@@ -97,8 +97,8 @@ export const lightPalette = {
   placeholderText: '#9D9DA8',
 
   // Bottom Navigation
-  navBg: 'rgba(251, 251, 253, 0.88)',
-  navBorder: 'rgba(0, 0, 0, 0.05)',
+  navBg: 'rgba(255, 255, 255, 0.94)',
+  navBorder: 'transparent',
   navBorderTop: 'transparent',
   navActiveBg: '#DFDFE4', // navActive #DFDFE4
   navActiveBorder: 'transparent',

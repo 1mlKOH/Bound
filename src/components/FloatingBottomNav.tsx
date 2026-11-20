@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Haptics } from '../utils/haptics';
 import { HomeIcon, SubjectsIcon, StatsIcon } from './icons';
 import { useTheme } from '../utils/theme';
+import { fontFamilyNames } from '../utils/typography';
 
 interface NavTabItemProps {
   label: string;
@@ -20,7 +21,6 @@ interface NavTabItemProps {
   onPress: () => void;
   renderIcon: (color: string) => React.ReactNode;
   activeBg: string;
-  activeBorder: string;
   activeTextColor: string;
   inactiveTextColor: string;
   iconColor: string;
@@ -32,7 +32,6 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
   onPress,
   renderIcon,
   activeBg,
-  activeBorder,
   activeTextColor,
   inactiveTextColor,
   iconColor,
@@ -42,7 +41,7 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
   const onPressIn = () => {
     Animated.timing(scale, {
       toValue: 0.94,
-      duration: 100,
+      duration: 90,
       useNativeDriver: true,
     }).start();
   };
@@ -57,38 +56,39 @@ const NavTabItem: React.FC<NavTabItemProps> = ({
   };
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <TouchableOpacity
-        activeOpacity={0.85}
-        accessibilityRole="tab"
-        accessibilityLabel={`${label} tab`}
-        accessibilityState={{ selected: isActive }}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        onPress={onPress}
-        style={[
-          styles.tabItem,
-          {
-            backgroundColor: isActive ? activeBg : 'transparent',
-          },
-        ]}
-        className="items-center justify-center px-6 py-2 rounded-full"
-      >
-        {renderIcon(iconColor)}
-        <Text
+    <View style={styles.tabCell}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          accessibilityRole="tab"
+          accessibilityLabel={`${label} tab`}
+          accessibilityState={{ selected: isActive }}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          onPress={onPress}
           style={[
-            styles.tabLabel,
+            styles.tabItem,
             {
-              color: isActive ? activeTextColor : inactiveTextColor,
-              letterSpacing: 0.2,
+              backgroundColor: isActive ? activeBg : 'transparent',
             },
           ]}
-          className="text-[11px] font-semibold mt-1"
         >
-          {label}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
+          {renderIcon(iconColor)}
+          <Text
+            numberOfLines={1}
+            allowFontScaling={false}
+            style={[
+              styles.tabLabel,
+              {
+                color: isActive ? activeTextColor : inactiveTextColor,
+              },
+            ]}
+          >
+            {label}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 };
 
@@ -96,7 +96,7 @@ export const FloatingBottomNav: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const isHome =
     pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/index';
@@ -112,86 +112,83 @@ export const FloatingBottomNav: React.FC = () => {
 
   return (
     <View
-      style={{
-        position: 'absolute',
-        bottom: bottomOffset,
-        left: 20,
-        right: 20,
-      }}
+      pointerEvents="box-none"
+      style={[
+        styles.outerWrapper,
+        {
+          bottom: bottomOffset,
+        },
+      ]}
     >
+      {/* Floating Shadow Wrapper: clean, soft, diffused elevation without clipping artifacts */}
       <View
         style={[
-          styles.container,
+          styles.shadowWrapper,
           {
-            borderRadius: 36,
-            borderCurve: 'continuous',
-            overflow: 'hidden',
             shadowColor: colors.cardShadow,
+            shadowOpacity: isDark ? 0.35 : 0.08,
           },
         ]}
       >
-        <BlurView
-          intensity={Platform.OS === 'ios' ? 70 : 85}
-          tint={colors.blurTint}
-          style={StyleSheet.absoluteFill}
-        />
+        {/* Navigation Container: Smooth capsule surface with backdrop blur */}
         <View
           style={[
-            styles.liquidLayer,
+            styles.container,
             {
-              borderRadius: 999,
-              borderCurve: 'continuous',
               backgroundColor: colors.navBg,
-              borderWidth: 1,
-              borderColor: colors.navBorder,
             },
           ]}
-          className="h-[64px] px-2.5 flex-row items-center justify-around"
         >
-          {/* Home Tab */}
-          <NavTabItem
-            label="Home"
-            isActive={isHome}
-            onPress={() => handleNavigate('/(tabs)')}
-            activeBg={colors.navActiveBg}
-            activeBorder={colors.navActiveBorder}
-            activeTextColor={colors.navActiveText}
-            inactiveTextColor={colors.navInactiveText}
-            iconColor={isHome ? colors.navActiveIcon : colors.navInactiveIcon}
-            renderIcon={(color) => (
-              <HomeIcon size={20} color={color} strokeWidth={2} />
-            )}
+          <BlurView
+            intensity={Platform.OS === 'ios' ? 70 : 85}
+            tint={colors.blurTint}
+            style={StyleSheet.absoluteFill}
           />
 
-          {/* Subjects Tab */}
-          <NavTabItem
-            label="Subjects"
-            isActive={isSubjects}
-            onPress={() => handleNavigate('/(tabs)/subjects')}
-            activeBg={colors.navActiveBg}
-            activeBorder={colors.navActiveBorder}
-            activeTextColor={colors.navActiveText}
-            inactiveTextColor={colors.navInactiveText}
-            iconColor={isSubjects ? colors.navActiveIcon : colors.navInactiveIcon}
-            renderIcon={(color) => (
-              <SubjectsIcon size={20} color={color} strokeWidth={2} />
-            )}
-          />
+          {/* Tab Items Row: Balanced partitions with equal cell widths */}
+          <View style={styles.navRow}>
+            {/* Home Tab */}
+            <NavTabItem
+              label="Home"
+              isActive={isHome}
+              onPress={() => handleNavigate('/(tabs)')}
+              activeBg={colors.navActiveBg}
+              activeTextColor={colors.navActiveText}
+              inactiveTextColor={colors.navInactiveText}
+              iconColor={isHome ? colors.navActiveIcon : colors.navInactiveIcon}
+              renderIcon={(color) => (
+                <HomeIcon size={20} color={color} strokeWidth={2} />
+              )}
+            />
 
-          {/* Stats Tab */}
-          <NavTabItem
-            label="Stats"
-            isActive={isStats}
-            onPress={() => handleNavigate('/(tabs)/stats')}
-            activeBg={colors.navActiveBg}
-            activeBorder={colors.navActiveBorder}
-            activeTextColor={colors.navActiveText}
-            inactiveTextColor={colors.navInactiveText}
-            iconColor={isStats ? colors.navActiveIcon : colors.navInactiveIcon}
-            renderIcon={(color) => (
-              <StatsIcon size={20} color={color} strokeWidth={2} />
-            )}
-          />
+            {/* Subjects Tab */}
+            <NavTabItem
+              label="Subjects"
+              isActive={isSubjects}
+              onPress={() => handleNavigate('/(tabs)/subjects')}
+              activeBg={colors.navActiveBg}
+              activeTextColor={colors.navActiveText}
+              inactiveTextColor={colors.navInactiveText}
+              iconColor={isSubjects ? colors.navActiveIcon : colors.navInactiveIcon}
+              renderIcon={(color) => (
+                <SubjectsIcon size={20} color={color} strokeWidth={2} />
+              )}
+            />
+
+            {/* Stats Tab */}
+            <NavTabItem
+              label="Stats"
+              isActive={isStats}
+              onPress={() => handleNavigate('/(tabs)/stats')}
+              activeBg={colors.navActiveBg}
+              activeTextColor={colors.navActiveText}
+              inactiveTextColor={colors.navInactiveText}
+              iconColor={isStats ? colors.navActiveIcon : colors.navInactiveIcon}
+              renderIcon={(color) => (
+                <StatsIcon size={20} color={color} strokeWidth={2} />
+              )}
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -199,28 +196,58 @@ export const FloatingBottomNav: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: 999,
-    borderCurve: 'continuous',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
-    elevation: 16,
-  },
-  liquidLayer: {},
-  tabItem: {
-    borderRadius: 999,
-    borderCurve: 'continuous',
-    height: 52,
-    minWidth: 72,
-    justifyContent: 'center',
+  outerWrapper: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
     alignItems: 'center',
   },
+  shadowWrapper: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 999,
+    borderCurve: 'continuous',
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  container: {
+    width: '100%',
+    height: 64,
+    borderRadius: 999,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+    borderWidth: 0,
+  },
+  navRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+  },
+  tabCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabItem: {
+    height: 50,
+    width: 76,
+    borderRadius: 25,
+    borderCurve: 'continuous',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0,
+  },
   tabLabel: {
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Figtree_700Bold',
-      default: undefined,
-    }),
+    fontFamily: fontFamilyNames.bold,
+    fontSize: 11,
+    marginTop: 3,
+    letterSpacing: -0.1,
+    includeFontPadding: false,
+    textAlign: 'center',
   },
 });
+
+export default FloatingBottomNav;
