@@ -15,7 +15,12 @@ fs.mkdirSync(LOGOS_DIR, { recursive: true });
 // 1. MASTER SVG DEFINITIONS
 // ---------------------------------------------------------------------------
 
-// A. Master Full-Color Tile (1024x1024)
+// Optimal Android Adaptive Icon safe-zone scale factor:
+// Target diameter = 66.0dp (safe zone maximum, radius = 33dp = 312.89px on 1024 canvas).
+// Original outer radius = 271px. S = 312.88889 / 271.0 = 1.1545715.
+const ADAPTIVE_SCALE = (33.0 * (1024.0 / 108.0)) / 271.0;
+
+// A. Master Full-Color Tile (1024x1024) - For iOS, Web, and Android Legacy Launcher Fallback
 const MASTER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%" style="display:block">
   <defs>
     <linearGradient id="bg-master" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
@@ -27,7 +32,7 @@ const MASTER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10
     </clipPath>
   </defs>
   <rect width="1024" height="1024" fill="url(#bg-master)"/>
-  <g transform="translate(512 502) scale(1.0000) translate(-512 -502)">
+  <g transform="translate(512 512) scale(${ADAPTIVE_SCALE.toFixed(6)}) translate(-512 -502)">
     <!-- Circular Medallion Base -->
     <circle cx="512" cy="502" r="264" fill="#22242C" stroke="rgba(255,255,255,0.46)" stroke-width="14"/>
 
@@ -36,6 +41,57 @@ const MASTER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10
       <path d="M 190 519 C 340 519, 404 445, 512 445 C 620 445, 684 371, 834 371" fill="none" stroke="#1E9BFF" stroke-width="37" stroke-linecap="round"/>
       <path d="M 190 576 C 340 576, 404 502, 512 502 C 620 502, 684 428, 834 428" fill="none" stroke="#3DDC84" stroke-width="37" stroke-linecap="round"/>
       <path d="M 190 633 C 340 633, 404 559, 512 559 C 620 559, 684 485, 834 485" fill="none" stroke="#FFB020" stroke-width="37" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>`;
+
+// A1. Android Adaptive Background Layer (1024x1024 Full-Bleed)
+const ADAPTIVE_BACKGROUND_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg-adaptive" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1D1E23"/>
+      <stop offset="100%" stop-color="#131418"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg-adaptive)"/>
+</svg>`;
+
+// A2. Android Adaptive Foreground Layer (1024x1024 Transparent Canvas, 66dp Medallion)
+const ADAPTIVE_FOREGROUND_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%">
+  <defs>
+    <clipPath id="waveMedClip-adaptive-fg">
+      <circle cx="512" cy="502" r="250"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(512 512) scale(${ADAPTIVE_SCALE.toFixed(6)}) translate(-512 -502)">
+    <!-- Circular Medallion Base -->
+    <circle cx="512" cy="502" r="264" fill="#22242C" stroke="rgba(255,255,255,0.46)" stroke-width="14"/>
+
+    <!-- Three Parallel Harmonic S-Curve Ribbons -->
+    <g clip-path="url(#waveMedClip-adaptive-fg)">
+      <path d="M 190 519 C 340 519, 404 445, 512 445 C 620 445, 684 371, 834 371" fill="none" stroke="#1E9BFF" stroke-width="37" stroke-linecap="round"/>
+      <path d="M 190 576 C 340 576, 404 502, 512 502 C 620 502, 684 428, 834 428" fill="none" stroke="#3DDC84" stroke-width="37" stroke-linecap="round"/>
+      <path d="M 190 633 C 340 633, 404 559, 512 559 C 620 559, 684 485, 834 485" fill="none" stroke="#FFB020" stroke-width="37" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>`;
+
+// A3. Android Adaptive Monochrome Silhouette (1024x1024 Transparent Canvas, Pure White on Alpha)
+const ADAPTIVE_MONOCHROME_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%">
+  <defs>
+    <clipPath id="waveMedClip-adaptive-mono">
+      <circle cx="512" cy="502" r="250"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(512 512) scale(${ADAPTIVE_SCALE.toFixed(6)}) translate(-512 -502)">
+    <!-- Circular Outer Rim Stroke (pure white, transparent interior) -->
+    <circle cx="512" cy="502" r="264" fill="none" stroke="#FFFFFF" stroke-width="14"/>
+
+    <!-- Three Parallel Ribbons (pure white) -->
+    <g clip-path="url(#waveMedClip-adaptive-mono)">
+      <path d="M 190 519 C 340 519, 404 445, 512 445 C 620 445, 684 371, 834 371" fill="none" stroke="#FFFFFF" stroke-width="37" stroke-linecap="round"/>
+      <path d="M 190 576 C 340 576, 404 502, 512 502 C 620 502, 684 428, 834 428" fill="none" stroke="#FFFFFF" stroke-width="37" stroke-linecap="round"/>
+      <path d="M 190 633 C 340 633, 404 559, 512 559 C 620 559, 684 485, 834 485" fill="none" stroke="#FFFFFF" stroke-width="37" stroke-linecap="round"/>
     </g>
   </g>
 </svg>`;
@@ -243,6 +299,9 @@ const LOCKUP_STACKED_DARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox
 // Write all SVGs to assets/logos/
 const SVG_MAP = {
   'bound-logo-master.svg': MASTER_LOGO_SVG,
+  'bound-adaptive-background.svg': ADAPTIVE_BACKGROUND_SVG,
+  'bound-adaptive-foreground.svg': ADAPTIVE_FOREGROUND_SVG,
+  'bound-adaptive-monochrome.svg': ADAPTIVE_MONOCHROME_SVG,
   'bound-symbol.svg': SYMBOL_TRANSPARENT_SVG,
   'bound-symbol-monotone-dark.svg': SYMBOL_MONO_DARK_SVG,
   'bound-symbol-monotone-white.svg': SYMBOL_MONO_WHITE_SVG,
@@ -290,58 +349,28 @@ for (const [filename, content] of Object.entries(SVG_MAP)) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. PRODUCTION PNG GENERATION FROM USER UPLOADED MASTER
+// 2. PRODUCTION PNG GENERATION
 // ---------------------------------------------------------------------------
 async function generateAllPngs() {
   const masterBuf = fs.readFileSync(USER_UPLOADED_PNG);
   const masterPng = PNG.sync.read(masterBuf);
 
-  // 1. Primary App Icon: 1024x1024 master icon
-  fs.writeFileSync(path.join(ASSETS_DIR, 'icon.png'), masterBuf);
+  // 1. Primary App Icon: 1024x1024 master icon (iOS & legacy Android fallback)
+  spawnSync('rsvg-convert', ['-w', '1024', '-h', '1024', path.join(LOGOS_DIR, 'bound-logo-master.svg'), '-o', path.join(ASSETS_DIR, 'icon.png')]);
+  fs.copyFileSync(path.join(LOGOS_DIR, 'bound-logo-master.svg'), path.join(PROJECT_ROOT, 'Bound-tri-track-wave-obsidian-1024x1024.svg'));
   console.log('Saved assets/icon.png (1024x1024)');
 
-  // 2. Adaptive Icon Foreground: 512x512 with transparent background outside circular medallion
-  // Center: 512, 502, Radius: 264px (outer stroke edge ~271px)
-  const adaptivePng = new PNG({ width: masterPng.width, height: masterPng.height });
-  const cx = 512, cy = 502;
-  const rInside = 267;
-  const rOutside = 271;
+  // 2. Adaptive Icon Background: 1024x1024 full-bleed obsidian gradient
+  spawnSync('rsvg-convert', ['-w', '1024', '-h', '1024', path.join(LOGOS_DIR, 'bound-adaptive-background.svg'), '-o', path.join(ASSETS_DIR, 'adaptive-icon-background.png')]);
+  console.log('Saved assets/adaptive-icon-background.png (1024x1024 full-bleed background)');
 
-  for (let y = 0; y < masterPng.height; y++) {
-    for (let x = 0; x < masterPng.width; x++) {
-      const idx = (masterPng.width * y + x) << 2;
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+  // 3. Adaptive Icon Foreground: 1024x1024 with transparent background, 66dp centered medallion
+  spawnSync('rsvg-convert', ['-w', '1024', '-h', '1024', path.join(LOGOS_DIR, 'bound-adaptive-foreground.svg'), '-o', path.join(ASSETS_DIR, 'adaptive-icon.png')]);
+  console.log('Saved assets/adaptive-icon.png (1024x1024 transparent foreground)');
 
-      adaptivePng.data[idx] = masterPng.data[idx];
-      adaptivePng.data[idx + 1] = masterPng.data[idx + 1];
-      adaptivePng.data[idx + 2] = masterPng.data[idx + 2];
-
-      if (dist <= rInside) {
-        adaptivePng.data[idx + 3] = masterPng.data[idx + 3];
-      } else if (dist >= rOutside) {
-        adaptivePng.data[idx + 3] = 0;
-      } else {
-        // Smooth anti-aliased edge falloff
-        const factor = (rOutside - dist) / (rOutside - rInside);
-        adaptivePng.data[idx + 3] = Math.round(masterPng.data[idx + 3] * factor);
-      }
-    }
-  }
-
-  const adaptive1024Buf = PNG.sync.write(adaptivePng);
-  const tempAdaptivePath = path.join(LOGOS_DIR, 'adaptive-temp-1024.png');
-  fs.writeFileSync(tempAdaptivePath, adaptive1024Buf);
-
-  // Scale down adaptive foreground to 512x512
-  const adaptive512Res = await imageUtils.generateImageAsync(
-    { projectRoot: PROJECT_ROOT, cacheType: 'icons' },
-    { src: tempAdaptivePath, width: 512, height: 512, resizeMode: 'contain', backgroundColor: 'transparent' }
-  );
-  fs.writeFileSync(path.join(ASSETS_DIR, 'adaptive-icon.png'), adaptive512Res.source);
-  console.log('Saved assets/adaptive-icon.png (512x512 transparent foreground)');
-  fs.unlinkSync(tempAdaptivePath);
+  // 4. Adaptive Icon Monochrome: 1024x1024 pure white silhouette for Android 13+ themed icons
+  spawnSync('rsvg-convert', ['-w', '1024', '-h', '1024', path.join(LOGOS_DIR, 'bound-adaptive-monochrome.svg'), '-o', path.join(ASSETS_DIR, 'adaptive-icon-monochrome.png')]);
+  console.log('Saved assets/adaptive-icon-monochrome.png (1024x1024 monochrome silhouette)');
 
   // 3. Splash Screen: 512x512 branded splash icons (Dark, Light, and Fallback)
   spawnSync('rsvg-convert', ['-w', '512', '-h', '512', path.join(LOGOS_DIR, 'splash-dark.svg'), '-o', path.join(ASSETS_DIR, 'splash-dark.png')]);
@@ -349,62 +378,12 @@ async function generateAllPngs() {
   fs.copyFileSync(path.join(ASSETS_DIR, 'splash-light.png'), path.join(ASSETS_DIR, 'splash.png'));
   console.log('Saved assets/splash-dark.png, assets/splash-light.png, and assets/splash.png (512x512 transparent)');
 
-  // 4. Notification Icon: 96x96 pure white silhouette for Android status bar
-  const notifPng = new PNG({ width: masterPng.width, height: masterPng.height });
-  for (let y = 0; y < masterPng.height; y++) {
-    for (let x = 0; x < masterPng.width; x++) {
-      const idx = (masterPng.width * y + x) << 2;
-      const r = masterPng.data[idx];
-      const g = masterPng.data[idx + 1];
-      const b = masterPng.data[idx + 2];
-
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      const isRing = dist >= 254 && dist <= 273 && (r + g + b) > 180;
-      const isBlue = b > 160 && b > r + 40;
-      const isGreen = g > 140 && g > r + 15 && g > b + 15;
-      const isOrange = r > 180 && g > 120 && b < 120;
-      const isRibbon = dist < 254 && (isBlue || isGreen || isOrange);
-
-      if (isRing) {
-        notifPng.data[idx] = 255;
-        notifPng.data[idx + 1] = 255;
-        notifPng.data[idx + 2] = 255;
-        notifPng.data[idx + 3] = Math.min(255, (r + g + b) - 100);
-      } else if (isRibbon) {
-        notifPng.data[idx] = 255;
-        notifPng.data[idx + 1] = 255;
-        notifPng.data[idx + 2] = 255;
-        notifPng.data[idx + 3] = 255;
-      } else {
-        notifPng.data[idx] = 0;
-        notifPng.data[idx + 1] = 0;
-        notifPng.data[idx + 2] = 0;
-        notifPng.data[idx + 3] = 0;
-      }
-    }
-  }
-
-  const notif1024Buf = PNG.sync.write(notifPng);
-  const tempNotifPath = path.join(LOGOS_DIR, 'notif-temp-1024.png');
-  fs.writeFileSync(tempNotifPath, notif1024Buf);
-
-  const notif96Res = await imageUtils.generateImageAsync(
-    { projectRoot: PROJECT_ROOT, cacheType: 'icons' },
-    { src: tempNotifPath, width: 96, height: 96, resizeMode: 'contain', backgroundColor: 'transparent' }
-  );
-  fs.writeFileSync(path.join(ASSETS_DIR, 'notification-icon.png'), notif96Res.source);
+  // 5. Notification Icon: 96x96 pure white silhouette for Android status bar
+  spawnSync('rsvg-convert', ['-w', '96', '-h', '96', path.join(LOGOS_DIR, 'bound-notification-icon.svg'), '-o', path.join(ASSETS_DIR, 'notification-icon.png')]);
   console.log('Saved assets/notification-icon.png (96x96 monochrome silhouette)');
-  fs.unlinkSync(tempNotifPath);
 
-  // 5. Favicon: 48x48 web favicon PNG
-  const fav48Res = await imageUtils.generateImageAsync(
-    { projectRoot: PROJECT_ROOT, cacheType: 'icons' },
-    { src: USER_UPLOADED_PNG, width: 48, height: 48, resizeMode: 'contain', backgroundColor: 'transparent' }
-  );
-  fs.writeFileSync(path.join(ASSETS_DIR, 'favicon.png'), fav48Res.source);
+  // 6. Favicon: 48x48 web favicon PNG
+  spawnSync('rsvg-convert', ['-w', '48', '-h', '48', path.join(LOGOS_DIR, 'bound-favicon.svg'), '-o', path.join(ASSETS_DIR, 'favicon.png')]);
   console.log('Saved assets/favicon.png (48x48)');
 
   console.log('All production PNGs and icons successfully generated!');

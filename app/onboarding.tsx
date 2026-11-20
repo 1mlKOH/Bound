@@ -16,7 +16,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
-import { NumberFlow } from 'number-flow-react-native';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { useTheme } from '../src/utils/theme';
 import { Haptics } from '../src/utils/haptics';
@@ -24,7 +23,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CheckIcon,
-  InfoIcon,
   BellIcon,
   CalendarSparklesIcon,
   PlusIcon,
@@ -352,8 +350,20 @@ export default function OnboardingScreen() {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const scrollViewRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
-  // Screen 2: Target percentage state
+  // Screen 2: Target percentage state & micro-spring animation
   const [targetPct, setTargetPct] = useState<number>(settings.globalTargetPct || 75);
+  const numberScaleAnim = useRef(new Animated.Value(1)).current;
+
+  const triggerNumberScale = () => {
+    numberScaleAnim.setValue(0.92);
+    Animated.spring(numberScaleAnim, {
+      toValue: 1,
+      damping: 12,
+      stiffness: 260,
+      mass: 0.6,
+      useNativeDriver: true,
+    }).start();
+  };
 
   // Screen 3: Interactive ticket state
   const [selectedCourseIdx, setSelectedCourseIdx] = useState<number>(0);

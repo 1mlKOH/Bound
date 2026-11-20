@@ -9,7 +9,7 @@
     </clipPath>
   </defs>
   <rect width="1024" height="1024" fill="url(#bg-master)"/>
-  <g transform="translate(512 502) scale(1.0000) translate(-512 -502)">
+  <g transform="translate(512 512) scale(1.154572) translate(-512 -502)">
     <!-- Circular Medallion Base -->
     <circle cx="512" cy="502" r="264" fill="#22242C" stroke="rgba(255,255,255,0.46)" stroke-width="14"/>
 

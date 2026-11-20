@@ -34,8 +34,9 @@
       "allowBackup": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
-        "backgroundColor": "#0F1015"
+        "backgroundImage": "./assets/adaptive-icon-background.png",
+        "backgroundColor": "#0F1015",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png"
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
