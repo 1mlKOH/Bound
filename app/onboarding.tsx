@@ -503,9 +503,10 @@ export default function OnboardingScreen() {
     }).start();
   };
 
-  // Adjust Target percentage
+  // Adjust Target percentage with micro-spring scale
   const adjustTarget = (delta: number) => {
     Haptics.selectionAsync();
+    triggerNumberScale();
     setTargetPct((prev) => {
       const next = Math.round(prev + delta);
       return Math.min(95, Math.max(50, next));
@@ -566,13 +567,21 @@ export default function OnboardingScreen() {
     }
   };
 
-  // Target tiers for Screen 2 (Flexible, Standard, Strict, Honors)
-  const CUTOFF_TIERS = [
+  // Preset tiers for Screen 2 (Flexible, Standard, Strict, Honors)
+  const PRESET_TIERS = [
     { pct: 70, label: 'Flexible' },
     { pct: 75, label: 'Standard' },
     { pct: 80, label: 'Strict' },
     { pct: 85, label: 'Honors' },
   ];
+
+  // Dynamic attendance requirement subtitle based on percentage
+  const getRequirementLabel = (pct: number) => {
+    if (pct < 75) return 'Flexible attendance requirement';
+    if (pct < 80) return 'Standard attendance requirement';
+    if (pct < 85) return 'Strict attendance requirement';
+    return 'Honors attendance requirement';
+  };
 
   // Dynamic ticket dimensions for Screen 3 (compact for natural card animation)
   const ticketWidth = Math.min(290, width - 48);
@@ -750,199 +759,239 @@ export default function OnboardingScreen() {
             {/* Aerodynamic Paper Plane & Safety Threshold Hero */}
             <GlideHero width={width} />
 
-            {/* Helper callout with SVG icon */}
-            <View className="mt-4 px-4 flex-row items-center justify-center gap-1.5">
-              <InfoIcon size={14} color={colors.textSecondary} />
-              <Text
-                style={[styles.sfText, { color: colors.textSecondary }]}
-                className="text-xs text-center leading-4"
-              >
-                Swipe left or tap Continue to set your college cutoff.
-              </Text>
-            </View>
           </ScrollView>
         </View>
 
         {/* ========================================================= */}
         {/* SCREEN 2: Attendance Cutoff Target Configuration          */}
         {/* ========================================================= */}
-        <View style={{ width, flex: 1 }} className="px-6 justify-between py-2">
+        <View style={{ width, flex: 1 }} className="px-6 justify-between py-4">
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               flexGrow: 1,
-              justifyContent: 'center',
+              justifyContent: 'space-around',
               paddingVertical: 16,
             }}
           >
-            {/* Title & Subtitle */}
-            <View className="mb-4">
+            {/* Title & Subtitle matching prototype */}
+            <View>
               <Text
-                style={[styles.sfText, { color: colors.text }]}
-                className="text-3xl font-extrabold tracking-tight mb-2"
+                style={[
+                  styles.sfText,
+                  {
+                    color: colors.text,
+                    fontSize: 36,
+                    lineHeight: 40,
+                    fontWeight: '900',
+                    letterSpacing: -0.8,
+                  },
+                ]}
+                className="mb-2"
               >
-                Required{'\n'}percentage.
+                Minimum{'\n'}attendance.
               </Text>
               <Text
-                style={[styles.sfText, { color: colors.textSecondary }]}
-                className="text-sm font-medium leading-5"
+                style={[
+                  styles.sfText,
+                  {
+                    color: colors.textSecondary,
+                    fontSize: 15,
+                    fontWeight: '500',
+                    lineHeight: 22,
+                  },
+                ]}
               >
-                Pick your college cutoff or fine-tune by 1%.
+                Set the percentage your college requires.
               </Text>
             </View>
 
-            {/* Top Divider */}
-            <View className="h-px bg-black/5 dark:bg-white/10" />
+            {/* Stepper Counter Row: [-]  70%  [+] */}
+            <View className="items-center my-6">
+              <View className="flex-row items-center justify-between w-full px-2">
+                {/* Minus Stepper Button */}
+                <TouchableOpacity
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  activeOpacity={0.7}
+                  onPress={() => adjustTarget(-1)}
+                  disabled={targetPct <= 50}
+                  style={[
+                    styles.circularButton,
+                    {
+                      width: 56,
+                      height: 56,
+                      borderRadius: 28,
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                      borderWidth: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: targetPct <= 50 ? 0.35 : 1,
+                    },
+                  ]}
+                >
+                  <MinusIcon size={18} color={colors.text} strokeWidth={2.6} />
+                </TouchableOpacity>
 
-            {/* Cutoff Tier Rows */}
-            {CUTOFF_TIERS.map((tier) => {
-              const isSelected = targetPct === tier.pct;
-              return (
-                <View key={tier.pct}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setTargetPct(tier.pct);
-                    }}
-                    className="flex-row items-center justify-between py-5"
+                {/* Center Big Percentage with spring-scale feedback & fixed clean % */}
+                <Animated.View
+                  style={{
+                    transform: [{ scale: numberScaleAnim }],
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.sfText,
+                      styles.tabular,
+                      {
+                        fontSize: 78,
+                        fontWeight: '900',
+                        color: colors.text,
+                        letterSpacing: -2,
+                        textAlign: 'center',
+                        includeFontPadding: false,
+                      },
+                    ]}
                   >
-                    {/* Left: Percentage & Label */}
-                    <View className="flex-row items-baseline gap-3">
+                    {targetPct}
+                    <Text
+                      style={{
+                        fontSize: 44,
+                        fontWeight: '900',
+                        color: colors.statusSafe,
+                        includeFontPadding: false,
+                      }}
+                    >
+                      %
+                    </Text>
+                  </Text>
+                </Animated.View>
+
+                {/* Plus Stepper Button */}
+                <TouchableOpacity
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  activeOpacity={0.7}
+                  onPress={() => adjustTarget(1)}
+                  disabled={targetPct >= 95}
+                  style={[
+                    styles.circularButton,
+                    {
+                      width: 56,
+                      height: 56,
+                      borderRadius: 28,
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                      borderWidth: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: targetPct >= 95 ? 0.35 : 1,
+                    },
+                  ]}
+                >
+                  <PlusIcon size={18} color={colors.text} strokeWidth={2.6} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Requirement Contextual Descriptor */}
+              <Text
+                style={[
+                  styles.sfText,
+                  {
+                    color: colors.textSecondary,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    marginTop: 14,
+                  },
+                ]}
+              >
+                {getRequirementLabel(targetPct)}
+              </Text>
+            </View>
+
+            {/* Preset Attendance Chips Row */}
+            <View>
+              <View className="flex-row items-center justify-between gap-2.5">
+                {PRESET_TIERS.map((tier) => {
+                  const isSelected = targetPct === tier.pct;
+                  return (
+                    <TouchableOpacity
+                      key={tier.pct}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        triggerNumberScale();
+                        setTargetPct(tier.pct);
+                      }}
+                      style={[
+                        styles.presetCardShadow,
+                        {
+                          flex: 1,
+                          paddingVertical: 14,
+                          paddingHorizontal: 4,
+                          borderRadius: 22,
+                          borderCurve: 'continuous',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: isSelected
+                            ? isDark
+                              ? '#FFFFFF'
+                              : '#111114'
+                            : isDark
+                            ? 'rgba(255, 255, 255, 0.06)'
+                            : '#FFFFFF',
+                          borderWidth: isSelected ? 0 : 1,
+                          borderColor: isDark
+                            ? 'rgba(255, 255, 255, 0.12)'
+                            : 'rgba(0, 0, 0, 0.08)',
+                        },
+                      ]}
+                    >
                       <Text
+                        numberOfLines={1}
                         style={[
                           styles.sfText,
                           styles.tabular,
                           {
-                            fontSize: 28,
-                            fontWeight: '900',
-                            letterSpacing: -0.5,
-                            color: isSelected ? colors.statusSafe : colors.text,
+                            fontSize: 16,
+                            fontWeight: '800',
+                            color: isSelected
+                              ? isDark
+                                ? '#111114'
+                                : '#FFFFFF'
+                              : colors.text,
+                            includeFontPadding: false,
                           },
                         ]}
                       >
                         {tier.pct}%
                       </Text>
                       <Text
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
                         style={[
                           styles.sfText,
                           {
-                            fontSize: 16,
-                            fontWeight: isSelected ? '700' : '500',
-                            color: isSelected ? colors.text : colors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: isSelected ? '700' : '600',
+                            color: isSelected
+                              ? isDark
+                                ? 'rgba(17, 17, 20, 0.65)'
+                                : 'rgba(255, 255, 255, 0.70)'
+                              : colors.textSecondary,
+                            marginTop: 3,
+                            includeFontPadding: false,
                           },
                         ]}
                       >
                         {tier.label}
                       </Text>
-                    </View>
-
-                    {/* Right: Radio Selection Indicator */}
-                    <View
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
-                        backgroundColor: isSelected ? colors.statusSafe : 'transparent',
-                        borderColor: isSelected
-                          ? colors.statusSafe
-                          : isDark
-                          ? 'rgba(255, 255, 255, 0.2)'
-                          : 'rgba(0, 0, 0, 0.15)',
-                        borderWidth: isSelected ? 0 : 1.5,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {isSelected && (
-                        <CheckIcon size={14} color="#FFFFFF" strokeWidth={3} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Row Divider */}
-                  <View className="h-px bg-black/5 dark:bg-white/10" />
-                </View>
-              );
-            })}
-
-            {/* Fine-tune by 1% Stepper Row */}
-            <View className="flex-row items-center justify-between pt-6 pb-2">
-              <Text
-                style={[styles.sfText, { color: colors.textSecondary }]}
-                className="text-sm font-medium"
-              >
-                Fine-tune by 1%
-              </Text>
-
-              <View className="flex-row items-center gap-3">
-                {/* Minus Stepper Button */}
-                <TouchableOpacity
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.7}
-                  onPress={() => adjustTarget(-1)}
-                  disabled={targetPct <= 50}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                    borderWidth: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1.5 },
-                    shadowOpacity: isDark ? 0.2 : 0.06,
-                    shadowRadius: 4,
-                    elevation: 1.5,
-                    opacity: targetPct <= 50 ? 0.35 : 1,
-                  }}
-                >
-                  <MinusIcon size={14} color={colors.text} strokeWidth={2.4} />
-                </TouchableOpacity>
-
-                {/* Stepper Value Display */}
-                <View
-                  style={{ minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <NumberFlow
-                    value={targetPct}
-                    suffix="%"
-                    style={{
-                      fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
-                      fontSize: 16,
-                      fontWeight: '800',
-                      color: colors.text,
-                    }}
-                  />
-                </View>
-
-                {/* Plus Stepper Button */}
-                <TouchableOpacity
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.7}
-                  onPress={() => adjustTarget(1)}
-                  disabled={targetPct >= 95}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                    borderWidth: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1.5 },
-                    shadowOpacity: isDark ? 0.2 : 0.06,
-                    shadowRadius: 4,
-                    elevation: 1.5,
-                    opacity: targetPct >= 95 ? 0.35 : 1,
-                  }}
-                >
-                  <PlusIcon size={14} color={colors.text} strokeWidth={2.4} />
-                </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </ScrollView>
@@ -1642,6 +1691,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 4,
+  },
+  circularButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  presetCardShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1.5,
   },
   sfText: {
     fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
