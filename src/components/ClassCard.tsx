@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -123,6 +123,21 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   const { colors, isDark } = useTheme();
   const [isExpanded, setIsExpanded] = useState(session.status === null);
   const lastMarkTime = useRef<{ id: string; time: number }>({ id: '', time: 0 });
+  const foldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync expanded state if session changes (e.g. date flipping)
+  useEffect(() => {
+    setIsExpanded(session.status === null);
+  }, [session.id]);
+
+  // Clean up any pending auto-fold timers on unmount
+  useEffect(() => {
+    return () => {
+      if (foldTimeoutRef.current) {
+        clearTimeout(foldTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const title =
     primaryLabel === 'code' && subject?.code
@@ -139,6 +154,31 @@ export const ClassCard: React.FC<ClassCardProps> = ({
     lastMarkTime.current = { id: session.id, time: now };
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onMark(status);
+
+    // Cancel any previous pending fold
+    if (foldTimeoutRef.current) {
+      clearTimeout(foldTimeoutRef.current);
+    }
+
+    // Auto-fold the card with a slight confirmation pause so user sees their tap register
+    foldTimeoutRef.current = setTimeout(() => {
+      LayoutAnimation.configureNext({
+        duration: 220,
+        create: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+        },
+        delete: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+      });
+      setIsExpanded(false);
+      foldTimeoutRef.current = null;
+    }, 180);
   };
 
   const renderCollapsedBadge = () => {
@@ -245,6 +285,10 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   };
 
   const toggleExpand = () => {
+    if (foldTimeoutRef.current) {
+      clearTimeout(foldTimeoutRef.current);
+      foldTimeoutRef.current = null;
+    }
     Haptics.selectionAsync();
     LayoutAnimation.configureNext({
       duration: 200,

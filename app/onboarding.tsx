@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   Platform,
   StyleSheet,
@@ -16,8 +17,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
+import { NumberFlow } from 'number-flow-react-native';
 import { useAttendanceStore } from '../src/store/useAttendanceStore';
 import { useTheme } from '../src/utils/theme';
+import { fontFamilyNames } from '../src/utils/typography';
 import { Haptics } from '../src/utils/haptics';
 import {
   ChevronLeftIcon,
@@ -30,6 +33,80 @@ import {
 } from '../src/components/icons';
 import { requestNotificationPermissions } from '../src/utils/notifications';
 import { toast } from 'sonner-native';
+
+// Emil Kowalski-inspired scale-on-press physical button wrapper
+interface PressableScaleProps {
+  onPress: () => void;
+  disabled?: boolean;
+  activeScale?: number;
+  children: React.ReactNode;
+  style?: any;
+  containerStyle?: any;
+  hitSlop?: any;
+  accessible?: boolean;
+  accessibilityRole?: any;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  accessibilityState?: any;
+}
+
+const PressableScale: React.FC<PressableScaleProps> = ({
+  onPress,
+  disabled,
+  activeScale = 0.94,
+  children,
+  style,
+  containerStyle,
+  hitSlop,
+  accessible,
+  accessibilityRole,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState,
+}) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    if (disabled) return;
+    Animated.spring(scale, {
+      toValue: activeScale,
+      damping: 15,
+      stiffness: 400,
+      mass: 0.4,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 12,
+      stiffness: 280,
+      mass: 0.5,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={disabled}
+      hitSlop={hitSlop}
+      style={containerStyle}
+      accessible={accessible}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={accessibilityState}
+    >
+      <Animated.View style={[{ transform: [{ scale }] }, style]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 // Semicircular notched ticket component
 interface TicketShapeProps {
@@ -339,6 +416,22 @@ const PREVIEW_COURSES = [
   },
 ];
 
+// Preset tiers for Screen 2 (Flexible, Standard, Strict, Honors)
+const PRESET_TIERS = [
+  { pct: 70, label: 'Flexible' },
+  { pct: 75, label: 'Standard' },
+  { pct: 80, label: 'Strict' },
+  { pct: 85, label: 'Honors' },
+];
+
+// Dynamic attendance requirement subtitle based on percentage
+const getRequirementLabel = (pct: number) => {
+  if (pct < 75) return 'Flexible attendance requirement';
+  if (pct < 80) return 'Standard attendance requirement';
+  if (pct < 85) return 'Strict attendance requirement';
+  return 'Honors attendance requirement';
+};
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -350,17 +443,58 @@ export default function OnboardingScreen() {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const scrollViewRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
-  // Screen 2: Target percentage state & micro-spring animation
+  // Screen 2: Target percentage state & Emil Kowalski micro-spring animations
   const [targetPct, setTargetPct] = useState<number>(settings.globalTargetPct || 75);
   const numberScaleAnim = useRef(new Animated.Value(1)).current;
+  const screen2EntranceAnim = useRef(new Animated.Value(0)).current;
 
+  // Emil Kowalski-inspired dynamic requirement label transition (crossfade + slide)
+  const requirementLabel = getRequirementLabel(targetPct);
+  const [displayedLabel, setDisplayedLabel] = useState<string>(requirementLabel);
+  const labelAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (requirementLabel !== displayedLabel) {
+      Animated.timing(labelAnim, {
+        toValue: 0,
+        duration: 90,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        setDisplayedLabel(requirementLabel);
+        Animated.spring(labelAnim, {
+          toValue: 1,
+          damping: 15,
+          stiffness: 260,
+          mass: 0.5,
+          useNativeDriver: true,
+        }).start();
+      });
+    }
+  }, [requirementLabel, displayedLabel]);
+
+  // Screen 2 Staggered Entrance on active page
+  useEffect(() => {
+    if (currentPage === 1) {
+      screen2EntranceAnim.setValue(0);
+      Animated.spring(screen2EntranceAnim, {
+        toValue: 1,
+        damping: 18,
+        stiffness: 220,
+        mass: 0.7,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [currentPage]);
+
+  // Tactile micro-pulse on number adjustment
   const triggerNumberScale = () => {
-    numberScaleAnim.setValue(0.92);
+    numberScaleAnim.setValue(0.95);
     Animated.spring(numberScaleAnim, {
       toValue: 1,
-      damping: 12,
-      stiffness: 260,
-      mass: 0.6,
+      damping: 14,
+      stiffness: 280,
+      mass: 0.5,
       useNativeDriver: true,
     }).start();
   };
@@ -567,22 +701,6 @@ export default function OnboardingScreen() {
     }
   };
 
-  // Preset tiers for Screen 2 (Flexible, Standard, Strict, Honors)
-  const PRESET_TIERS = [
-    { pct: 70, label: 'Flexible' },
-    { pct: 75, label: 'Standard' },
-    { pct: 80, label: 'Strict' },
-    { pct: 85, label: 'Honors' },
-  ];
-
-  // Dynamic attendance requirement subtitle based on percentage
-  const getRequirementLabel = (pct: number) => {
-    if (pct < 75) return 'Flexible attendance requirement';
-    if (pct < 80) return 'Standard attendance requirement';
-    if (pct < 85) return 'Strict attendance requirement';
-    return 'Honors attendance requirement';
-  };
-
   // Dynamic ticket dimensions for Screen 3 (compact for natural card animation)
   const ticketWidth = Math.min(290, width - 48);
   const ticketHeight = 96;
@@ -620,6 +738,16 @@ export default function OnboardingScreen() {
     outputRange: ['1.5deg', '3.5deg'],
   });
 
+  // Screen 2 entrance animation interpolations (Emil Kowalski subtle 12px slide + 0.35 opacity)
+  const screen2TranslateY = screen2EntranceAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [12, 0],
+  });
+  const screen2Opacity = screen2EntranceAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1],
+  });
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.canvas }}
@@ -630,6 +758,10 @@ export default function OnboardingScreen() {
         {/* Back Button Slot (Left) */}
         <View className="z-10" style={{ minWidth: 40, alignItems: 'flex-start' }}>
           <TouchableOpacity
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Go to previous step"
+            accessibilityHint="Navigates to the previous onboarding screen"
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             activeOpacity={0.7}
             disabled={currentPage === 0}
@@ -656,12 +788,22 @@ export default function OnboardingScreen() {
           style={StyleSheet.absoluteFill}
           className="items-center justify-center"
         >
-          <View className="flex-row items-center gap-2">
+          <View
+            accessible={true}
+            accessibilityRole="tablist"
+            accessibilityLabel="Onboarding progress"
+            className="flex-row items-center gap-2"
+          >
             {[0, 1, 2, 3].map((idx) => {
               const isActive = currentPage === idx;
               return (
                 <TouchableOpacity
                   key={idx}
+                  accessible={true}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`Step ${idx + 1} of 4${isActive ? ', current step' : ''}`}
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityHint={`Navigates to step ${idx + 1}`}
                   hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   activeOpacity={0.8}
                   onPress={() => goToPage(idx)}
@@ -685,6 +827,10 @@ export default function OnboardingScreen() {
         <View className="z-10" style={{ minWidth: 40, alignItems: 'flex-end' }}>
           {currentPage < 3 ? (
             <TouchableOpacity
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Skip onboarding tour"
+              accessibilityHint="Skips tour and sets up an empty timetable"
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               activeOpacity={0.7}
               onPress={handleSkip}
@@ -705,6 +851,7 @@ export default function OnboardingScreen() {
                 numberOfLines={1}
                 style={[
                   styles.sfText,
+                  styles.bold,
                   {
                     color: isDark ? '#F5F5F7' : '#111114',
                     opacity: isDark ? 0.85 : 0.80,
@@ -744,20 +891,34 @@ export default function OnboardingScreen() {
           >
             {/* Title & Subtitle with punchy copy */}
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                styles.extraBold,
+                { color: colors.text, fontFamily: fontFamilyNames.extraBold },
+              ]}
               className="text-3xl font-extrabold tracking-tight mb-2 text-center"
             >
               Track attendance{'\n'}without the stress.
             </Text>
             <Text
-              style={[styles.sfText, { color: colors.textSecondary }]}
+              style={[
+                styles.sfText,
+                styles.medium,
+                { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+              ]}
               className="text-sm font-medium leading-5 mb-2 text-center px-4"
             >
               Stay comfortably above your college attendance requirement with live safe-absence forecasts.
             </Text>
 
             {/* Aerodynamic Paper Plane & Safety Threshold Hero */}
-            <GlideHero width={width} />
+            <View
+              accessible={true}
+              accessibilityRole="image"
+              accessibilityLabel="Illustration: Attendance target with live safe absence buffer forecasting"
+            >
+              <GlideHero width={width} />
+            </View>
 
           </ScrollView>
         </View>
@@ -766,235 +927,273 @@ export default function OnboardingScreen() {
         {/* SCREEN 2: Attendance Cutoff Target Configuration          */}
         {/* ========================================================= */}
         <View style={{ width, flex: 1 }} className="px-6 justify-between py-4">
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              flexGrow: 1,
-              justifyContent: 'space-around',
-              paddingVertical: 16,
+          <Animated.View
+            style={{
+              flex: 1,
+              opacity: screen2Opacity,
+              transform: [{ translateY: screen2TranslateY }],
             }}
           >
-            {/* Title & Subtitle matching prototype */}
-            <View>
-              <Text
-                style={[
-                  styles.sfText,
-                  {
-                    color: colors.text,
-                    fontSize: 36,
-                    lineHeight: 40,
-                    fontWeight: '900',
-                    letterSpacing: -0.8,
-                  },
-                ]}
-                className="mb-2"
-              >
-                Minimum{'\n'}attendance.
-              </Text>
-              <Text
-                style={[
-                  styles.sfText,
-                  {
-                    color: colors.textSecondary,
-                    fontSize: 15,
-                    fontWeight: '500',
-                    lineHeight: 22,
-                  },
-                ]}
-              >
-                Set the percentage your college requires.
-              </Text>
-            </View>
-
-            {/* Stepper Counter Row: [-]  70%  [+] */}
-            <View className="items-center my-6">
-              <View className="flex-row items-center justify-between w-full px-2">
-                {/* Minus Stepper Button */}
-                <TouchableOpacity
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  activeOpacity={0.7}
-                  onPress={() => adjustTarget(-1)}
-                  disabled={targetPct <= 50}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: 'space-around',
+                paddingVertical: 16,
+              }}
+            >
+              {/* Title & Subtitle matching prototype */}
+              <View>
+                <Text
                   style={[
-                    styles.circularButton,
+                    styles.sfText,
+                    styles.extraBold,
                     {
-                      width: 56,
-                      height: 56,
-                      borderRadius: 28,
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                      borderWidth: 1,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: targetPct <= 50 ? 0.35 : 1,
+                      color: colors.text,
+                      fontSize: 36,
+                      lineHeight: 40,
+                      fontWeight: '900',
+                      letterSpacing: -0.8,
+                      fontFamily: fontFamilyNames.extraBold,
+                    },
+                  ]}
+                  className="mb-2"
+                >
+                  Minimum{'\n'}attendance.
+                </Text>
+                <Text
+                  style={[
+                    styles.sfText,
+                    styles.medium,
+                    {
+                      color: colors.textSecondary,
+                      fontSize: 15,
+                      fontWeight: '500',
+                      lineHeight: 22,
+                      fontFamily: fontFamilyNames.medium,
                     },
                   ]}
                 >
-                  <MinusIcon size={18} color={colors.text} strokeWidth={2.6} />
-                </TouchableOpacity>
+                  Set the percentage your college requires.
+                </Text>
+              </View>
 
-                {/* Center Big Percentage with spring-scale feedback & fixed clean % */}
-                <Animated.View
-                  style={{
-                    transform: [{ scale: numberScaleAnim }],
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
+              {/* Stepper Counter Row: [-]  70%  [+] with Emil scale-on-press & NumberFlow */}
+              <View className="items-center my-6">
+                <View className="flex-row items-center justify-between w-full px-2">
+                  {/* Minus Stepper Button with physical press damping */}
+                  <PressableScale
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease minimum attendance"
+                    accessibilityHint="Decreases requirement by 1 percent"
+                    accessibilityState={{ disabled: targetPct <= 50 }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    activeScale={0.88}
+                    onPress={() => adjustTarget(-1)}
+                    disabled={targetPct <= 50}
                     style={[
-                      styles.sfText,
-                      styles.tabular,
+                      styles.circularButton,
                       {
-                        fontSize: 78,
-                        fontWeight: '900',
-                        color: colors.text,
-                        letterSpacing: -2,
-                        textAlign: 'center',
-                        includeFontPadding: false,
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: targetPct <= 50 ? 0.35 : 1,
                       },
                     ]}
                   >
-                    {targetPct}
-                    <Text
-                      style={{
-                        fontSize: 44,
-                        fontWeight: '900',
-                        color: colors.statusSafe,
-                        includeFontPadding: false,
-                      }}
-                    >
-                      %
-                    </Text>
-                  </Text>
-                </Animated.View>
+                    <MinusIcon size={18} color={colors.text} strokeWidth={2.6} />
+                  </PressableScale>
 
-                {/* Plus Stepper Button */}
-                <TouchableOpacity
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  activeOpacity={0.7}
-                  onPress={() => adjustTarget(1)}
-                  disabled={targetPct >= 95}
-                  style={[
-                    styles.circularButton,
-                    {
-                      width: 56,
-                      height: 56,
-                      borderRadius: 28,
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-                      borderWidth: 1,
+                  {/* Center Big Percentage with NumberFlow rolling digits & micro-pulse */}
+                  <Animated.View
+                    accessible={true}
+                    accessibilityRole="text"
+                    accessibilityLabel={`Minimum attendance requirement: ${targetPct} percent, ${requirementLabel}`}
+                    accessibilityLiveRegion="polite"
+                    style={{
+                      transform: [{ scale: numberScaleAnim }],
                       alignItems: 'center',
                       justifyContent: 'center',
-                      opacity: targetPct >= 95 ? 0.35 : 1,
+                    }}
+                  >
+                    <NumberFlow
+                      value={targetPct}
+                      suffix="%"
+                      style={{
+                        fontFamily: fontFamilyNames.extraBold,
+                        fontSize: 78,
+                        fontWeight: '900',
+                        letterSpacing: -2,
+                        color: colors.text,
+                      }}
+                    />
+                  </Animated.View>
+
+                  {/* Plus Stepper Button with physical press damping */}
+                  <PressableScale
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase minimum attendance"
+                    accessibilityHint="Increases requirement by 1 percent"
+                    accessibilityState={{ disabled: targetPct >= 95 }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    activeScale={0.88}
+                    onPress={() => adjustTarget(1)}
+                    disabled={targetPct >= 95}
+                    style={[
+                      styles.circularButton,
+                      {
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: targetPct >= 95 ? 0.35 : 1,
+                      },
+                    ]}
+                  >
+                    <PlusIcon size={18} color={colors.text} strokeWidth={2.6} />
+                  </PressableScale>
+                </View>
+
+                {/* Requirement Contextual Descriptor with smooth crossfade & slide */}
+                <Animated.Text
+                  accessible={true}
+                  accessibilityRole="text"
+                  style={[
+                    styles.sfText,
+                    styles.semiBold,
+                    {
+                      color: colors.textSecondary,
+                      fontSize: 15,
+                      fontWeight: '600',
+                      fontFamily: fontFamilyNames.semiBold,
+                      textAlign: 'center',
+                      marginTop: 14,
+                      opacity: labelAnim,
+                      transform: [
+                        {
+                          translateY: labelAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [4, 0],
+                          }),
+                        },
+                      ],
                     },
                   ]}
                 >
-                  <PlusIcon size={18} color={colors.text} strokeWidth={2.6} />
-                </TouchableOpacity>
+                  {displayedLabel}
+                </Animated.Text>
               </View>
 
-              {/* Requirement Contextual Descriptor */}
-              <Text
-                style={[
-                  styles.sfText,
-                  {
-                    color: colors.textSecondary,
-                    fontSize: 15,
-                    fontWeight: '600',
-                    textAlign: 'center',
-                    marginTop: 14,
-                  },
-                ]}
-              >
-                {getRequirementLabel(targetPct)}
-              </Text>
-            </View>
-
-            {/* Preset Attendance Chips Row */}
-            <View>
-              <View className="flex-row items-center justify-between gap-2.5">
-                {PRESET_TIERS.map((tier) => {
-                  const isSelected = targetPct === tier.pct;
-                  return (
-                    <TouchableOpacity
-                      key={tier.pct}
-                      activeOpacity={0.75}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        triggerNumberScale();
-                        setTargetPct(tier.pct);
-                      }}
-                      style={[
-                        styles.presetCardShadow,
-                        {
-                          flex: 1,
-                          paddingVertical: 14,
-                          paddingHorizontal: 4,
-                          borderRadius: 22,
-                          borderCurve: 'continuous',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: isSelected
-                            ? isDark
-                              ? '#FFFFFF'
-                              : '#111114'
-                            : isDark
-                            ? 'rgba(255, 255, 255, 0.06)'
-                            : '#FFFFFF',
-                          borderWidth: isSelected ? 0 : 1,
-                          borderColor: isDark
-                            ? 'rgba(255, 255, 255, 0.12)'
-                            : 'rgba(0, 0, 0, 0.08)',
-                        },
-                      ]}
-                    >
-                      <Text
-                        numberOfLines={1}
+              {/* Preset Attendance Chips Row with Emil physical press scale */}
+              <View>
+                <View
+                  accessible={true}
+                  accessibilityRole="radiogroup"
+                  accessibilityLabel="Preset attendance requirement policies"
+                  className="flex-row items-center justify-between gap-2.5"
+                >
+                  {PRESET_TIERS.map((tier) => {
+                    const isSelected = targetPct === tier.pct;
+                    return (
+                      <PressableScale
+                        key={tier.pct}
+                        accessible={true}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`${tier.pct} percent, ${tier.label} policy`}
+                        accessibilityState={{ selected: isSelected }}
+                        accessibilityHint={`Sets minimum attendance to ${tier.pct} percent`}
+                        activeScale={0.94}
+                        containerStyle={{ flex: 1 }}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          triggerNumberScale();
+                          setTargetPct(tier.pct);
+                        }}
                         style={[
-                          styles.sfText,
-                          styles.tabular,
+                          styles.presetCardShadow,
                           {
-                            fontSize: 16,
-                            fontWeight: '800',
-                            color: isSelected
+                            paddingVertical: 14,
+                            paddingHorizontal: 4,
+                            borderRadius: 22,
+                            borderCurve: 'continuous',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isSelected
                               ? isDark
-                                ? '#111114'
-                                : '#FFFFFF'
-                              : colors.text,
-                            includeFontPadding: false,
+                                ? '#FFFFFF'
+                                : '#111114'
+                              : isDark
+                              ? 'rgba(255, 255, 255, 0.06)'
+                              : '#FFFFFF',
+                            borderWidth: isSelected ? 0 : 1,
+                            borderColor: isDark
+                              ? 'rgba(255, 255, 255, 0.12)'
+                              : 'rgba(0, 0, 0, 0.08)',
                           },
                         ]}
                       >
-                        {tier.pct}%
-                      </Text>
-                      <Text
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.8}
-                        style={[
-                          styles.sfText,
-                          {
-                            fontSize: 11,
-                            fontWeight: isSelected ? '700' : '600',
-                            color: isSelected
-                              ? isDark
-                                ? 'rgba(17, 17, 20, 0.65)'
-                                : 'rgba(255, 255, 255, 0.70)'
-                              : colors.textSecondary,
-                            marginTop: 3,
-                            includeFontPadding: false,
-                          },
-                        ]}
-                      >
-                        {tier.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.sfText,
+                            styles.extraBold,
+                            styles.tabular,
+                            {
+                              fontSize: 16,
+                              fontWeight: '800',
+                              fontFamily: fontFamilyNames.extraBold,
+                              color: isSelected
+                                ? isDark
+                                  ? '#111114'
+                                  : '#FFFFFF'
+                                : colors.text,
+                              includeFontPadding: false,
+                            },
+                          ]}
+                        >
+                          {tier.pct}%
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.8}
+                          style={[
+                            styles.sfText,
+                            styles.semiBold,
+                            {
+                              fontSize: 11,
+                              fontWeight: isSelected ? '700' : '600',
+                              fontFamily: fontFamilyNames.semiBold,
+                              color: isSelected
+                                ? isDark
+                                  ? 'rgba(17, 17, 20, 0.65)'
+                                  : 'rgba(255, 255, 255, 0.70)'
+                                : colors.textSecondary,
+                              marginTop: 3,
+                              includeFontPadding: false,
+                            },
+                          ]}
+                        >
+                          {tier.label}
+                        </Text>
+                      </PressableScale>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </Animated.View>
         </View>
 
         {/* ========================================================= */}
@@ -1007,13 +1206,21 @@ export default function OnboardingScreen() {
           >
             {/* Title & Subtitle */}
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                styles.extraBold,
+                { color: colors.text, fontFamily: fontFamilyNames.extraBold },
+              ]}
               className="text-3xl font-extrabold tracking-tight mb-1.5 text-center"
             >
               Know your safe{'\n'}absence buffer.
             </Text>
             <Text
-              style={[styles.sfText, { color: colors.textSecondary }]}
+              style={[
+                styles.sfText,
+                styles.medium,
+                { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+              ]}
               className="text-sm font-medium leading-5 mb-5 text-center px-2"
             >
               Every course shows how many lectures you can miss before you drop below your cutoff.
@@ -1023,6 +1230,8 @@ export default function OnboardingScreen() {
             <View className="items-center my-2">
               {/* Background Angled Card (preview next course in deck) */}
               <Animated.View
+                accessible={false}
+                importantForAccessibility="no"
                 style={{
                   position: 'absolute',
                   top: -6,
@@ -1040,7 +1249,14 @@ export default function OnboardingScreen() {
                 className="p-3 justify-between"
               >
                 <Text
-                  style={[styles.sfText, { color: 'rgba(255, 255, 255, 0.9)' }]}
+                  style={[
+                    styles.sfText,
+                    styles.bold,
+                    {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontFamily: fontFamilyNames.bold,
+                    },
+                  ]}
                   className="text-[9px] font-extrabold tracking-widest text-right"
                 >
                   {nextCourse.code} · {nextCourse.name.toUpperCase()}
@@ -1049,6 +1265,9 @@ export default function OnboardingScreen() {
 
               {/* Main Active Ticket with Perforated Notches */}
               <Animated.View
+                accessible={true}
+                accessibilityRole="summary"
+                accessibilityLabel={`${activeCourse.name}, code ${activeCourse.code}, schedule ${activeCourse.days}, buffer ${activeCourse.classes.replace('+', '')}, attendance ${activeCourse.pct}, status ${activeCourse.statusText}`}
                 style={{
                   transform: [
                     { translateY: ticketTranslateY },
@@ -1084,7 +1303,12 @@ export default function OnboardingScreen() {
                     <Text
                       style={[
                         styles.sfText,
-                        { color: 'rgba(255, 255, 255, 0.85)', letterSpacing: 0.4 },
+                        styles.bold,
+                        {
+                          color: 'rgba(255, 255, 255, 0.85)',
+                          letterSpacing: 0.4,
+                          fontFamily: fontFamilyNames.bold,
+                        },
                       ]}
                       className="text-[9.5px] font-extrabold uppercase mb-0.5"
                       numberOfLines={1}
@@ -1094,14 +1318,26 @@ export default function OnboardingScreen() {
                     </Text>
 
                     <Text
-                      style={[styles.sfText, styles.tabular, { color: '#FFFFFF' }]}
+                      style={[
+                        styles.sfText,
+                        styles.extraBold,
+                        styles.tabular,
+                        { color: '#FFFFFF', fontFamily: fontFamilyNames.extraBold },
+                      ]}
                       className="text-[22px] font-black leading-6"
                     >
                       {activeCourse.classes}
                     </Text>
 
                     <Text
-                      style={[styles.sfText, { color: 'rgba(255, 255, 255, 0.8)' }]}
+                      style={[
+                        styles.sfText,
+                        styles.semiBold,
+                        {
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontFamily: fontFamilyNames.semiBold,
+                        },
+                      ]}
                       className="text-[10px] font-semibold mt-0.5"
                     >
                       Safe above {targetPct}%
@@ -1114,7 +1350,12 @@ export default function OnboardingScreen() {
                     className="items-center justify-center pl-2"
                   >
                     <Text
-                      style={[styles.sfText, styles.tabular, { color: '#FFFFFF' }]}
+                      style={[
+                        styles.sfText,
+                        styles.extraBold,
+                        styles.tabular,
+                        { color: '#FFFFFF', fontFamily: fontFamilyNames.extraBold },
+                      ]}
                       className="text-xl font-black mb-0.5"
                     >
                       {activeCourse.pct}
@@ -1128,7 +1369,11 @@ export default function OnboardingScreen() {
                       className="px-2 py-0.5"
                     >
                       <Text
-                        style={[styles.sfText, { color: '#FFFFFF' }]}
+                        style={[
+                          styles.sfText,
+                          styles.bold,
+                          { color: '#FFFFFF', fontFamily: fontFamilyNames.bold },
+                        ]}
                         className="text-[9px] font-extrabold tracking-wider"
                       >
                         {activeCourse.statusText}
@@ -1140,6 +1385,9 @@ export default function OnboardingScreen() {
 
               {/* Free-Floating Status Pill (detached with clean margin) */}
               <View
+                accessible={true}
+                accessibilityRole="text"
+                accessibilityLabel={`Buffer ready: ${activeCourse.classes.replace('+', '').replace('Classes', 'Skips').trim()}`}
                 style={{
                   backgroundColor: isDark ? '#062612' : '#0B4722',
                   borderColor: isDark ? 'rgba(61, 220, 132, 0.4)' : 'rgba(61, 220, 132, 0.5)',
@@ -1153,7 +1401,11 @@ export default function OnboardingScreen() {
               >
                 <CheckIcon size={12} color="#3DDC84" strokeWidth={3} />
                 <Text
-                  style={[styles.sfText, { color: '#3DDC84' }]}
+                  style={[
+                    styles.sfText,
+                    styles.bold,
+                    { color: '#3DDC84', fontFamily: fontFamilyNames.bold },
+                  ]}
                   className="text-[11px] font-bold"
                 >
                   Buffer Ready ({activeCourse.classes.replace('+', '').replace('Classes', 'Skips').trim()})
@@ -1162,12 +1414,22 @@ export default function OnboardingScreen() {
             </View>
 
             {/* Interactive Subject Chips Selector */}
-            <View className="flex-row items-center justify-center gap-2.5 mt-3 mb-3">
+            <View
+              accessible={true}
+              accessibilityRole="tablist"
+              accessibilityLabel="Preview course selector"
+              className="flex-row items-center justify-center gap-2.5 mt-3 mb-3"
+            >
               {PREVIEW_COURSES.map((course, idx) => {
                 const isSelected = selectedCourseIdx === idx;
                 return (
                   <TouchableOpacity
                     key={course.id}
+                    accessible={true}
+                    accessibilityRole="tab"
+                    accessibilityLabel={`Preview ${course.name}, code ${course.code}`}
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityHint={`Shows attendance buffer simulation for ${course.name}`}
                     hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                     activeOpacity={0.75}
                     onPress={() => selectCourse(idx)}
@@ -1196,10 +1458,14 @@ export default function OnboardingScreen() {
                     <Text
                       style={[
                         styles.sfText,
+                        styles.bold,
                         styles.tabular,
                         {
                           color: isSelected ? colors.text : colors.textSecondary,
                           fontWeight: isSelected ? '800' : '600',
+                          fontFamily: isSelected
+                            ? fontFamilyNames.extraBold
+                            : fontFamilyNames.semiBold,
                         },
                       ]}
                       className="text-xs"
@@ -1214,7 +1480,11 @@ export default function OnboardingScreen() {
             {/* Student Explanation Note */}
             <View className="mt-2 px-3">
               <Text
-                style={[styles.sfText, { color: colors.textSecondary }]}
+                style={[
+                  styles.sfText,
+                  styles.medium,
+                  { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+                ]}
                 className="text-xs text-center leading-4"
               >
                 Tap courses above to preview skip calculations. You can load these starter courses or start clean on the next step.
@@ -1233,13 +1503,21 @@ export default function OnboardingScreen() {
           >
             {/* Title & Subtitle */}
             <Text
-              style={[styles.sfText, { color: colors.text }]}
+              style={[
+                styles.sfText,
+                styles.extraBold,
+                { color: colors.text, fontFamily: fontFamilyNames.extraBold },
+              ]}
               className="text-3xl font-extrabold tracking-tight mb-1.5 text-center"
             >
               Never drop by surprise.{'\n'}Get smart alerts.
             </Text>
             <Text
-              style={[styles.sfText, { color: colors.textSecondary }]}
+              style={[
+                styles.sfText,
+                styles.medium,
+                { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+              ]}
               className="text-sm font-medium leading-5 mb-4 text-center px-2"
             >
               Timely heads-up reminders right before class with your live skip bank.
@@ -1283,6 +1561,9 @@ export default function OnboardingScreen() {
 
               {/* Floating Notification Card */}
               <Animated.View
+                accessible={true}
+                accessibilityRole="summary"
+                accessibilityLabel={`Smart alert preview for ${previewAlertMode === 'safe' ? 'Physics, PHY 101' : 'Calculus, MAT 102'}. ${previewAlertMode === 'safe' ? 'You have 4 skips banked. Safe to take a break today.' : `Current attendance is 74 percent, cutoff is ${targetPct} percent. Attendance required today.`}`}
                 style={[
                   styles.cardShadow,
                   {
@@ -1320,7 +1601,11 @@ export default function OnboardingScreen() {
                     </View>
                     <View>
                       <Text
-                        style={[styles.sfText, { color: colors.textSecondary }]}
+                        style={[
+                          styles.sfText,
+                          styles.extraBold,
+                          { color: colors.textSecondary, fontFamily: fontFamilyNames.extraBold },
+                        ]}
                         className="text-[10px] font-extrabold tracking-widest uppercase"
                       >
                         Bound · Smart Alert
@@ -1329,7 +1614,11 @@ export default function OnboardingScreen() {
                   </View>
 
                   <Text
-                    style={[styles.sfText, { color: colors.textSecondary }]}
+                    style={[
+                      styles.sfText,
+                      styles.semiBold,
+                      { color: colors.textSecondary, fontFamily: fontFamilyNames.semiBold },
+                    ]}
                     className="text-[10px] font-semibold"
                   >
                     15m before class
@@ -1339,13 +1628,21 @@ export default function OnboardingScreen() {
                 {/* Content Body */}
                 <View className="my-1">
                   <Text
-                    style={[styles.sfText, { color: colors.text }]}
+                    style={[
+                      styles.sfText,
+                      styles.extraBold,
+                      { color: colors.text, fontFamily: fontFamilyNames.extraBold },
+                    ]}
                     className="text-base font-extrabold mb-0.5"
                   >
                     {previewAlertMode === 'safe' ? 'Physics · PHY101' : 'Calculus · MAT102'}
                   </Text>
                   <Text
-                    style={[styles.sfText, { color: colors.textSecondary }]}
+                    style={[
+                      styles.sfText,
+                      styles.medium,
+                      { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+                    ]}
                     className="text-xs leading-4"
                   >
                     {previewAlertMode === 'safe'
@@ -1368,8 +1665,12 @@ export default function OnboardingScreen() {
                     <Text
                       style={[
                         styles.sfText,
+                        styles.bold,
                         styles.tabular,
-                        { color: previewAlertMode === 'safe' ? colors.statusSafe : colors.statusWarning },
+                        {
+                          color: previewAlertMode === 'safe' ? colors.statusSafe : colors.statusWarning,
+                          fontFamily: fontFamilyNames.bold,
+                        },
                       ]}
                       className="text-[11px] font-bold"
                     >
@@ -1378,7 +1679,11 @@ export default function OnboardingScreen() {
                   </View>
 
                   <Text
-                    style={[styles.sfText, { color: colors.textSecondary }]}
+                    style={[
+                      styles.sfText,
+                      styles.medium,
+                      { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+                    ]}
                     className="text-[10px] font-medium"
                   >
                     Tap preview below to test
@@ -1387,8 +1692,15 @@ export default function OnboardingScreen() {
               </Animated.View>
 
               {/* Interactive Mode Switcher Chips */}
-              <View className="flex-row items-center justify-center gap-2 mt-3 mb-1">
+              <View
+                accessibilityRole="tablist"
+                className="flex-row items-center justify-center gap-2 mt-3 mb-1"
+              >
                 <TouchableOpacity
+                  accessible={true}
+                  accessibilityRole="tab"
+                  accessibilityLabel="Safe Day preview alert"
+                  accessibilityState={{ selected: previewAlertMode === 'safe' }}
                   hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                   activeOpacity={0.7}
                   onPress={() => {
@@ -1408,9 +1720,11 @@ export default function OnboardingScreen() {
                   <Text
                     style={[
                       styles.sfText,
+                      previewAlertMode === 'safe' ? styles.extraBold : styles.semiBold,
                       {
                         color: previewAlertMode === 'safe' ? colors.statusSafe : colors.textSecondary,
                         fontWeight: previewAlertMode === 'safe' ? '800' : '600',
+                        fontFamily: previewAlertMode === 'safe' ? fontFamilyNames.extraBold : fontFamilyNames.semiBold,
                       },
                     ]}
                     className="text-xs"
@@ -1420,6 +1734,10 @@ export default function OnboardingScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  accessible={true}
+                  accessibilityRole="tab"
+                  accessibilityLabel="Close Call alert preview"
+                  accessibilityState={{ selected: previewAlertMode === 'warning' }}
                   hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                   activeOpacity={0.7}
                   onPress={() => {
@@ -1439,9 +1757,11 @@ export default function OnboardingScreen() {
                   <Text
                     style={[
                       styles.sfText,
+                      previewAlertMode === 'warning' ? styles.extraBold : styles.semiBold,
                       {
                         color: previewAlertMode === 'warning' ? colors.statusWarning : colors.textSecondary,
                         fontWeight: previewAlertMode === 'warning' ? '800' : '600',
+                        fontFamily: previewAlertMode === 'warning' ? fontFamilyNames.extraBold : fontFamilyNames.semiBold,
                       },
                     ]}
                     className="text-xs"
@@ -1467,7 +1787,16 @@ export default function OnboardingScreen() {
               className="p-4 my-2"
             >
               {/* Row 1: Pre-Lecture Heads-Up */}
-              <View className="flex-row items-center justify-between">
+              <TouchableOpacity
+                accessible={true}
+                accessibilityRole="switch"
+                accessibilityLabel="Pre-lecture alerts"
+                accessibilityHint="Toggles 5 or 15 minute advance notifications before classes start"
+                accessibilityState={{ checked: enableReminders }}
+                activeOpacity={0.7}
+                onPress={() => handleToggleReminders(!enableReminders)}
+                className="flex-row items-center justify-between"
+              >
                 <View className="flex-row items-center gap-3 flex-1 pr-3">
                   <View
                     style={{
@@ -1489,13 +1818,21 @@ export default function OnboardingScreen() {
                   </View>
                   <View className="flex-1">
                     <Text
-                      style={[styles.sfText, { color: colors.text }]}
+                      style={[
+                        styles.sfText,
+                        styles.bold,
+                        { color: colors.text, fontFamily: fontFamilyNames.bold },
+                      ]}
                       className="text-sm font-bold mb-0.5"
                     >
                       Pre-Lecture Alerts
                     </Text>
                     <Text
-                      style={[styles.sfText, { color: colors.textSecondary }]}
+                      style={[
+                        styles.sfText,
+                        styles.medium,
+                        { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+                      ]}
                       className="text-xs leading-4"
                     >
                       Reminders 5 or 15 minutes before class starts.
@@ -1512,13 +1849,22 @@ export default function OnboardingScreen() {
                   }}
                   thumbColor="#FFFFFF"
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Divider */}
               <View className="h-px bg-black/5 dark:bg-white/10 my-3" />
 
               {/* Row 2: Sunday Weekly Summary */}
-              <View className="flex-row items-center justify-between">
+              <TouchableOpacity
+                accessible={true}
+                accessibilityRole="switch"
+                accessibilityLabel="Sunday weekly summary"
+                accessibilityHint="Toggles a 7 PM weekly overview of upcoming schedule"
+                accessibilityState={{ checked: enableSundayDigest }}
+                activeOpacity={0.7}
+                onPress={() => handleToggleSundayDigest(!enableSundayDigest)}
+                className="flex-row items-center justify-between"
+              >
                 <View className="flex-row items-center gap-3 flex-1 pr-3">
                   <View
                     style={{
@@ -1540,13 +1886,21 @@ export default function OnboardingScreen() {
                   </View>
                   <View className="flex-1">
                     <Text
-                      style={[styles.sfText, { color: colors.text }]}
+                      style={[
+                        styles.sfText,
+                        styles.bold,
+                        { color: colors.text, fontFamily: fontFamilyNames.bold },
+                      ]}
                       className="text-sm font-bold mb-0.5"
                     >
                       Sunday Weekly Summary
                     </Text>
                     <Text
-                      style={[styles.sfText, { color: colors.textSecondary }]}
+                      style={[
+                        styles.sfText,
+                        styles.medium,
+                        { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+                      ]}
                       className="text-xs leading-4"
                     >
                       Calm 7 PM weekly overview of upcoming schedule.
@@ -1563,13 +1917,18 @@ export default function OnboardingScreen() {
                   }}
                   thumbColor="#FFFFFF"
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Divider */}
               <View className="h-px bg-black/5 dark:bg-white/10 my-3" />
 
               {/* Row 3: Starter Courses */}
               <TouchableOpacity
+                accessible={true}
+                accessibilityRole="switch"
+                accessibilityLabel="Load starter courses"
+                accessibilityHint="Pre-populates demo courses for Physics, Data Structures, and Calculus"
+                accessibilityState={{ checked: loadStarterCourses }}
                 activeOpacity={0.7}
                 onPress={() => {
                   Haptics.selectionAsync();
@@ -1598,13 +1957,21 @@ export default function OnboardingScreen() {
                   </View>
                   <View className="flex-1">
                     <Text
-                      style={[styles.sfText, { color: colors.text }]}
+                      style={[
+                        styles.sfText,
+                        styles.bold,
+                        { color: colors.text, fontFamily: fontFamilyNames.bold },
+                      ]}
                       className="text-sm font-bold mb-0.5"
                     >
                       Load Starter Courses
                     </Text>
                     <Text
-                      style={[styles.sfText, { color: colors.textSecondary }]}
+                      style={[
+                        styles.sfText,
+                        styles.medium,
+                        { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
+                      ]}
                       className="text-xs leading-4"
                     >
                       Pre-populate Physics, Data Structures & Calculus demo timetable.
@@ -1641,6 +2008,21 @@ export default function OnboardingScreen() {
         className="px-6 pt-3"
       >
         <TouchableOpacity
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={
+            currentPage < 3
+              ? 'Continue to next step'
+              : isSubmitting
+              ? 'Setting up Bound'
+              : 'Get started with Bound'
+          }
+          accessibilityHint={
+            currentPage < 3
+              ? 'Navigates to the next onboarding slide'
+              : 'Completes onboarding and opens Bound'
+          }
+          accessibilityState={{ disabled: isSubmitting }}
           activeOpacity={0.85}
           onPress={() => {
             if (currentPage < 3) {
@@ -1653,14 +2035,18 @@ export default function OnboardingScreen() {
           style={[
             styles.ctaShadow,
             {
-              backgroundColor: colors.statusSafe,
+              backgroundColor: colors.primaryButton,
               borderRadius: 999,
             },
           ]}
           className="py-3.5 items-center justify-center flex-row gap-2"
         >
           <Text
-            style={[styles.sfText, { color: '#06210F' }]}
+            style={[
+              styles.sfText,
+              styles.extraBold,
+              { color: colors.primaryButtonText, fontFamily: fontFamilyNames.extraBold },
+            ]}
             className="text-base font-extrabold tracking-wide"
           >
             {currentPage < 3
@@ -1670,7 +2056,7 @@ export default function OnboardingScreen() {
               : 'Get Started'}
           </Text>
           {currentPage < 3 && (
-            <ChevronRightIcon size={18} color="#06210F" strokeWidth={2.6} />
+            <ChevronRightIcon size={18} color={colors.primaryButtonText} strokeWidth={2.6} />
           )}
         </TouchableOpacity>
       </View>
@@ -1707,7 +2093,19 @@ const styles = StyleSheet.create({
     elevation: 1.5,
   },
   sfText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+    fontFamily: fontFamilyNames.regular,
+  },
+  medium: {
+    fontFamily: fontFamilyNames.medium,
+  },
+  semiBold: {
+    fontFamily: fontFamilyNames.semiBold,
+  },
+  bold: {
+    fontFamily: fontFamilyNames.bold,
+  },
+  extraBold: {
+    fontFamily: fontFamilyNames.extraBold,
   },
   tabular: {
     fontVariant: ['tabular-nums'],

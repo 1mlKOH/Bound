@@ -26,6 +26,11 @@ import {
   NOTIFICATION_ACTIONS,
 } from '../utils/notifications';
 import { validateBackupPayload } from '../domain/backup';
+import {
+  syncWidgetSnapshot,
+  getWidgetProStatus,
+  setWidgetProStatus,
+} from '../utils/widgets';
 
 let notificationSyncTimer: ReturnType<typeof setTimeout> | null = null;
 const debouncedSyncNotifications = (
@@ -42,6 +47,23 @@ const debouncedSyncNotifications = (
     syncScheduledNotifications(settings, subjects, scheduleSlots, sessions, holidays);
     notificationSyncTimer = null;
   }, 400);
+};
+
+let widgetSyncTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedSyncWidget = (
+  subjects: Subject[],
+  sessions: Session[],
+  holidays: Holiday[],
+  settings: Settings,
+  isPro: boolean
+) => {
+  if (widgetSyncTimer) {
+    clearTimeout(widgetSyncTimer);
+  }
+  widgetSyncTimer = setTimeout(() => {
+    syncWidgetSnapshot(subjects, sessions, holidays, settings, isPro);
+    widgetSyncTimer = null;
+  }, 200);
 };
 
 interface AttendanceStoreState {
@@ -110,6 +132,12 @@ interface AttendanceStoreState {
   resetToDemo: () => void;
   clearAllData: () => void;
 
+  // Widget & Pro Entitlement
+  isPro: boolean;
+  setPro: (isPro: boolean) => void;
+  syncWidget: () => void;
+  refreshFromDb: () => void;
+
   // Getters
   getAllSubjectStats: () => SubjectStats[];
   getPooledStats: () => PooledStats;
@@ -146,6 +174,40 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   statsFilter: 'week',
   isLoading: true,
   initError: null,
+  isPro: getWidgetProStatus(),
+
+  setPro: (isPro: boolean) => {
+    setWidgetProStatus(isPro);
+    set({ isPro });
+    get().syncWidget();
+  },
+
+  syncWidget: () => {
+    const { subjects, sessions, holidays, settings, isPro } = get();
+    debouncedSyncWidget(subjects, sessions, holidays, settings, isPro);
+  },
+
+  refreshFromDb: () => {
+    try {
+      const sessionsRaw = expoDb.getAllSync<any>(
+        'SELECT * FROM sessions ORDER BY start_time ASC'
+      );
+      const sessions: Session[] = sessionsRaw.map((r) => ({
+        id: r.id,
+        subjectId: r.subject_id,
+        slotId: r.slot_id,
+        date: r.date,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        status: r.status as AttendanceStatus,
+        markedAt: r.marked_at,
+      }));
+      set({ sessions });
+      get().syncWidget();
+    } catch (e) {
+      console.warn('Failed to refresh from DB:', e);
+    }
+  },
 
   initialize: () => {
     try {
@@ -240,6 +302,9 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
       // Reschedule reminders
       syncScheduledNotifications(currentSettings, subjects, scheduleSlots, sessions, holidays);
+
+      // Resync widget snapshot
+      get().syncWidget();
     } catch (e: any) {
       console.error('Failed to initialize database:', e);
       set({ isLoading: false, initError: e?.message || 'Failed to initialize database' });
@@ -310,6 +375,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       updatedSessions,
       get().holidays
     );
+    get().syncWidget();
   },
 
   setSessionStatus: (sessionId: string, newStatus: AttendanceStatus) => {
@@ -344,6 +410,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       updatedSessions,
       get().holidays
     );
+    get().syncWidget();
   },
 
   recordAttendanceFromNotification: ({
@@ -471,6 +538,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       updatedSessions,
       get().holidays
     );
+    get().syncWidget();
 
     return idsToUpdate.length;
   },
@@ -501,6 +569,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       get().sessions,
       updatedHolidays
     );
+    get().syncWidget();
   },
 
   addExtraClass: (
@@ -646,6 +715,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       get().sessions,
       get().holidays
     );
+    get().syncWidget();
   },
 
   deleteSubject: (id: string) => {
@@ -665,6 +735,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       updatedSessions,
       get().holidays
     );
+    get().syncWidget();
   },
 
   updateSettings: (partial: Partial<Settings>) => {
@@ -704,6 +775,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       get().sessions,
       get().holidays
     );
+    get().syncWidget();
   },
 
   completeOnboarding: async (options: {

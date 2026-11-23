@@ -1,0 +1,50 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'com.bound.attendance.widget'
+version = '1.0.0'
+
+def getExtOrDefault(name, defaultValue) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : defaultValue
+}
+
+android {
+  namespace "com.bound.attendance.widget"
+  compileSdkVersion getExtOrDefault('compileSdkVersion', 35)
+
+  defaultConfig {
+    minSdkVersion getExtOrDefault('minSdkVersion', 24)
+    targetSdkVersion getExtOrDefault('targetSdkVersion', 35)
+    versionCode 1
+    versionName "1.0.0"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = "17"
+    freeCompilerArgs += [
+      "-opt-in=androidx.glance.ExperimentalGlanceApi"
+    ]
+  }
+
+  buildFeatures {
+    compose true
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getExtOrDefault('kotlinVersion', '2.0.21')}"
+
+  // Jetpack Glance for AppWidgets
+  implementation "androidx.glance:glance-appwidget:1.1.1"
+  implementation "androidx.glance:glance-material3:1.1.1"
+
+  // Kotlin Coroutines & AndroidX Core
+  implementation "androidx.core:core-ktx:1.13.1"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+}

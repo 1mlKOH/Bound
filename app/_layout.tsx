@@ -40,14 +40,15 @@ export default function RootLayout() {
     syncThemeWithSystem(themePref);
   }, [themePref]);
 
-  // When returning from background, ensure system appearance is re-synced if on system theme
+  // When returning from background, ensure system appearance is re-synced and attendance state refreshed from DB
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        const currentPref = useAttendanceStore.getState().settings.theme;
-        if (currentPref === 'system') {
+        const store = useAttendanceStore.getState();
+        if (store.settings.theme === 'system') {
           syncThemeWithSystem('system');
         }
+        store.refreshFromDb();
       }
     });
     return () => subscription.remove();

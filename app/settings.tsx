@@ -517,6 +517,64 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Bound Pro & Home Screen Widget Banner */}
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push('/paywall');
+          }}
+          activeOpacity={0.85}
+          style={{
+            backgroundColor: colors.card,
+            borderColor: isDark ? 'rgba(255, 176, 32, 0.3)' : 'rgba(255, 176, 32, 0.4)',
+          }}
+          className="rounded-[22px] p-4 mb-3 border flex-row items-center justify-between"
+        >
+          <View className="flex-row items-center gap-3 flex-1 mr-2">
+            <View
+              style={{ backgroundColor: 'rgba(255, 176, 32, 0.15)' }}
+              className="w-10 h-10 rounded-[14px] items-center justify-center"
+            >
+              <ZapIcon size={18} color="#FFB020" />
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center gap-1.5">
+                <Text
+                  style={[
+                    styles.sfText,
+                    { fontFamily: fontFamilyNames.bold, color: colors.text },
+                  ]}
+                  className="text-[15px] font-bold"
+                >
+                  Bound Pro
+                </Text>
+                <View
+                  style={{ backgroundColor: 'rgba(255, 176, 32, 0.2)' }}
+                  className="px-2 py-0.5 rounded-full"
+                >
+                  <Text
+                    style={{ fontFamily: fontFamilyNames.bold, color: '#FFB020' }}
+                    className="text-[10px]"
+                  >
+                    WIDGETS
+                  </Text>
+                </View>
+              </View>
+              <Text
+                style={[
+                  styles.sfText,
+                  { fontFamily: fontFamilyNames.regular, color: colors.textSecondary },
+                ]}
+                className="text-[12px] mt-0.5"
+                numberOfLines={1}
+              >
+                Home screen timetable & 1-tap attendance
+              </Text>
+            </View>
+          </View>
+          <ChevronRightIcon size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Category 1: Appearance & Display */}
         <FoldableSectionCard
           title="Appearance & Display"

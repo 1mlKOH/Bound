@@ -1,0 +1,7 @@
+{
+  "name": "bound-widgets",
+  "platforms": ["android"],
+  "android": {
+    "modules": ["com.bound.attendance.widget.BoundWidgetsModule"]
+  }
+}

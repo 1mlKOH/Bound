@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+  <!-- Medallion base -->
+  <path
+      android:fillColor="#22242C"
+      android:pathData="M256,256 m-230,0 a230,230 0 1,0 460,0 a230,230 0 1,0 -460,0" />
+  <!-- Medallion stroke -->
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="#3DDC84"
+      android:strokeWidth="16"
+      android:pathData="M256,256 m-230,0 a230,230 0 1,0 460,0 a230,230 0 1,0 -460,0" />
+  <!-- Wave ribbons -->
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="#1E9BFF"
+      android:strokeWidth="32"
+      android:strokeLineCap="round"
+      android:pathData="M50,271 C150,271 180,206 256,206 C332,206 362,142 462,142" />
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="#3DDC84"
+      android:strokeWidth="32"
+      android:strokeLineCap="round"
+      android:pathData="M50,321 C150,321 180,256 256,256 C332,256 362,191 462,191" />
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="#FFB020"
+      android:strokeWidth="32"
+      android:strokeLineCap="round"
+      android:pathData="M50,370 C150,370 180,306 256,306 C332,306 362,241 462,241" />
+</vector>
