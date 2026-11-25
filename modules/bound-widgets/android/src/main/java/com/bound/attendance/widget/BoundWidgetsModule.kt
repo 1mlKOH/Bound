@@ -1,5 +1,9 @@
 package com.bound.attendance.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
+import android.os.Build
 import androidx.glance.appwidget.updateAll
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -8,6 +12,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class BoundWidgetsModule : Module() {
+
+    private suspend fun refreshAllWidgets(context: Context) {
+        try {
+            BoundTodayWidget().updateAll(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        try {
+            BoundSubjectWidget().updateAll(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun definition() = ModuleDefinition {
         Name("BoundWidgets")
 
@@ -15,11 +33,7 @@ class BoundWidgetsModule : Module() {
             val context = appContext.reactContext ?: return@Function false
             WidgetStorage.saveSnapshotJson(context, jsonStr)
             CoroutineScope(Dispatchers.Main).launch {
-                try {
-                    BoundTodayWidget().updateAll(context)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                refreshAllWidgets(context)
             }
             return@Function true
         }
@@ -28,29 +42,34 @@ class BoundWidgetsModule : Module() {
             val context = appContext.reactContext ?: return@Function false
             WidgetStorage.setPro(context, isPro)
             CoroutineScope(Dispatchers.Main).launch {
-                try {
-                    BoundTodayWidget().updateAll(context)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                refreshAllWidgets(context)
             }
             return@Function true
         }
 
         Function("getEntitlementStatus") {
-            val context = appContext.reactContext ?: return@Function false
+            val context = appContext.reactContext ?: return@Function true
             return@Function WidgetStorage.isPro(context)
         }
 
         AsyncFunction("requestWidgetUpdate") {
             val context = appContext.reactContext ?: return@AsyncFunction false
-            try {
-                BoundTodayWidget().updateAll(context)
-                return@AsyncFunction true
-            } catch (e: Exception) {
-                e.printStackTrace()
+            refreshAllWidgets(context)
+            return@AsyncFunction true
+        }
+
+        AsyncFunction("pinSubjectWidget") { subjectId: String ->
+            val context = appContext.reactContext ?: return@AsyncFunction false
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                 return@AsyncFunction false
             }
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            if (!appWidgetManager.isRequestPinAppWidgetSupported) {
+                return@AsyncFunction false
+            }
+            WidgetStorage.setPendingPinSubject(context, subjectId.ifBlank { WidgetStorage.AUTO_SUBJECT_ID })
+            val provider = ComponentName(context, BoundSubjectWidgetReceiver::class.java)
+            return@AsyncFunction appWidgetManager.requestPinAppWidget(provider, null, null)
         }
     }
 }

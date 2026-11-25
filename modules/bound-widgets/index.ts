@@ -23,6 +23,20 @@ export interface BoundWidgetSessionItem {
   statusLabel: string;
 }
 
+export interface BoundWidgetSubjectItem {
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
+  subjectColor: string;
+  attended: number;
+  absent: number;
+  totalHeld: number;
+  percentage: number;
+  effectiveTarget: number;
+  tier: 'safe' | 'warning' | 'danger' | 'neutral';
+  statusLabel: string;
+}
+
 export interface BoundWidgetSnapshot {
   isPro: boolean;
   date: string;
@@ -35,6 +49,7 @@ export interface BoundWidgetSnapshot {
   overallStatus: 'safe' | 'close' | 'below';
   targetPercentage: number;
   sessions: BoundWidgetSessionItem[];
+  subjects: BoundWidgetSubjectItem[];
 }
 
 export function updateWidgetSnapshot(snapshot: BoundWidgetSnapshot): boolean {
@@ -72,6 +87,18 @@ export async function requestWidgetUpdate(): Promise<boolean> {
   try {
     return await BoundWidgetsNative.requestWidgetUpdate();
   } catch {
+    return false;
+  }
+}
+
+export async function pinSubjectWidget(subjectId: string = 'auto'): Promise<boolean> {
+  if (!BoundWidgetsNative || typeof BoundWidgetsNative.pinSubjectWidget !== 'function') {
+    return false;
+  }
+  try {
+    return Boolean(await BoundWidgetsNative.pinSubjectWidget(subjectId));
+  } catch (err) {
+    console.warn('[BoundWidgets] Failed to pin subject widget:', err);
     return false;
   }
 }

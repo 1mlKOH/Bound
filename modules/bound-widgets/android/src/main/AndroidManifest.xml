@@ -11,5 +11,27 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/bound_today_widget_info" />
         </receiver>
+
+        <receiver
+            android:name="com.bound.attendance.widget.BoundSubjectWidgetReceiver"
+            android:exported="true"
+            android:label="@string/subject_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bound_subject_widget_info" />
+        </receiver>
+
+        <activity
+            android:name="com.bound.attendance.widget.BoundSubjectConfigActivity"
+            android:exported="true"
+            android:label="@string/subject_widget_name"
+            android:theme="@android:style/Theme.DeviceDefault.DayNight">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

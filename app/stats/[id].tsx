@@ -20,6 +20,7 @@ import { AttendanceStatus } from '../../src/types';
 import { fontFamilyNames } from '../../src/utils/typography';
 import { ProgressBar } from '../../src/components/ProgressBar';
 import { formatTime12h } from '../../src/domain/attendance';
+import { pinSubjectWidget } from '../../src/utils/widgets';
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -210,7 +211,7 @@ export default function SubjectDetailStatsScreen() {
           </Text>
         </TouchableOpacity>
 
-        {isSimulationActive && (
+        {isSimulationActive ? (
           <TouchableOpacity
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -239,7 +240,39 @@ export default function SubjectDetailStatsScreen() {
               Reset What-If
             </Text>
           </TouchableOpacity>
-        )}
+        ) : Platform.OS === 'android' ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Pin ${activeSubject.name} widget to home screen`}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            onPress={async () => {
+              Haptics.selectionAsync();
+              const ok = await pinSubjectWidget(activeSubject.id);
+              if (!ok) {
+                toast.info('Add from Home Screen', {
+                  description: 'Long-press your home screen and add "Bound — Subject Progress".',
+                });
+              }
+            }}
+            style={{
+              backgroundColor: colors.actionBg,
+              borderRadius: 999,
+            }}
+            className="flex-row items-center px-3 py-1.5"
+          >
+            <PlusIcon size={12} color={colors.text} strokeWidth={2.5} />
+            <Text
+              style={[
+                styles.sfText,
+                { color: colors.text },
+              ]}
+              className="text-xs font-semibold ml-1.5"
+            >
+              Pin Widget
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Horizontal Subject Switcher Carousel */}

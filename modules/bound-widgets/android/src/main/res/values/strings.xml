@@ -2,4 +2,6 @@
 <resources>
     <string name="widget_name">Bound — Today\'s Classes</string>
     <string name="widget_description">Track schedule and 1-tap mark attendance with live skip buffers.</string>
+    <string name="subject_widget_name">Bound — Subject Progress</string>
+    <string name="subject_widget_description">Minimal attendance progress for a pinned subject or auto-lowest course.</string>
 </resources>

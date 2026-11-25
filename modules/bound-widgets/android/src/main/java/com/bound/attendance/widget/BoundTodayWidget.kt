@@ -13,11 +13,11 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
@@ -59,9 +59,7 @@ class BoundTodayWidget : GlanceAppWidget() {
             val amber = Color(0xFFFF, 0xB0, 0x20)
             val rose = Color(0xFFFF, 0x6B, 0x72)
 
-            val openTodayIntent = Intent(Intent.ACTION_VIEW, Uri.parse("bound://today")).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
+            val openTodayIntent = boundDeepLinkIntent(context, "bound://today")
 
             Box(
                 modifier = GlanceModifier
@@ -177,7 +175,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                     .cornerRadius(999.dp)
                                     .background(Color(0x28, 0xFF, 0xB0, 0x20))
                                     .padding(horizontal = 8.dp)
-                                    .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse("bound://paywall?source=widget_badge")))),
+                                    .clickable(actionStartActivity(boundDeepLinkIntent(context, "bound://paywall?source=widget_badge"))),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Image(
@@ -203,9 +201,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                     // 2. Body Content
                     if (!isPro) {
                         // PAYWALL / LOCKED STATE (W_PAYWALL)
-                        val paywallIntent = Intent(Intent.ACTION_VIEW, Uri.parse("bound://paywall?source=widget_locked")).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        }
+                        val paywallIntent = boundDeepLinkIntent(context, "bound://paywall?source=widget_locked")
                         Box(
                             modifier = GlanceModifier
                                 .fillMaxWidth()
@@ -351,9 +347,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                 .defaultWeight()
                         ) {
                             items(snapshot.sessions) { session ->
-                                val statsIntent = Intent(Intent.ACTION_VIEW, Uri.parse("bound://stats/${session.subjectId}")).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                }
+                                val statsIntent = boundDeepLinkIntent(context, "bound://stats/${session.subjectId}")
 
                                 val subjectColorParsed = try {
                                     Color(AndroidColor.parseColor(session.subjectColor))

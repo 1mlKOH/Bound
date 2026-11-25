@@ -6,9 +6,17 @@ import android.net.Uri
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.updateAll
 
 val SessionIdKey = ActionParameters.Key<String>("sessionId")
 val TargetStatusKey = ActionParameters.Key<String>("targetStatus")
+
+internal fun boundDeepLinkIntent(context: Context, uri: String): Intent {
+    return Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+        setPackage(context.packageName)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+}
 
 class MarkSessionAction : ActionCallback {
     override suspend fun onAction(
@@ -21,18 +29,20 @@ class MarkSessionAction : ActionCallback {
 
         // 1. Paywall Guard
         if (!WidgetStorage.isPro(context)) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bound://paywall?source=widget_action")).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            context.startActivity(intent)
+            context.startActivity(boundDeepLinkIntent(context, "bound://paywall?source=widget_action"))
             return
         }
 
         // 2. Perform Toggle Update
         WidgetStorage.updateSessionStatus(context, sessionId, targetStatus)
 
-        // 3. Immediately redraw the widget
+        // 3. Immediately redraw both Today and Subject Progress widgets
         BoundTodayWidget().update(context, glanceId)
+        try {
+            BoundSubjectWidget().updateAll(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
 
@@ -44,17 +54,19 @@ class BatchMarkAction : ActionCallback {
     ) {
         // 1. Paywall Guard
         if (!WidgetStorage.isPro(context)) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bound://paywall?source=widget_batch")).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            context.startActivity(intent)
+            context.startActivity(boundDeepLinkIntent(context, "bound://paywall?source=widget_batch"))
             return
         }
 
         // 2. Batch Mark Unmarked
         WidgetStorage.batchMarkAllPresent(context)
 
-        // 3. Redraw widget
+        // 3. Redraw both Today and Subject Progress widgets
         BoundTodayWidget().update(context, glanceId)
+        try {
+            BoundSubjectWidget().updateAll(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
