@@ -94,9 +94,8 @@ export function runMigrations(db: MigrationDb): void {
           id, global_target_pct, theme, primary_card_label,
           daily_reminder_enabled, daily_reminder_time,
           per_class_reminder_enabled, per_class_reminder_offset_minutes,
-          sunday_digest_enabled, haptic_feedback_enabled,
-          has_seeded_demo, has_onboarded, last_backup_at
-        ) VALUES (1, 75.0, 'system', 'name', 0, '18:00', 0, 5, 0, 1, 0, 0, NULL);
+          sunday_digest_enabled, has_seeded_demo
+        ) VALUES (1, 75.0, 'system', 'name', 0, '18:00', 0, 5, 0, 0);
       `);
       setDatabaseVersion(1, db);
     });
