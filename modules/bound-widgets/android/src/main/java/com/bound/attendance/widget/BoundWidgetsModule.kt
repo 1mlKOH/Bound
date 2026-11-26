@@ -10,6 +10,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class BoundWidgetsModule : Module() {
 
@@ -54,7 +55,9 @@ class BoundWidgetsModule : Module() {
 
         AsyncFunction("requestWidgetUpdate") {
             val context = appContext.reactContext ?: return@AsyncFunction false
-            refreshAllWidgets(context)
+            runBlocking {
+                refreshAllWidgets(context)
+            }
             return@AsyncFunction true
         }
 
