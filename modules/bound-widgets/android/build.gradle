@@ -1,5 +1,17 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+
+  dependencies {
+    def kotlinVer = rootProject.ext.has('kotlinVersion') ? rootProject.ext.get('kotlinVersion') : '2.2.0'
+    classpath("org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:${kotlinVer}")
+  }
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 group = 'com.bound.attendance.widget'
 version = '1.0.0'
@@ -38,7 +50,7 @@ android {
 
 dependencies {
   implementation project(':expo-modules-core')
-  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getExtOrDefault('kotlinVersion', '2.0.21')}"
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getExtOrDefault('kotlinVersion', '2.2.0')}"
 
   // Jetpack Glance for AppWidgets
   implementation "androidx.glance:glance-appwidget:1.1.1"
