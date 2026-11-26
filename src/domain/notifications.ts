@@ -1,4 +1,4 @@
-import type { Subject, SubjectStats, ScheduleSlot, Session } from '../types/index.ts';
+import type { Subject, SubjectStats, ScheduleSlot, Session, Holiday } from '../types/index.ts';
 import { isSlotEffectiveOnDate, isSubjectActiveOnDate, formatTime12h } from './attendance.ts';
 
 /**
@@ -140,4 +140,163 @@ export function getUnmarkedCountForDate(
     count: unmarkedCount,
     sampleSubjectName: firstUnmarkedSubjectName,
   };
+}
+
+/**
+ * Checks whether a given YYYY-MM-DD date is registered as a holiday.
+ */
+export function isDateHoliday(
+  dateStr: string,
+  holidays: Holiday[] | Set<string>
+): boolean {
+  if (holidays instanceof Set) {
+    return holidays.has(dateStr);
+  }
+  return holidays.some((h) => h.date === dateStr);
+}
+
+export interface ClassReminderCandidate {
+  date: string;
+  slotId: string | null;
+  sessionId?: string;
+  isExtra: boolean;
+  subject: Subject;
+  startTime: string;
+  endTime?: string;
+  weekday: number;
+  triggerTimeMs: number;
+}
+
+/**
+ * Identifies upcoming scheduled classes and extra classes across a rolling window
+ * (e.g. 7 days ahead) that are eligible for reminder notifications.
+ *
+ * Excludes:
+ * - Dates marked as holidays (no notifications on holidays!)
+ * - Sessions already marked with an attendance status (present, absent, cancelled)
+ * - Inactive / archived subjects or slots outside effective dates
+ * - Times that have already elapsed
+ */
+export function getClassReminderCandidates(
+  referenceDate: Date,
+  daysAheadCount: number,
+  offsetMinutes: number,
+  slots: ScheduleSlot[],
+  subjectsMap: Map<string, Subject>,
+  sessions: Session[],
+  holidaysSet: Set<string>
+): ClassReminderCandidate[] {
+  const candidates: ClassReminderCandidate[] = [];
+  const refMs = referenceDate.getTime();
+
+  for (let daysAhead = 0; daysAhead < daysAheadCount; daysAhead++) {
+    const targetDate = new Date(refMs);
+    targetDate.setDate(targetDate.getDate() + daysAhead);
+
+    const y = targetDate.getFullYear();
+    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const d = String(targetDate.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+    const dayOfWeek = targetDate.getDay();
+
+    // Crucial: Skip the entire day if it is marked as a holiday
+    if (holidaysSet.has(dateStr)) {
+      continue;
+    }
+
+    // 1. Regular timetable slots for this day of week
+    for (const slot of slots) {
+      if (slot.weekday !== dayOfWeek) continue;
+
+      const subject = subjectsMap.get(slot.subjectId);
+      if (!subject || subject.archivedAt) continue;
+
+      if (!isSlotEffectiveOnDate(slot, dateStr)) continue;
+      if (!isSubjectActiveOnDate(subject, dateStr)) continue;
+
+      // If attendance has already been logged for this slot on this date, skip
+      const existingSession = sessions.find(
+        (s) => s.slotId === slot.id && s.date === dateStr
+      );
+      if (existingSession && existingSession.status !== null) continue;
+
+      const [startH, startM] = slot.startTime.split(':').map(Number);
+      if (isNaN(startH) || isNaN(startM)) continue;
+
+      const classStartTime = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        startH,
+        startM,
+        0,
+        0
+      );
+      const triggerTimeMs = classStartTime.getTime() - offsetMinutes * 60 * 1000;
+
+      // Skip if the reminder trigger time has already elapsed
+      if (triggerTimeMs <= refMs) continue;
+
+      candidates.push({
+        date: dateStr,
+        slotId: slot.id,
+        isExtra: false,
+        subject,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        weekday: slot.weekday,
+        triggerTimeMs,
+      });
+    }
+
+    // 2. Extra classes (slotId === null) scheduled for this date
+    const dayExtraSessions = sessions.filter(
+      (s) => s.slotId === null && s.date === dateStr && s.status === null
+    );
+
+    for (const extra of dayExtraSessions) {
+      const subject = subjectsMap.get(extra.subjectId);
+      if (!subject || subject.archivedAt) continue;
+
+      const [startH, startM] = extra.startTime.split(':').map(Number);
+      if (isNaN(startH) || isNaN(startM)) continue;
+
+      const classStartTime = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        startH,
+        startM,
+        0,
+        0
+      );
+      let triggerTimeMs = classStartTime.getTime() - offsetMinutes * 60 * 1000;
+
+      if (triggerTimeMs <= refMs) {
+        // If class starts soon (within offsetMinutes) but hasn't started yet
+        if (classStartTime.getTime() > refMs) {
+          triggerTimeMs = refMs + 2000;
+        } else {
+          continue; // Already started or in the past
+        }
+      }
+
+      candidates.push({
+        date: dateStr,
+        slotId: null,
+        sessionId: extra.id,
+        isExtra: true,
+        subject,
+        startTime: extra.startTime,
+        endTime: extra.endTime,
+        weekday: dayOfWeek,
+        triggerTimeMs,
+      });
+    }
+  }
+
+  // Sort candidates chronologically
+  candidates.sort((a, b) => a.triggerTimeMs - b.triggerTimeMs);
+
+  return candidates;
 }

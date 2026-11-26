@@ -4,6 +4,8 @@ import {
   generateClassReminderCopy,
   generateUnmarkedCatchupCopy,
   getUnmarkedCountForDate,
+  getClassReminderCandidates,
+  isDateHoliday,
 } from '../notifications.ts';
 import type { Subject, SubjectStats, ScheduleSlot, Session } from '../../types/index.ts';
 
@@ -225,4 +227,181 @@ test('getUnmarkedCountForDate accurately reports unmarked slots and ignores mark
     new Set()
   );
   assert.equal(resC.count, 0);
+});
+
+test('isDateHoliday identifies holidays accurately from Set or Holiday array', () => {
+  const set = new Set(['2026-11-20', '2026-11-25']);
+  assert.equal(isDateHoliday('2026-11-20', set), true);
+  assert.equal(isDateHoliday('2026-11-21', set), false);
+
+  const arr = [
+    { date: '2026-11-20', label: 'Festival' },
+    { date: '2026-11-25', label: 'National Holiday' },
+  ];
+  assert.equal(isDateHoliday('2026-11-25', arr), true);
+  assert.equal(isDateHoliday('2026-11-26', arr), false);
+});
+
+test('getClassReminderCandidates returns 0 candidates when the entire day is marked as a holiday', () => {
+  // Monday 2026-11-16 08:00 AM (weekday 1)
+  const refDate = new Date(2026, 10, 16, 8, 0, 0, 0); // Month 10 = Nov
+  const slot: ScheduleSlot = {
+    id: 'slot-1',
+    subjectId: 'sub-1',
+    weekday: 1, // Mon
+    startTime: '09:00',
+    endTime: '10:00',
+    effectiveFrom: '2026-09-01',
+    effectiveTo: null,
+  };
+  const subjectsMap = new Map([['sub-1', dummySubject]]);
+
+  // Without holiday: 1 candidate (09:00 AM with 5 min offset -> 08:55 AM)
+  const normalCandidates = getClassReminderCandidates(
+    refDate,
+    1,
+    5,
+    [slot],
+    subjectsMap,
+    [],
+    new Set()
+  );
+  assert.equal(normalCandidates.length, 1);
+  assert.equal(normalCandidates[0].subject.name, 'Physics');
+  assert.equal(normalCandidates[0].date, '2026-11-16');
+
+  // With holiday on 2026-11-16: 0 candidates!
+  const holidayCandidates = getClassReminderCandidates(
+    refDate,
+    1,
+    5,
+    [slot],
+    subjectsMap,
+    [],
+    new Set(['2026-11-16'])
+  );
+  assert.equal(holidayCandidates.length, 0);
+});
+
+test('getClassReminderCandidates schedules multi-day rolling window while skipping holiday dates', () => {
+  // Monday 2026-11-16 08:00 AM
+  const refDate = new Date(2026, 10, 16, 8, 0, 0, 0);
+  const slotMon: ScheduleSlot = {
+    id: 'slot-mon',
+    subjectId: 'sub-1',
+    weekday: 1, // Mon
+    startTime: '10:00',
+    endTime: '11:00',
+    effectiveFrom: '2026-09-01',
+    effectiveTo: null,
+  };
+  const slotTue: ScheduleSlot = {
+    id: 'slot-tue',
+    subjectId: 'sub-1',
+    weekday: 2, // Tue
+    startTime: '10:00',
+    endTime: '11:00',
+    effectiveFrom: '2026-09-01',
+    effectiveTo: null,
+  };
+  const subjectsMap = new Map([['sub-1', dummySubject]]);
+
+  // Tuesday 2026-11-17 is marked as holiday
+  const holidays = new Set(['2026-11-17']);
+
+  const candidates = getClassReminderCandidates(
+    refDate,
+    7,
+    5,
+    [slotMon, slotTue],
+    subjectsMap,
+    [],
+    holidays
+  );
+
+  // Should have candidates for Monday 2026-11-16, but NOT Tuesday 2026-11-17
+  const dates = candidates.map((c) => c.date);
+  assert.ok(dates.includes('2026-11-16'), 'Monday class should be scheduled');
+  assert.ok(!dates.includes('2026-11-17'), 'Tuesday holiday must NOT have class notifications');
+});
+
+test('getClassReminderCandidates skips extra classes scheduled on holidays', () => {
+  // Monday 2026-11-16 08:00 AM
+  const refDate = new Date(2026, 10, 16, 8, 0, 0, 0);
+  const subjectsMap = new Map([['sub-1', dummySubject]]);
+
+  const extraSession: Session = {
+    id: 'extra-1',
+    subjectId: 'sub-1',
+    slotId: null, // Extra class
+    date: '2026-11-16',
+    startTime: '14:00',
+    endTime: '15:00',
+    status: null,
+    markedAt: null,
+  };
+
+  // Case A: Not a holiday -> extra class is scheduled
+  const candidatesWithoutHoliday = getClassReminderCandidates(
+    refDate,
+    1,
+    5,
+    [],
+    subjectsMap,
+    [extraSession],
+    new Set()
+  );
+  assert.equal(candidatesWithoutHoliday.length, 1);
+  assert.equal(candidatesWithoutHoliday[0].isExtra, true);
+  assert.equal(candidatesWithoutHoliday[0].sessionId, 'extra-1');
+
+  // Case B: Day is marked as holiday -> extra class must NOT be scheduled
+  const candidatesWithHoliday = getClassReminderCandidates(
+    refDate,
+    1,
+    5,
+    [],
+    subjectsMap,
+    [extraSession],
+    new Set(['2026-11-16'])
+  );
+  assert.equal(candidatesWithHoliday.length, 0);
+});
+
+test('getClassReminderCandidates skips sessions that have already been marked with status', () => {
+  // Monday 2026-11-16 08:00 AM
+  const refDate = new Date(2026, 10, 16, 8, 0, 0, 0);
+  const slot: ScheduleSlot = {
+    id: 'slot-1',
+    subjectId: 'sub-1',
+    weekday: 1,
+    startTime: '10:00',
+    endTime: '11:00',
+    effectiveFrom: '2026-09-01',
+    effectiveTo: null,
+  };
+  const subjectsMap = new Map([['sub-1', dummySubject]]);
+
+  // Marked as present
+  const markedSession: Session = {
+    id: 'sess-1',
+    subjectId: 'sub-1',
+    slotId: 'slot-1',
+    date: '2026-11-16',
+    startTime: '10:00',
+    endTime: '11:00',
+    status: 'present',
+    markedAt: '2026-11-16T08:30:00Z',
+  };
+
+  const candidates = getClassReminderCandidates(
+    refDate,
+    1,
+    5,
+    [slot],
+    subjectsMap,
+    [markedSession],
+    new Set()
+  );
+  assert.equal(candidates.length, 0, 'Already marked class must not trigger reminder');
 });

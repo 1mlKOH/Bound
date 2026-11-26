@@ -6,21 +6,53 @@ import {
   generateClassReminderCopy,
   generateUnmarkedCatchupCopy,
   getUnmarkedCountForDate,
+  getClassReminderCandidates,
+  isDateHoliday,
+  ClassReminderCandidate,
 } from '../domain/notifications';
 import { Haptics } from './haptics';
 import { toast } from 'sonner-native';
 
-export { generateClassReminderCopy, generateUnmarkedCatchupCopy, getUnmarkedCountForDate };
+export {
+  generateClassReminderCopy,
+  generateUnmarkedCatchupCopy,
+  getUnmarkedCountForDate,
+  getClassReminderCandidates,
+  isDateHoliday,
+};
+export type { ClassReminderCandidate };
 
 // Set up notification display behavior
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    // If notification has a date payload and that date is marked as a holiday, suppress alert/sound/banner
+    const data = notification?.request?.content?.data as { date?: string } | undefined;
+    if (data?.date) {
+      try {
+        const store = getStore().getState();
+        const isHoliday = store.holidays.some((h: Holiday) => h.date === data.date);
+        if (isHoliday) {
+          return {
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
+      } catch {
+        // Fallback to normal display
+      }
+    }
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 export const NOTIFICATION_CHANNELS = {
@@ -58,7 +90,7 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
         description: 'Heads-up smart alerts before scheduled classes',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#3DDC84',
+        lightColor: '#1E9BFF',
         sound: 'default',
         enableLights: true,
         enableVibrate: true,
@@ -70,7 +102,7 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
         description: 'Evening reminders for unlogged classes',
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 200],
-        lightColor: '#3DDC84',
+        lightColor: '#1E9BFF',
         sound: 'default',
         enableLights: true,
         enableVibrate: true,
@@ -82,7 +114,7 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
         description: 'Sunday evening attendance targets summary',
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 200],
-        lightColor: '#3DDC84',
+        lightColor: '#1E9BFF',
         sound: 'default',
         enableLights: true,
         enableVibrate: true,
@@ -228,6 +260,7 @@ export async function syncScheduledNotifications(
               title,
               body,
               sound: true,
+              color: '#1E9BFF',
               categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
               data: {
                 type: 'UNMARKED_CHECK',
@@ -257,6 +290,7 @@ export async function syncScheduledNotifications(
           title: 'Weekly Attendance Digest',
           body: sundayBody,
           sound: true,
+          color: '#1E9BFF',
           data: {
             type: 'SUNDAY_DIGEST',
           },
@@ -271,125 +305,57 @@ export async function syncScheduledNotifications(
       });
     }
 
-    // 4. Schedule Per-Class Quick-Mark Reminders if enabled
+    // 4. Schedule Per-Class Quick-Mark Reminders if enabled (rolling 7-day window with DATE triggers)
     if (settings.perClassReminderEnabled) {
       const offsetMin = settings.perClassReminderOffsetMinutes || 5;
+      const now = new Date();
 
-      for (const slot of slots) {
-        const subject = activeSubjectsMap.get(slot.subjectId);
-        if (!subject) continue;
+      const candidates = getClassReminderCandidates(
+        now,
+        7,
+        offsetMin,
+        slots,
+        activeSubjectsMap,
+        sessions,
+        holidaysSet
+      );
 
+      for (const candidate of candidates) {
         const stats =
-          statsMap.get(subject.id) ||
-          computeSubjectStats(subject, sessions, holidaysSet, settings.globalTargetPct);
+          statsMap.get(candidate.subject.id) ||
+          computeSubjectStats(candidate.subject, sessions, holidaysSet, settings.globalTargetPct);
+
         const { title, body } = generateClassReminderCopy(
-          subject,
+          candidate.subject,
           stats,
-          slot.startTime,
+          candidate.startTime,
           offsetMin
         );
 
-        const [startH, startM] = slot.startTime.split(':').map(Number);
-        let notifyH = startH;
-        let notifyM = startM - offsetMin;
-        let slotWeekday = slot.weekday;
-        if (notifyM < 0) {
-          notifyM += 60;
-          notifyH -= 1;
-        }
-        if (notifyH < 0) {
-          notifyH += 24;
-          slotWeekday = (slotWeekday + 6) % 7;
-        }
-
-        // Convert weekday (0=Sun..6=Sat) to Notification trigger (1=Sun..7=Sat)
-        const triggerWeekday = slotWeekday + 1;
+        const displayTitle = candidate.isExtra ? `Extra Class · ${title}` : title;
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title,
+            title: displayTitle,
             body,
             sound: true,
+            color: '#1E9BFF',
             categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
             data: {
               type: 'CLASS_REMINDER',
-              subjectId: subject.id,
-              subjectName: subject.name,
-              slotId: slot.id,
-              startTime: slot.startTime,
-              weekday: slot.weekday,
-            },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-            channelId: NOTIFICATION_CHANNELS.CLASS_REMINDERS,
-            weekday: triggerWeekday,
-            hour: notifyH,
-            minute: notifyM,
-          },
-        });
-      }
-
-      // 4b. Schedule Reminders for Upcoming Unmarked Extra Classes (one-shot DATE triggers)
-      const nowMs = Date.now();
-      const horizonDays = 14;
-      const horizonMs = nowMs + horizonDays * 24 * 60 * 60 * 1000;
-
-      for (const ses of sessions) {
-        // Extra classes have slotId === null and haven't been marked yet
-        if (ses.slotId !== null || ses.status !== null) continue;
-        const subject = activeSubjectsMap.get(ses.subjectId);
-        if (!subject) continue;
-
-        const [y, m, d] = ses.date.split('-').map(Number);
-        const [startH, startM] = ses.startTime.split(':').map(Number);
-        if (!y || !m || !d || isNaN(startH) || isNaN(startM)) continue;
-
-        const classStartDate = new Date(y, m - 1, d, startH, startM, 0, 0);
-        const classStartMs = classStartDate.getTime();
-
-        // Skip if class already started or is past the 14-day horizon
-        if (classStartMs <= nowMs || classStartMs > horizonMs) continue;
-
-        // Target notification time with offset
-        let notifyDate = new Date(classStartMs - offsetMin * 60 * 1000);
-
-        // If reminder time has already passed (e.g. created 3 mins before class with 5 min offset),
-        // trigger in 2 seconds so the student still receives the notification
-        if (notifyDate.getTime() <= nowMs) {
-          notifyDate = new Date(nowMs + 2000);
-        }
-
-        const stats =
-          statsMap.get(subject.id) ||
-          computeSubjectStats(subject, sessions, holidaysSet, settings.globalTargetPct);
-
-        const { title, body } = generateClassReminderCopy(
-          subject,
-          stats,
-          ses.startTime,
-          offsetMin
-        );
-
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `Extra Class · ${title}`,
-            body,
-            sound: true,
-            categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
-            data: {
-              type: 'CLASS_REMINDER',
-              isExtra: true,
-              sessionId: ses.id,
-              subjectId: subject.id,
-              subjectName: subject.name,
-              startTime: ses.startTime,
-              date: ses.date,
+              isExtra: candidate.isExtra,
+              sessionId: candidate.sessionId,
+              subjectId: candidate.subject.id,
+              subjectName: candidate.subject.name,
+              slotId: candidate.slotId,
+              startTime: candidate.startTime,
+              weekday: candidate.weekday,
+              date: candidate.date,
             },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: notifyDate,
+            date: new Date(candidate.triggerTimeMs),
             channelId: NOTIFICATION_CHANNELS.CLASS_REMINDERS,
           },
         });
@@ -426,6 +392,24 @@ export async function dismissPresentedNotificationForSession(session: {
       );
 
       if (matchesSession || matchesSlot || matchesSubject) {
+        await Notifications.dismissNotificationAsync(item.request.identifier).catch(() => {});
+      }
+    }
+  } catch {
+    // Graceful fallback if notifications are unsupported in current runtime
+  }
+}
+
+/**
+ * Automatically dismisses any delivered notifications in the status bar/tray
+ * matching a specific date (e.g. when that day is marked as a holiday).
+ */
+export async function dismissPresentedNotificationsForDate(dateStr: string): Promise<void> {
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    for (const item of presented) {
+      const data = item.request.content.data as { date?: string } | undefined;
+      if (data && data.date === dateStr) {
         await Notifications.dismissNotificationAsync(item.request.identifier).catch(() => {});
       }
     }
@@ -566,6 +550,7 @@ export async function sendTestNotification(
         title: 'Unmarked Classes Remaining',
         body: `You have 1 class left to mark today (${sampleSubject.name}). Tap to log your attendance.`,
         sound: true,
+        color: '#1E9BFF',
         categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
         data: {
           type: 'UNMARKED_CHECK',
@@ -591,6 +576,7 @@ export async function sendTestNotification(
       title,
       body,
       sound: true,
+      color: '#1E9BFF',
       categoryIdentifier: NOTIFICATION_CATEGORIES.CLASS_REMINDER,
       data: {
         type: 'CLASS_REMINDER',

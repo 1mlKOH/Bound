@@ -23,6 +23,7 @@ import {
 import {
   syncScheduledNotifications,
   dismissPresentedNotificationForSession,
+  dismissPresentedNotificationsForDate,
   NOTIFICATION_ACTIONS,
 } from '../utils/notifications';
 import { validateBackupPayload } from '../domain/backup';
@@ -560,6 +561,8 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         dateStr,
         label,
       ]);
+      // When marked as holiday, immediately dismiss any active or delivered notifications for this date from the tray
+      dismissPresentedNotificationsForDate(dateStr).catch(() => {});
     }
 
     debouncedSyncNotifications(

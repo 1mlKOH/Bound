@@ -193,21 +193,21 @@ const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 25
   </g>
 </svg>`;
 
-// G. Notification Icon (Monochrome White Silhouette for Android Status Bar)
+// G. Notification Icon (High-Contrast Bold Monochrome Silhouette for Android Status Bar)
 const NOTIFICATION_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="100%" height="100%">
   <defs>
-    <clipPath id="notif-clip">
-      <circle cx="48" cy="48" r="39"/>
+    <clipPath id="notif-clip-bold">
+      <circle cx="48" cy="48" r="38"/>
     </clipPath>
   </defs>
-  <!-- Outer Rim -->
-  <circle cx="48" cy="48" r="42" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+  <!-- Outer Rim with strong optical presence -->
+  <circle cx="48" cy="48" r="42" fill="none" stroke="#FFFFFF" stroke-width="9"/>
 
-  <!-- Pure White Ribbons with Transparent Gaps -->
-  <g clip-path="url(#notif-clip)">
-    <path d="M -6 51 C 20 51, 30 39, 48 39 C 66 39, 76 27, 102 27" fill="none" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round"/>
-    <path d="M -6 60 C 20 60, 30 48, 48 48 C 66 48, 76 36, 102 36" fill="none" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round"/>
-    <path d="M -6 69 C 20 69, 30 57, 48 57 C 66 57, 76 45, 102 45" fill="none" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round"/>
+  <!-- High-contrast Bold Ribbons with crisp transparent channels -->
+  <g clip-path="url(#notif-clip-bold)">
+    <path d="M -6 51 C 20 51, 30 39, 48 39 C 66 39, 76 27, 102 27" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
+    <path d="M -6 60 C 20 60, 30 48, 48 48 C 66 48, 76 36, 102 36" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
+    <path d="M -6 69 C 20 69, 30 57, 48 57 C 66 57, 76 45, 102 45" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
   </g>
 </svg>`;
 

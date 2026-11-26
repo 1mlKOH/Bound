@@ -506,7 +506,6 @@ export default function OnboardingScreen() {
   // Screen 4: Bell Permission Primer & Smart Alerts state (off by default)
   const [enableReminders, setEnableReminders] = useState<boolean>(false);
   const [enableSundayDigest, setEnableSundayDigest] = useState<boolean>(false);
-  const [loadStarterCourses, setLoadStarterCourses] = useState<boolean>(false);
   const [previewAlertMode, setPreviewAlertMode] = useState<'safe' | 'warning'>('safe');
   const bellFloatAnim = useRef(new Animated.Value(0)).current;
   const isNavigating = useRef<boolean>(false);
@@ -664,15 +663,13 @@ export default function OnboardingScreen() {
 
       await completeOnboarding({
         targetPct,
-        loadSampleData: loadStarterCourses,
+        loadSampleData: false,
         enableReminders,
         sundayDigestEnabled: enableSundayDigest,
       });
 
       toast.success('Welcome to Bound!', {
-        description: loadStarterCourses
-          ? 'Starter timetable ready. Mark your classes to see your buffer!'
-          : 'Clean timetable ready. Add your first subject to start tracking!',
+        description: 'Clean timetable ready. Add your first subject to start tracking!',
       });
 
       router.replace('/(tabs)');
@@ -884,49 +881,42 @@ export default function OnboardingScreen() {
         {/* ========================================================= */}
         {/* SCREEN 1: Visual Hero & Value Proposition (Glide)         */}
         {/* ========================================================= */}
-        <View style={{ width, flex: 1 }} className="px-6 justify-between py-1">
+        <View style={{ width, flex: 1 }} className="px-6 justify-between py-2">
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            contentContainerStyle={{ flexGrow: 1, paddingTop: 12, paddingBottom: 12 }}
           >
-            {/* Title & Subtitle with punchy copy */}
-            <Text
-              style={[
-                styles.sfText,
-                styles.extraBold,
-                { color: colors.text, fontFamily: fontFamilyNames.extraBold },
-              ]}
-              className="text-3xl font-extrabold tracking-tight mb-2 text-center"
-            >
-              Track attendance{'\n'}without the stress.
-            </Text>
-            <Text
-              style={[
-                styles.sfText,
-                styles.medium,
-                { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
-              ]}
-              className="text-sm font-medium leading-5 mb-2 text-center px-4"
-            >
-              Stay comfortably above your college attendance requirement with live safe-absence forecasts.
-            </Text>
+            {/* Editorial Header */}
+            <View className="mb-4">
+              <Text
+                style={[styles.sfText, styles.editorialTitle, { color: colors.text }]}
+                className="mb-2"
+              >
+                Track attendance{'\n'}without the stress.
+              </Text>
+              <Text
+                style={[styles.sfText, styles.editorialSubtitle, { color: colors.textSecondary }]}
+              >
+                Stay comfortably above your college attendance requirement with live safe-absence forecasts.
+              </Text>
+            </View>
 
             {/* Aerodynamic Paper Plane & Safety Threshold Hero */}
             <View
               accessible={true}
               accessibilityRole="image"
               accessibilityLabel="Illustration: Attendance target with live safe absence buffer forecasting"
+              style={{ flex: 1, justifyContent: 'center' }}
             >
               <GlideHero width={width} />
             </View>
-
           </ScrollView>
         </View>
 
         {/* ========================================================= */}
         {/* SCREEN 2: Attendance Cutoff Target Configuration          */}
         {/* ========================================================= */}
-        <View style={{ width, flex: 1 }} className="px-6 justify-between py-4">
+        <View style={{ width, flex: 1 }} className="px-6 justify-between py-2">
           <Animated.View
             style={{
               flex: 1,
@@ -938,45 +928,26 @@ export default function OnboardingScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 flexGrow: 1,
-                justifyContent: 'space-around',
-                paddingVertical: 16,
+                paddingTop: 12,
+                paddingBottom: 12,
               }}
             >
-              {/* Title & Subtitle matching prototype */}
-              <View>
+              {/* Editorial Header */}
+              <View className="mb-4">
                 <Text
-                  style={[
-                    styles.sfText,
-                    styles.extraBold,
-                    {
-                      color: colors.text,
-                      fontSize: 36,
-                      lineHeight: 40,
-                      fontWeight: '900',
-                      letterSpacing: -0.8,
-                      fontFamily: fontFamilyNames.extraBold,
-                    },
-                  ]}
+                  style={[styles.sfText, styles.editorialTitle, { color: colors.text }]}
                   className="mb-2"
                 >
                   Minimum{'\n'}attendance.
                 </Text>
                 <Text
-                  style={[
-                    styles.sfText,
-                    styles.medium,
-                    {
-                      color: colors.textSecondary,
-                      fontSize: 15,
-                      fontWeight: '500',
-                      lineHeight: 22,
-                      fontFamily: fontFamilyNames.medium,
-                    },
-                  ]}
+                  style={[styles.sfText, styles.editorialSubtitle, { color: colors.textSecondary }]}
                 >
                   Set the percentage your college requires.
                 </Text>
               </View>
+
+              <View style={{ flex: 1, justifyContent: 'space-around' }}>
 
               {/* Stepper Counter Row: [-]  70%  [+] with Emil scale-on-press & NumberFlow */}
               <View className="items-center my-6">
@@ -1192,6 +1163,7 @@ export default function OnboardingScreen() {
                   })}
                 </View>
               </View>
+              </View>
             </ScrollView>
           </Animated.View>
         </View>
@@ -1199,32 +1171,59 @@ export default function OnboardingScreen() {
         {/* ========================================================= */}
         {/* SCREEN 3: The "Skip Bank" Interactive Ticket Preview      */}
         {/* ========================================================= */}
-        <View style={{ width, flex: 1 }} className="px-6 justify-between py-1">
+        <View style={{ width, flex: 1 }} className="px-6 justify-between py-2">
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            contentContainerStyle={{ flexGrow: 1, paddingTop: 12, paddingBottom: 12 }}
           >
-            {/* Title & Subtitle */}
-            <Text
-              style={[
-                styles.sfText,
-                styles.extraBold,
-                { color: colors.text, fontFamily: fontFamilyNames.extraBold },
-              ]}
-              className="text-3xl font-extrabold tracking-tight mb-1.5 text-center"
+            {/* Editorial Header */}
+            <View className="mb-4">
+              <Text
+                style={[styles.sfText, styles.editorialTitle, { color: colors.text }]}
+                className="mb-2"
+              >
+                Know your safe{'\n'}absence buffer.
+              </Text>
+              <Text
+                style={[styles.sfText, styles.editorialSubtitle, { color: colors.textSecondary }]}
+              >
+                Every course shows how many lectures you can miss before you drop below your cutoff.
+              </Text>
+            </View>
+
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+            {/* Example Preview Label */}
+            <View
+              accessible={true}
+              accessibilityRole="text"
+              accessibilityLabel="Example preview"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'rgba(0, 0, 0, 0.05)',
+                borderColor: isDark
+                  ? 'rgba(255, 255, 255, 0.14)'
+                  : 'rgba(0, 0, 0, 0.08)',
+                borderWidth: 1,
+                borderRadius: 999,
+              }}
+              className="self-center px-3 py-1 mb-3"
             >
-              Know your safe{'\n'}absence buffer.
-            </Text>
-            <Text
-              style={[
-                styles.sfText,
-                styles.medium,
-                { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
-              ]}
-              className="text-sm font-medium leading-5 mb-5 text-center px-2"
-            >
-              Every course shows how many lectures you can miss before you drop below your cutoff.
-            </Text>
+              <Text
+                style={[
+                  styles.sfText,
+                  styles.extraBold,
+                  {
+                    color: colors.textSecondary,
+                    fontFamily: fontFamilyNames.extraBold,
+                    letterSpacing: 1.1,
+                  },
+                ]}
+                className="text-[11px] font-extrabold uppercase"
+              >
+                Example Preview
+              </Text>
+            </View>
 
             {/* Stacked Interactive Ticket Showcase */}
             <View className="items-center my-2">
@@ -1257,7 +1256,9 @@ export default function OnboardingScreen() {
                       fontFamily: fontFamilyNames.bold,
                     },
                   ]}
-                  className="text-[9px] font-extrabold tracking-widest text-right"
+                  className="text-[11px] font-extrabold tracking-widest text-right"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {nextCourse.code} · {nextCourse.name.toUpperCase()}
                 </Text>
@@ -1310,7 +1311,7 @@ export default function OnboardingScreen() {
                           fontFamily: fontFamilyNames.bold,
                         },
                       ]}
-                      className="text-[9.5px] font-extrabold uppercase mb-0.5"
+                      className="text-[11px] font-extrabold uppercase mb-0.5"
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
@@ -1338,7 +1339,7 @@ export default function OnboardingScreen() {
                           fontFamily: fontFamilyNames.semiBold,
                         },
                       ]}
-                      className="text-[10px] font-semibold mt-0.5"
+                      className="text-[11px] font-semibold mt-0.5"
                     >
                       Safe above {targetPct}%
                     </Text>
@@ -1374,7 +1375,7 @@ export default function OnboardingScreen() {
                           styles.bold,
                           { color: '#FFFFFF', fontFamily: fontFamilyNames.bold },
                         ]}
-                        className="text-[9px] font-extrabold tracking-wider"
+                        className="text-[11px] font-extrabold tracking-wider"
                       >
                         {activeCourse.statusText}
                       </Text>
@@ -1487,8 +1488,9 @@ export default function OnboardingScreen() {
                 ]}
                 className="text-xs text-center leading-4"
               >
-                Tap courses above to preview skip calculations. You can load these starter courses or start clean on the next step.
+                Example preview — tap a sample course above to see how Bound calculates your safe skips.
               </Text>
+            </View>
             </View>
           </ScrollView>
         </View>
@@ -1496,33 +1498,27 @@ export default function OnboardingScreen() {
         {/* ========================================================= */}
         {/* SCREEN 4: The Bell Permission Primer & Smart Alerts       */}
         {/* ========================================================= */}
-        <View style={{ width, flex: 1 }} className="px-6 justify-between py-1">
+        <View style={{ width, flex: 1 }} className="px-6 justify-between py-2">
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            contentContainerStyle={{ flexGrow: 1, paddingTop: 12, paddingBottom: 12 }}
           >
-            {/* Title & Subtitle */}
-            <Text
-              style={[
-                styles.sfText,
-                styles.extraBold,
-                { color: colors.text, fontFamily: fontFamilyNames.extraBold },
-              ]}
-              className="text-3xl font-extrabold tracking-tight mb-1.5 text-center"
-            >
-              Never drop by surprise.{'\n'}Get smart alerts.
-            </Text>
-            <Text
-              style={[
-                styles.sfText,
-                styles.medium,
-                { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
-              ]}
-              className="text-sm font-medium leading-5 mb-4 text-center px-2"
-            >
-              Timely heads-up reminders right before class with your live skip bank.
-            </Text>
+            {/* Editorial Header */}
+            <View className="mb-4">
+              <Text
+                style={[styles.sfText, styles.editorialTitle, { color: colors.text }]}
+                className="mb-2"
+              >
+                Never drop by surprise.{'\n'}Get smart alerts.
+              </Text>
+              <Text
+                style={[styles.sfText, styles.editorialSubtitle, { color: colors.textSecondary }]}
+              >
+                Timely heads-up reminders right before class with your live skip bank.
+              </Text>
+            </View>
 
+            <View style={{ flex: 1, justifyContent: 'center' }}>
             {/* Hero Section: Simulated Native Heads-Up Alert (Dynamic Island style) */}
             <View className="items-center my-2">
               {/* Background Subtle Glowing Rings */}
@@ -1606,7 +1602,7 @@ export default function OnboardingScreen() {
                           styles.extraBold,
                           { color: colors.textSecondary, fontFamily: fontFamilyNames.extraBold },
                         ]}
-                        className="text-[10px] font-extrabold tracking-widest uppercase"
+                        className="text-[11px] font-extrabold tracking-wider uppercase"
                       >
                         Bound · Smart Alert
                       </Text>
@@ -1619,7 +1615,7 @@ export default function OnboardingScreen() {
                       styles.semiBold,
                       { color: colors.textSecondary, fontFamily: fontFamilyNames.semiBold },
                     ]}
-                    className="text-[10px] font-semibold"
+                    className="text-[11px] font-semibold"
                   >
                     15m before class
                   </Text>
@@ -1652,7 +1648,7 @@ export default function OnboardingScreen() {
                 </View>
 
                 {/* Status Pill Tag */}
-                <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-black/5 dark:border-white/10">
+                <View className="flex-row items-center justify-between gap-2 mt-2 pt-2 border-t border-black/5 dark:border-white/10">
                   <View className="flex-row items-center gap-1.5">
                     <View
                       style={{
@@ -1684,7 +1680,8 @@ export default function OnboardingScreen() {
                       styles.medium,
                       { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
                     ]}
-                    className="text-[10px] font-medium"
+                    className="text-[11px] font-medium flex-shrink text-right"
+                    numberOfLines={1}
                   >
                     Tap preview below to test
                   </Text>
@@ -1782,9 +1779,10 @@ export default function OnboardingScreen() {
                   borderWidth: 1,
                   borderRadius: 20,
                   borderCurve: 'continuous',
+                  overflow: 'hidden',
                 },
               ]}
-              className="p-4 my-2"
+              className="my-2"
             >
               {/* Row 1: Pre-Lecture Heads-Up */}
               <TouchableOpacity
@@ -1795,7 +1793,8 @@ export default function OnboardingScreen() {
                 accessibilityState={{ checked: enableReminders }}
                 activeOpacity={0.7}
                 onPress={() => handleToggleReminders(!enableReminders)}
-                className="flex-row items-center justify-between"
+                style={{ width: '100%', minHeight: 56 }}
+                className="flex-row items-center justify-between px-4 py-3.5"
               >
                 <View className="flex-row items-center gap-3 flex-1 pr-3">
                   <View
@@ -1841,6 +1840,8 @@ export default function OnboardingScreen() {
                 </View>
 
                 <Switch
+                  accessible={false}
+                  importantForAccessibility="no"
                   value={enableReminders}
                   onValueChange={handleToggleReminders}
                   trackColor={{
@@ -1852,7 +1853,7 @@ export default function OnboardingScreen() {
               </TouchableOpacity>
 
               {/* Divider */}
-              <View className="h-px bg-black/5 dark:bg-white/10 my-3" />
+              <View className="h-px bg-black/5 dark:bg-white/10 mx-4" />
 
               {/* Row 2: Sunday Weekly Summary */}
               <TouchableOpacity
@@ -1863,7 +1864,8 @@ export default function OnboardingScreen() {
                 accessibilityState={{ checked: enableSundayDigest }}
                 activeOpacity={0.7}
                 onPress={() => handleToggleSundayDigest(!enableSundayDigest)}
-                className="flex-row items-center justify-between"
+                style={{ width: '100%', minHeight: 56 }}
+                className="flex-row items-center justify-between px-4 py-3.5"
               >
                 <View className="flex-row items-center gap-3 flex-1 pr-3">
                   <View
@@ -1909,6 +1911,8 @@ export default function OnboardingScreen() {
                 </View>
 
                 <Switch
+                  accessible={false}
+                  importantForAccessibility="no"
                   value={enableSundayDigest}
                   onValueChange={handleToggleSundayDigest}
                   trackColor={{
@@ -1918,80 +1922,7 @@ export default function OnboardingScreen() {
                   thumbColor="#FFFFFF"
                 />
               </TouchableOpacity>
-
-              {/* Divider */}
-              <View className="h-px bg-black/5 dark:bg-white/10 my-3" />
-
-              {/* Row 3: Starter Courses */}
-              <TouchableOpacity
-                accessible={true}
-                accessibilityRole="switch"
-                accessibilityLabel="Load starter courses"
-                accessibilityHint="Pre-populates demo courses for Physics, Data Structures, and Calculus"
-                accessibilityState={{ checked: loadStarterCourses }}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setLoadStarterCourses((prev) => !prev);
-                }}
-                className="flex-row items-center justify-between"
-              >
-                <View className="flex-row items-center gap-3 flex-1 pr-3">
-                  <View
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: loadStarterCourses
-                        ? isDark ? 'rgba(61, 220, 132, 0.15)' : 'rgba(13, 138, 51, 0.12)'
-                        : isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <CheckIcon
-                      size={16}
-                      color={loadStarterCourses ? colors.statusSafe : colors.textSecondary}
-                      strokeWidth={2.4}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text
-                      style={[
-                        styles.sfText,
-                        styles.bold,
-                        { color: colors.text, fontFamily: fontFamilyNames.bold },
-                      ]}
-                      className="text-sm font-bold mb-0.5"
-                    >
-                      Load Starter Courses
-                    </Text>
-                    <Text
-                      style={[
-                        styles.sfText,
-                        styles.medium,
-                        { color: colors.textSecondary, fontFamily: fontFamilyNames.medium },
-                      ]}
-                      className="text-xs leading-4"
-                    >
-                      Pre-populate Physics, Data Structures & Calculus demo timetable.
-                    </Text>
-                  </View>
-                </View>
-
-                <Switch
-                  value={loadStarterCourses}
-                  onValueChange={(val) => {
-                    Haptics.selectionAsync();
-                    setLoadStarterCourses(val);
-                  }}
-                  trackColor={{
-                    false: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
-                    true: colors.statusSafe,
-                  }}
-                  thumbColor="#FFFFFF"
-                />
-              </TouchableOpacity>
+            </View>
             </View>
           </ScrollView>
         </View>
@@ -2094,6 +2025,21 @@ const styles = StyleSheet.create({
   },
   sfText: {
     fontFamily: fontFamilyNames.regular,
+  },
+  editorialTitle: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '900',
+    letterSpacing: -0.7,
+    fontFamily: fontFamilyNames.extraBold,
+    textAlign: 'left',
+  },
+  editorialSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+    fontFamily: fontFamilyNames.medium,
+    textAlign: 'left',
   },
   medium: {
     fontFamily: fontFamilyNames.medium,
