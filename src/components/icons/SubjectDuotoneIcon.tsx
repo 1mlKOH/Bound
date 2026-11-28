@@ -814,6 +814,195 @@ export const ArchitectureIcon: React.FC<SubjectIconProps> = ({
   </Svg>
 );
 
+/**
+ * 30. Livestock Farm Practices
+ * Keyline outline: barn
+ */
+export const FarmPracticesIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M2 21V10.351c0-.227.077-.447.219-.625L5.868 5.165a1.5 1.5 0 01.319-.262l5.351-2.79a1 1 0 01.924 0l5.351 2.79c.123.064.232.153.319.262l3.649 4.561c.142.178.219.398.219.625V21a1 1 0 01-1 1H3a1 1 0 01-1-1zm6 1v-5.5a.5.5 0 01.5-.5h7a.5.5 0 01.5.5V22m0 0L8.146 16.146M11 8h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V9a1 1 0 011-1z"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 31. Public Health & Epidemiology
+ * Keyline outline: shield-plus
+ */
+export const PublicHealthIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M8 12h8M12 8v8M5.183 5.168C7.83 4.854 9.83 3.532 11.024 2.373a1.404 1.404 0 011.952 0c1.195 1.159 3.194 2.481 5.842 2.795.65.078 1.182.583 1.182 1.215v6.188c0 1.774-.289 3.58-1.388 5.002-1.202 1.555-3.109 3.297-5.782 4.28a1.91 1.91 0 01-1.66 0c-2.673-.983-4.58-2.725-5.782-4.28C4.289 16.151 4 14.345 4 12.571V6.383c0-.632.533-1.137 1.183-1.215z"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 32. Extension Education & Outreach
+ * Keyline outline: users
+ */
+export const ExtensionIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M8 13h2c3.314 0 6 2.686 6 6v1a1 1 0 01-1 1H3a1 1 0 01-1-1v-1c0-3.314 2.686-6 6-6zm1-10a3 3 0 110 6 3 3 0 010-6zm7 0a3 3 0 010 6m2.333 4.471C20.554 14.409 22 16.589 22 19v1a1 1 0 01-1 1"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 33. Clinical Practices & Care
+ * Keyline outline: syringe
+ */
+export const ClinicalIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M13.929 5.828l-8.071 8.071a2 2 0 000 2.829l1.414 1.414a2 2 0 002.829 0l8.071-8.071M6.565 17.435L3 21M12.515 4.414l3.535 3.536 2.829-2.829M16.757 3L21 7.243M16.05 7.95l3.536 3.535M7.757 12l1.415 1.414M10.586 9.172L12 10.586"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 34. Genetics & Breeding
+ * Keyline outline: dna
+ */
+export const GeneticsIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M20 2c0 5-8 8-8 10s-8 5-8 10M4 2c0 5 8 8 8 10s8 5 8 10M4.392 4h15.216M7.298 8h9.404M16.702 16H7.298M19.608 20H4.392"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 35. Animal Nutrition & Feed
+ * Custom Keyline-spec 2px outline: wheat grain stalk
+ */
+export const NutritionIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 21V8M12 3l2.2 2.2a2 2 0 010 2.8L12 10.2 9.8 8a2 2 0 010-2.8L12 3zM7 9.5a3 3 0 013 3v1.5H8.5a3 3 0 01-1.5-4.5zM17 9.5a3 3 0 00-3 3V14h1.5a3 3 0 001.5-4.5zM7 14.5a3 3 0 013 3V19H8.5a3 3 0 01-1.5-4.5zM17 14.5a3 3 0 00-3 3V19h1.5a3 3 0 001.5-4.5z"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 36. Biochemistry & Assays
+ * Keyline outline: test-tubes
+ */
+export const BiochemistryIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M4 2h4a1 1 0 011 1v16a3 3 0 11-6 0V3a1 1 0 011-1zM2 2h8M3 13h6M16 2h4a1 1 0 011 1v16a3 3 0 11-6 0V3a1 1 0 011-1zm-2 0h8m-7 14h6"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+/**
+ * 37. Microbiology & Virology
+ * Custom Keyline-spec 2px outline: virus pathogen cell
+ */
+export const MicrobiologyIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle
+      cx="12"
+      cy="12"
+      r="5"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+    />
+    <Path
+      d="M12 2v5M12 17v5M2 12h5M17 12h5M10 2h4M10 22h4M2 10v4M22 10v4M4.93 4.93l3.53 3.53M15.54 15.54l3.53 3.53M19.07 4.93l-3.53 3.53M8.46 15.54l-3.53 3.53"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle cx="10.5" cy="11" r="0.9" fill={strokeColor} />
+    <Circle cx="13.5" cy="13.5" r="0.9" fill={strokeColor} />
+  </Svg>
+);
+
+/**
+ * 38. Parasitology & Entomology
+ * Keyline outline: bug
+ */
+export const ParasitologyIcon: React.FC<SubjectIconProps> = ({
+  size = 24,
+  strokeColor = DEFAULT_STROKE,
+  strokeWidth = 2,
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M6.8 9.4c-.21.525-.3 1.05-.3 1.5v3.7c0 3.08 2.475 5.6 5.5 5.6s5.5-2.52 5.5-5.6v-3.7c0-.45-.09-.975-.3-1.5C15.902 7.877 14.001 7 12 7s-3.902.877-5.2 2.4zM9 7.694V5.695C9 4.972 9.317 4.316 9.832 3.832 10.378 3.319 11.148 3 12 3s1.622.319 2.168.832C14.683 4.316 15 4.972 15 5.695v1.999M8 2l1.832 1.832M16 2l-1.832 1.832M20 4.6v.97c0 1.915-1.204 3.485-2.8 3.83M4 4.6v.97c0 1.915 1.204 3.485 2.8 3.83M21 13.4h-3.5M3 13.4h3.5M20.5 22v-.97c0-1.815-1.569-3.303-3.65-3.63M3.5 22v-.97c0-1.815 1.57-3.303 3.65-3.63M12 12v3.6"
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 import {
   SubjectCategoryKey,
   SUBJECT_CATEGORY_METAS,
@@ -868,6 +1057,21 @@ export const CATEGORY_MAP: Record<
   pharmacology: { label: SUBJECT_CATEGORY_METAS.pharmacology.label, component: PharmacologyIcon },
   database: { label: SUBJECT_CATEGORY_METAS.database.label, component: DatabaseIcon },
   architecture: { label: SUBJECT_CATEGORY_METAS.architecture.label, component: ArchitectureIcon },
+  'farm-practices': {
+    label: SUBJECT_CATEGORY_METAS['farm-practices'].label,
+    component: FarmPracticesIcon,
+  },
+  'public-health': {
+    label: SUBJECT_CATEGORY_METAS['public-health'].label,
+    component: PublicHealthIcon,
+  },
+  extension: { label: SUBJECT_CATEGORY_METAS.extension.label, component: ExtensionIcon },
+  clinical: { label: SUBJECT_CATEGORY_METAS.clinical.label, component: ClinicalIcon },
+  genetics: { label: SUBJECT_CATEGORY_METAS.genetics.label, component: GeneticsIcon },
+  nutrition: { label: SUBJECT_CATEGORY_METAS.nutrition.label, component: NutritionIcon },
+  biochemistry: { label: SUBJECT_CATEGORY_METAS.biochemistry.label, component: BiochemistryIcon },
+  microbiology: { label: SUBJECT_CATEGORY_METAS.microbiology.label, component: MicrobiologyIcon },
+  parasitology: { label: SUBJECT_CATEGORY_METAS.parasitology.label, component: ParasitologyIcon },
 };
 
 interface SubjectDuotoneIconProps {

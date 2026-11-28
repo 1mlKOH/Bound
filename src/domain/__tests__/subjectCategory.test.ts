@@ -81,7 +81,7 @@ test('6. Edge cases: Empty, undefined, and unclassified subjects fallback to Gen
   assert.equal(detectSubjectCategory('Random Topic XYZ').label, 'General Studies');
 });
 
-test('7. All 29 academic categories are registered in SUBJECT_CATEGORY_METAS', () => {
+test('7. All 38 academic categories are registered in SUBJECT_CATEGORY_METAS', () => {
   const keys: SubjectCategoryKey[] = [
     'physics',
     'computer-science',
@@ -112,9 +112,18 @@ test('7. All 29 academic categories are registered in SUBJECT_CATEGORY_METAS', (
     'pharmacology',
     'database',
     'architecture',
+    'farm-practices',
+    'public-health',
+    'extension',
+    'clinical',
+    'genetics',
+    'nutrition',
+    'biochemistry',
+    'microbiology',
+    'parasitology',
   ];
 
-  assert.equal(keys.length, 29);
+  assert.equal(keys.length, 38);
   for (const k of keys) {
     assert.ok(SUBJECT_CATEGORY_METAS[k]);
     assert.equal(SUBJECT_CATEGORY_METAS[k].key, k);
@@ -142,4 +151,41 @@ test('8. Functional concept detection for specialized streams (Veterinary, CS, M
   // Medicine & Morphology:
   assert.equal(detectSubjectCategory('Human Anatomy', 'MED100').key, 'anatomy');
   assert.equal(detectSubjectCategory('Cardiovascular Physiology', 'MED201').key, 'physiology');
+});
+
+test('9. Specialized veterinary curriculum subjects all resolve to distinct categories', () => {
+  const subjects = [
+    'Livestock production technology',
+    'Livestock farm practices',
+    'Veterinary public health and epidemiology',
+    'Veterinary and animal husbandry extension education',
+    'Veterinary clinical practices',
+    'Animal genetics and breeding',
+    'Veterinary animal nutrition',
+    'veterinary biochemistry',
+    'Veterinary pathology',
+    'Veterinary microbiology',
+    'Veterinary parasitology',
+    'veterinary physiology',
+    'veterinary anatomy',
+  ];
+
+  const resolved = subjects.map((s) => detectSubjectCategory(s).key);
+  assert.deepEqual(resolved, [
+    'livestock',
+    'farm-practices',
+    'public-health',
+    'extension',
+    'clinical',
+    'genetics',
+    'nutrition',
+    'biochemistry',
+    'pathology',
+    'microbiology',
+    'parasitology',
+    'physiology',
+    'anatomy',
+  ]);
+  // Ensure every single subject got a unique category/icon
+  assert.equal(new Set(resolved).size, subjects.length);
 });

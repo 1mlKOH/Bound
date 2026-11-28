@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeSubjectStats, computePooledStats, formatTime12h, formatTimeRange12h } from '../attendance.ts';
-import type { Subject, Session } from '../../types/index.ts';
+import {
+  computeSubjectStats,
+  computePooledStats,
+  formatTime12h,
+  formatTimeRange12h,
+  diffScheduleSlots,
+  filterVisibleSessionsForDate,
+} from '../attendance.ts';
+import type { Subject, Session, ScheduleSlot } from '../../types/index.ts';
 
 test('Physics attendance matches screenshot (37/45 -> 82%, Can miss 4)', () => {
   const subject: Subject = {
@@ -346,4 +353,103 @@ test('formatTimeRange12h formats start and end time ranges to 12h format', () =>
   assert.equal(formatTimeRange12h('14:00', null), '2:00 PM');
   assert.equal(formatTimeRange12h(null, '15:00'), '3:00 PM');
   assert.equal(formatTimeRange12h(null, null), '');
+});
+
+test('diffScheduleSlots preserves unchanged slots when baseline counts or metadata are edited', () => {
+  const existingSlots: ScheduleSlot[] = [
+    {
+      id: 'slot-vcp-fri',
+      subjectId: 'sub-vcp',
+      weekday: 5,
+      startTime: '09:00',
+      endTime: '12:00',
+      effectiveFrom: '2026-11-20',
+      effectiveTo: null,
+    },
+    {
+      id: 'slot-vcp-mon',
+      subjectId: 'sub-vcp',
+      weekday: 1,
+      startTime: '10:00',
+      endTime: '11:00',
+      effectiveFrom: '2026-11-20',
+      effectiveTo: null,
+    },
+  ];
+
+  // Re-save with exact same timetable slots (e.g. only baselineAbsent changed)
+  const diffUnchanged = diffScheduleSlots(existingSlots, [
+    { weekday: 5, startTime: '09:00', endTime: '12:00' },
+    { weekday: 1, startTime: '10:00', endTime: '11:00' },
+  ]);
+  assert.equal(diffUnchanged.keptSlots.length, 2);
+  assert.equal(diffUnchanged.retiredSlots.length, 0);
+  assert.equal(diffUnchanged.addedSlots.length, 0);
+
+  // Edit Monday's slot time and keep Friday unchanged
+  const diffPartial = diffScheduleSlots(existingSlots, [
+    { weekday: 5, startTime: '09:00', endTime: '12:00' },
+    { weekday: 1, startTime: '11:00', endTime: '12:00' },
+  ]);
+  assert.equal(diffPartial.keptSlots.map((s) => s.id).join(','), 'slot-vcp-fri');
+  assert.equal(diffPartial.retiredSlots.map((s) => s.id).join(','), 'slot-vcp-mon');
+  assert.deepEqual(diffPartial.addedSlots, [
+    { weekday: 1, startTime: '11:00', endTime: '12:00' },
+  ]);
+});
+
+test('filterVisibleSessionsForDate drops unmarked orphaned slot sessions but keeps marked and extra classes', () => {
+  const sessions: Session[] = [
+    {
+      id: 'ses-unmarked-retired',
+      subjectId: 'sub-1',
+      slotId: 'slot-retired',
+      date: '2026-11-27',
+      startTime: '09:00',
+      endTime: '12:00',
+      status: null,
+      markedAt: null,
+    },
+    {
+      id: 'ses-marked-retired',
+      subjectId: 'sub-1',
+      slotId: 'slot-retired',
+      date: '2026-11-27',
+      startTime: '09:00',
+      endTime: '12:00',
+      status: 'absent',
+      markedAt: '2026-11-27T09:10:00Z',
+    },
+    {
+      id: 'ses-active',
+      subjectId: 'sub-1',
+      slotId: 'slot-active',
+      date: '2026-11-27',
+      startTime: '14:00',
+      endTime: '15:00',
+      status: null,
+      markedAt: null,
+    },
+    {
+      id: 'ses-extra',
+      subjectId: 'sub-1',
+      slotId: null,
+      date: '2026-11-27',
+      startTime: '16:00',
+      endTime: '17:00',
+      status: null,
+      markedAt: null,
+    },
+  ];
+
+  const visible = filterVisibleSessionsForDate(
+    sessions,
+    new Set(['slot-active']),
+    new Set(['sub-1'])
+  );
+
+  assert.deepEqual(
+    visible.map((s) => s.id),
+    ['ses-marked-retired', 'ses-active', 'ses-extra']
+  );
 });

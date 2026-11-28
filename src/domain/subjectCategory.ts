@@ -27,7 +27,16 @@ export type SubjectCategoryKey =
   | 'pathology'
   | 'pharmacology'
   | 'database'
-  | 'architecture';
+  | 'architecture'
+  | 'farm-practices'
+  | 'public-health'
+  | 'extension'
+  | 'clinical'
+  | 'genetics'
+  | 'nutrition'
+  | 'biochemistry'
+  | 'microbiology'
+  | 'parasitology';
 
 export interface SubjectCategoryMeta {
   key: SubjectCategoryKey;
@@ -163,7 +172,7 @@ export const SUBJECT_CATEGORY_METAS: Record<SubjectCategoryKey, SubjectCategoryM
   },
   pathology: {
     key: 'pathology',
-    label: 'Pathology & Microbiology',
+    label: 'Pathology & Histopathology',
     description: 'Laboratory diagnostic microscope & specimen analysis',
   },
   pharmacology: {
@@ -180,6 +189,51 @@ export const SUBJECT_CATEGORY_METAS: Record<SubjectCategoryKey, SubjectCategoryM
     key: 'architecture',
     label: 'Architecture & Spatial Design',
     description: 'Architectural building elevation & structural planning',
+  },
+  'farm-practices': {
+    key: 'farm-practices',
+    label: 'Livestock Farm Practices',
+    description: 'Barn housing & daily livestock farm operations',
+  },
+  'public-health': {
+    key: 'public-health',
+    label: 'Public Health & Epidemiology',
+    description: 'Protective medical shield for population health & biosecurity',
+  },
+  extension: {
+    key: 'extension',
+    label: 'Extension Education & Outreach',
+    description: 'Community farmer outreach & extension education',
+  },
+  clinical: {
+    key: 'clinical',
+    label: 'Clinical Practices & Care',
+    description: 'Clinical syringe for hands-on diagnosis & treatment',
+  },
+  genetics: {
+    key: 'genetics',
+    label: 'Genetics & Breeding',
+    description: 'DNA double helix for heredity & selective breeding',
+  },
+  nutrition: {
+    key: 'nutrition',
+    label: 'Animal Nutrition & Feed',
+    description: 'Grain wheat stalk for feed, forage & nutrition',
+  },
+  biochemistry: {
+    key: 'biochemistry',
+    label: 'Biochemistry & Assays',
+    description: 'Twin laboratory test tubes for biochemical analysis',
+  },
+  microbiology: {
+    key: 'microbiology',
+    label: 'Microbiology & Virology',
+    description: 'Viral pathogen cell for microbiology & bacteriology',
+  },
+  parasitology: {
+    key: 'parasitology',
+    label: 'Parasitology & Entomology',
+    description: 'Parasite & arthropod vector organism',
   },
 };
 
@@ -202,6 +256,96 @@ export function detectSubjectCategory(
   // gets the pulse-rhythm icon instead of a generic paw or hospital badge,
   // and "Database Systems" (CS202) gets a database cylinder icon instead of a generic code icon.
 
+  // Public Health & Epidemiology (check before veterinary/medicine)
+  if (
+    /\b(public\s*health|epidemiology|epidemiological|zoonoses|zoonotic|biosecurity|preventive\s*medicine|hygiene|one\s*health)\b/i.test(
+      text
+    ) ||
+    /^(vph|eph|epi)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'public-health', label: SUBJECT_CATEGORY_METAS['public-health'].label };
+  }
+
+  // Extension Education & Community Outreach (check before livestock/veterinary)
+  if (
+    /\b(extension|extension\s*education|outreach|rural\s*sociology|community\s*development)\b/i.test(
+      text
+    ) ||
+    /^(vae|ext)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'extension', label: SUBJECT_CATEGORY_METAS.extension.label };
+  }
+
+  // Livestock Farm Practices (check before general livestock production)
+  if (
+    /\b(farm\s*practices?|barn|shed|milking|animal\s*housing|dairy\s*farm\s*practice|poultry\s*farm\s*practice)\b/i.test(
+      text
+    ) ||
+    /^(lfp)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'farm-practices', label: SUBJECT_CATEGORY_METAS['farm-practices'].label };
+  }
+
+  // Clinical Practices & Ambulatory Care (check before veterinary/medicine)
+  if (
+    /\b(clinical\s*practices?|ambulatory|gynecology|obstetrics|surgery|surgical|radiology|ophthalmology)\b/i.test(
+      text
+    ) ||
+    /^(vcp|vcc|vsr|vgo)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'clinical', label: SUBJECT_CATEGORY_METAS.clinical.label };
+  }
+
+  // Animal Genetics & Breeding (check before veterinary/biology)
+  if (
+    /\b(genetics|breeding|genomics|heredity|cytogenetics|molecular\s*genetics|population\s*genetics)\b/i.test(
+      text
+    ) ||
+    /^(agb|gen)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'genetics', label: SUBJECT_CATEGORY_METAS.genetics.label };
+  }
+
+  // Animal Nutrition & Feed Technology (check before veterinary/livestock)
+  if (
+    /\b(nutrition|nutritional|feed\s*technology|fodder|forage|ration|dietetics|animal\s*nutrition)\b/i.test(
+      text
+    ) ||
+    /^(van|ann|nut)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'nutrition', label: SUBJECT_CATEGORY_METAS.nutrition.label };
+  }
+
+  // Biochemistry & Metabolic Assays (check before veterinary/chemistry)
+  if (
+    /\b(biochemistry|biochemical|enzymology|metabolism|metabolic|molecular\s*biology)\b/i.test(
+      text
+    ) ||
+    /^(vbc|bch|bioc)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'biochemistry', label: SUBJECT_CATEGORY_METAS.biochemistry.label };
+  }
+
+  // Parasitology & Entomology (distinct from Pathology & Microbiology)
+  if (
+    /\b(parasitology|parasitic|helminthology|protozoology|entomology|acarology|helminth)\b/i.test(
+      text
+    ) ||
+    /^(vpa|para)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'parasitology', label: SUBJECT_CATEGORY_METAS.parasitology.label };
+  }
+
+  // Microbiology, Virology & Bacteriology (distinct from Pathology)
+  if (
+    /\b(microbiology|virology|bacteriology|mycology|immunology|serology|microbial)\b/i.test(
+      text
+    ) ||
+    /^(vmc|mic|micro)\s*\d+/i.test(normCode)
+  ) {
+    return { key: 'microbiology', label: SUBJECT_CATEGORY_METAS.microbiology.label };
+  }
+
   // Physiology & Diagnostics
   if (
     /\b(physiology|physiological|cardio|cardiovascular|neurophysiology|hemodynamics|pulmonary|electrophysiology|pathophysiology)\b/i.test(
@@ -222,7 +366,7 @@ export function detectSubjectCategory(
 
   // Livestock & Animal Production / Husbandry
   if (
-    /\b(livestock|husbandry|poultry|dairy|cattle|ruminant|swine|pasture|animal\s*production|farm\s*management|feedlot|forage)\b/i.test(
+    /\b(livestock|husbandry|poultry|dairy|cattle|ruminant|swine|pasture|animal\s*production|farm\s*management|feedlot)\b/i.test(
       text
     ) ||
     /^(lpm|anp|as)\s*\d+/i.test(normCode)
@@ -230,12 +374,12 @@ export function detectSubjectCategory(
     return { key: 'livestock', label: SUBJECT_CATEGORY_METAS.livestock.label };
   }
 
-  // Pathology, Microbiology & Parasitology
+  // Pathology & Histopathology
   if (
-    /\b(pathology|pathological|microbiology|parasitology|virology|bacteriology|immunology|histopathology|hematology|serology)\b/i.test(
+    /\b(pathology|pathological|histopathology|hematology|necropsy|autopsy)\b/i.test(
       text
     ) ||
-    /^(path|mic|para)\s*\d+/i.test(normCode)
+    /^(path|vpp)\s*\d+/i.test(normCode)
   ) {
     return { key: 'pathology', label: SUBJECT_CATEGORY_METAS.pathology.label };
   }

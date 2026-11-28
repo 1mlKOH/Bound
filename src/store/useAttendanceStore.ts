@@ -19,6 +19,8 @@ import {
   isSlotEffectiveOnDate,
   isSubjectActiveOnDate,
   getTodayDateString,
+  diffScheduleSlots,
+  filterVisibleSessionsForDate,
 } from '../domain/attendance';
 import {
   syncScheduledNotifications,
@@ -626,7 +628,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     const isEdit = Boolean(subjectData.id);
     const subjectId = subjectData.id || generateUUID();
     const now = new Date().toISOString();
-    const todayStr = get().selectedDate;
+    const effectiveDateStr = getTodayDateString();
 
     if (isEdit) {
       // 1. Update Subject
@@ -648,26 +650,52 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         ]
       );
 
-      // 2. Non-destructive timetable versioning
-      // Close all currently active slots for this subject effective yesterday
-      const yesterday = new Date(todayStr);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().slice(0, 10);
-
-      expoDb.runSync(
-        `UPDATE schedule_slots 
-         SET effective_to = ? 
-         WHERE subject_id = ? AND (effective_to IS NULL OR effective_to >= ?)`,
-        [yesterdayStr, subjectId, todayStr]
+      // 2. Non-destructive timetable versioning: preserve unchanged slots so existing
+      // slot IDs and linked sessions stay intact when editing baseline counts or metadata.
+      const activeExistingSlots = get().scheduleSlots.filter(
+        (s) =>
+          s.subjectId === subjectId &&
+          (s.effectiveTo === null || s.effectiveTo >= effectiveDateStr)
+      );
+      const { retiredSlots, addedSlots } = diffScheduleSlots(
+        activeExistingSlots,
+        slots
       );
 
-      // Insert new slots with effectiveFrom = today
-      for (const slot of slots) {
+      if (retiredSlots.length > 0) {
+        const [ey, em, ed] = effectiveDateStr.split('-').map(Number);
+        const yesterdayStr = new Date(Date.UTC(ey, em - 1, ed - 1))
+          .toISOString()
+          .slice(0, 10);
+
+        for (const retired of retiredSlots) {
+          expoDb.runSync(
+            `UPDATE schedule_slots SET effective_to = ? WHERE id = ?`,
+            [yesterdayStr, retired.id]
+          );
+          // Remove unmarked session placeholders from today onward for retired slots
+          // while preserving any historical or already-marked attendance records.
+          expoDb.runSync(
+            `DELETE FROM sessions WHERE slot_id = ? AND date >= ? AND status IS NULL`,
+            [retired.id, effectiveDateStr]
+          );
+        }
+      }
+
+      // Insert only genuinely new or modified slots with effectiveFrom = today
+      for (const slot of addedSlots) {
         const newSlotId = generateUUID();
         expoDb.runSync(
           `INSERT INTO schedule_slots (id, subject_id, weekday, start_time, end_time, effective_from, effective_to)
            VALUES (?, ?, ?, ?, ?, ?, NULL)`,
-          [newSlotId, subjectId, slot.weekday, slot.startTime, slot.endTime, todayStr]
+          [
+            newSlotId,
+            subjectId,
+            slot.weekday,
+            slot.startTime,
+            slot.endTime,
+            effectiveDateStr,
+          ]
         );
       }
     } else {
@@ -996,9 +1024,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     const activeSubjectsMap = new Map(
       subjects.filter((s) => !s.archivedAt).map((s) => [s.id, s])
     );
-
-    // Existing sessions for date
-    let daySessions = sessions.filter((s) => s.date === dateStr);
+    const activeSubjectIds = new Set(activeSubjectsMap.keys());
 
     // Parse weekday (0 = Sun, 1 = Mon ... 6 = Sat)
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -1014,6 +1040,14 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         isSubjectActiveOnDate(subject, dateStr)
       );
     });
+    const activeSlotIdsForDay = new Set(slotsForDay.map((slot) => slot.id));
+
+    // Existing sessions for date (excluding unmarked placeholders from retired/inactive slots)
+    let daySessions = filterVisibleSessionsForDate(
+      sessions.filter((s) => s.date === dateStr),
+      activeSlotIdsForDay,
+      activeSubjectIds
+    );
 
     const newSessionsToInsert: Session[] = [];
 
@@ -1057,7 +1091,11 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
       const allUpdatedSessions = [...sessions, ...newSessionsToInsert];
       set({ sessions: allUpdatedSessions });
-      daySessions = allUpdatedSessions.filter((s) => s.date === dateStr);
+      daySessions = filterVisibleSessionsForDate(
+        allUpdatedSessions.filter((s) => s.date === dateStr),
+        activeSlotIdsForDay,
+        activeSubjectIds
+      );
     }
 
     return daySessions.sort((a, b) => a.startTime.localeCompare(b.startTime));

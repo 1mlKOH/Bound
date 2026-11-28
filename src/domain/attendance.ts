@@ -163,6 +163,72 @@ export function isSubjectActiveOnDate(subject: Subject, dateStr: string): boolea
   return true;
 }
 
+export interface ScheduleSlotInput {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface ScheduleSlotDiff {
+  keptSlots: ScheduleSlot[];
+  retiredSlots: ScheduleSlot[];
+  addedSlots: ScheduleSlotInput[];
+}
+
+/**
+ * Matches active schedule slots against updated inputs 1-to-1 by (weekday, startTime, endTime)
+ * so unchanged slots preserve their existing IDs instead of being retired and recreated.
+ */
+export function diffScheduleSlots(
+  activeExistingSlots: ScheduleSlot[],
+  incomingSlots: ScheduleSlotInput[]
+): ScheduleSlotDiff {
+  const remainingIncoming = [...incomingSlots];
+  const keptSlots: ScheduleSlot[] = [];
+  const retiredSlots: ScheduleSlot[] = [];
+
+  for (const existing of activeExistingSlots) {
+    const matchIdx = remainingIncoming.findIndex(
+      (inc) =>
+        inc.weekday === existing.weekday &&
+        inc.startTime === existing.startTime &&
+        inc.endTime === existing.endTime
+    );
+    if (matchIdx !== -1) {
+      keptSlots.push(existing);
+      remainingIncoming.splice(matchIdx, 1);
+    } else {
+      retiredSlots.push(existing);
+    }
+  }
+
+  return {
+    keptSlots,
+    retiredSlots,
+    addedSlots: remainingIncoming,
+  };
+}
+
+/**
+ * Excludes unmarked session placeholders whose schedule slot is no longer active on dateStr,
+ * while preserving extra classes (slotId === null) and all already-logged sessions.
+ */
+export function filterVisibleSessionsForDate(
+  daySessions: Session[],
+  activeSlotIdsForDay: Set<string>,
+  activeSubjectIds?: Set<string>
+): Session[] {
+  return daySessions.filter((s) => {
+    if (activeSubjectIds && !activeSubjectIds.has(s.subjectId)) {
+      return s.status !== null;
+    }
+    if (s.slotId !== null && s.status === null && !activeSlotIdsForDay.has(s.slotId)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 /**
  * Detects time overlaps between two time ranges (HH:mm)
  */
