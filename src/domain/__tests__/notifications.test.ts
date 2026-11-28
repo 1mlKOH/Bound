@@ -6,6 +6,7 @@ import {
   getUnmarkedCountForDate,
   getClassReminderCandidates,
   isDateHoliday,
+  generateAttendanceConfirmationCopy,
 } from '../notifications.ts';
 import type { Subject, SubjectStats, ScheduleSlot, Session } from '../../types/index.ts';
 
@@ -404,4 +405,28 @@ test('getClassReminderCandidates skips sessions that have already been marked wi
     new Set()
   );
   assert.equal(candidates.length, 0, 'Already marked class must not trigger reminder');
+});
+
+test('generateAttendanceConfirmationCopy formats Present confirmation with live stats', () => {
+  const copy = generateAttendanceConfirmationCopy('Physics', true, {
+    percentage: 84.4,
+    statusLabel: 'Can miss 5',
+  });
+  assert.equal(copy.title, 'Physics · Marked Present ✓');
+  assert.equal(copy.body, 'Updated: 84.4% attendance · Can miss 5');
+});
+
+test('generateAttendanceConfirmationCopy formats Absent confirmation with live recovery stats', () => {
+  const copy = generateAttendanceConfirmationCopy('Data Structures', false, {
+    percentage: 71.0,
+    statusLabel: 'Attend next 4',
+  });
+  assert.equal(copy.title, 'Data Structures · Marked Absent');
+  assert.equal(copy.body, 'Updated: 71% attendance · Attend next 4');
+});
+
+test('generateAttendanceConfirmationCopy provides clean fallback when stats are not provided', () => {
+  const copy = generateAttendanceConfirmationCopy('Chemistry', true);
+  assert.equal(copy.title, 'Chemistry · Marked Present ✓');
+  assert.equal(copy.body, "Attendance updated for today's session");
 });
