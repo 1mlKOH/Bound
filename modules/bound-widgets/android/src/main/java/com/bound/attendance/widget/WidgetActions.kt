@@ -1,8 +1,13 @@
 package com.bound.attendance.widget
 
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
+import android.widget.RemoteViews
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
@@ -12,9 +17,43 @@ val SessionIdKey = ActionParameters.Key<String>("sessionId")
 val TargetStatusKey = ActionParameters.Key<String>("targetStatus")
 
 internal fun boundDeepLinkIntent(context: Context, uri: String): Intent {
+    val launchComponent = context.packageManager
+        .getLaunchIntentForPackage(context.packageName)
+        ?.component
+        ?: ComponentName(context.packageName, "com.bound.attendance.MainActivity")
+
     return Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+        component = launchComponent
         setPackage(context.packageName)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+}
+
+internal fun handleGlanceCompositionError(
+    context: Context,
+    appWidgetId: Int,
+    widgetName: String,
+    throwable: Throwable
+) {
+    val cause = throwable.cause ?: throwable
+    val detail = "${cause.javaClass.simpleName}: ${cause.message ?: "Unknown error"}"
+    Log.e("BoundWidgets", "Composition error in $widgetName (id=$appWidgetId): $detail", throwable)
+
+    try {
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            appWidgetId,
+            boundDeepLinkIntent(context, "bound://today"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val views = RemoteViews(context.packageName, R.layout.bound_widget_error).apply {
+            setTextViewText(R.id.bound_error_title, "Bound · Tap to open")
+            setTextViewText(R.id.bound_error_detail, detail)
+            setOnClickPendingIntent(R.id.bound_error_root, pendingIntent)
+        }
+        AppWidgetManager.getInstance(context).updateAppWidget(appWidgetId, views)
+    } catch (e: Exception) {
+        Log.e("BoundWidgets", "Failed to render error fallback view", e)
     }
 }
 

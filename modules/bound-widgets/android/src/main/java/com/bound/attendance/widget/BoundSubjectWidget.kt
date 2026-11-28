@@ -68,6 +68,15 @@ class BoundSubjectWidget : GlanceAppWidget() {
         setOf(SLIM_STRIP, SMALL_SQUARE, WIDE_CAPSULE)
     )
 
+    override fun onCompositionError(
+        context: Context,
+        glanceId: GlanceId,
+        appWidgetId: Int,
+        throwable: Throwable
+    ) {
+        handleGlanceCompositionError(context, appWidgetId, "BoundSubjectWidget", throwable)
+    }
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = try {
             GlanceAppWidgetManager(context).getAppWidgetId(id)

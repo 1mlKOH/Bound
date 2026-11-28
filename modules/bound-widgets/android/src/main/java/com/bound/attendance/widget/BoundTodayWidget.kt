@@ -43,21 +43,30 @@ class BoundTodayWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Exact
 
+    override fun onCompositionError(
+        context: Context,
+        glanceId: GlanceId,
+        appWidgetId: Int,
+        throwable: Throwable
+    ) {
+        handleGlanceCompositionError(context, appWidgetId, "BoundTodayWidget", throwable)
+    }
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val snapshot = WidgetStorage.getSnapshot(context)
             val isPro = WidgetStorage.isPro(context)
 
             // Theme colors (Defaulting to Dark Theme matching Bound's Obsidian palette)
-            val widgetBg = Color(0xFF0F, 0x10, 0x14)
-            val widgetBorder = Color(0xFF2C, 0x2D, 0x34)
-            val cardBg = Color(0xFF1B, 0x1C, 0x21)
-            val textPrimary = Color(0xFFF5, 0xF5, 0xF7)
-            val textSecondary = Color(0xFFB5, 0xB5, 0xC0)
-            val textMuted = Color(0xFF8E, 0x8E, 0x9A)
-            val emerald = Color(0xFF3D, 0xDC, 0x84)
-            val amber = Color(0xFFFF, 0xB0, 0x20)
-            val rose = Color(0xFFFF, 0x6B, 0x72)
+            val widgetBg = Color(0xFF0F1014)
+            val widgetBorder = Color(0xFF2C2D34)
+            val cardBg = Color(0xFF1B1C21)
+            val textPrimary = Color(0xFFF5F5F7)
+            val textSecondary = Color(0xFFB5B5C0)
+            val textMuted = Color(0xFF8E8E9A)
+            val emerald = Color(0xFF3DDC84)
+            val amber = Color(0xFFFFB020)
+            val rose = Color(0xFFFF6B72)
 
             val openTodayIntent = boundDeepLinkIntent(context, "bound://today")
 
@@ -121,7 +130,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                     modifier = GlanceModifier
                                         .height(30.dp)
                                         .cornerRadius(999.dp)
-                                        .background(Color(0xFF25, 0x26, 0x2E))
+                                        .background(Color(0xFF25262E))
                                         .padding(horizontal = 10.dp)
                                         .clickable(actionRunCallback<BatchMarkAction>()),
                                     verticalAlignment = Alignment.CenterVertically
@@ -135,7 +144,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                     Text(
                                         text = "All Present",
                                         style = TextStyle(
-                                            color = ColorProvider(Color(0xFFC8, 0xC8, 0xD2)),
+                                            color = ColorProvider(Color(0xFFC8C8D2)),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -147,7 +156,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                     modifier = GlanceModifier
                                         .height(30.dp)
                                         .cornerRadius(999.dp)
-                                        .background(Color(0x28, 0x3D, 0xDC, 0x84))
+                                        .background(Color(0x283DDC84))
                                         .padding(horizontal = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -173,7 +182,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                 modifier = GlanceModifier
                                     .height(28.dp)
                                     .cornerRadius(999.dp)
-                                    .background(Color(0x28, 0xFF, 0xB0, 0x20))
+                                    .background(Color(0x28FFB020))
                                     .padding(horizontal = 8.dp)
                                     .clickable(actionStartActivity(boundDeepLinkIntent(context, "bound://paywall?source=widget_badge"))),
                                 verticalAlignment = Alignment.CenterVertically
@@ -244,7 +253,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                 Row(
                                     modifier = GlanceModifier
                                         .cornerRadius(999.dp)
-                                        .background(Color(0xFF25, 0x26, 0x2E))
+                                        .background(Color(0xFF25262E))
                                         .padding(horizontal = 12.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -292,7 +301,7 @@ class BoundTodayWidget : GlanceAppWidget() {
                                 .fillMaxWidth()
                                 .defaultWeight()
                                 .cornerRadius(16.dp)
-                                .background(Color(0x24, 0xF5, 0x9E, 0x0B))
+                                .background(Color(0x24F59E0B))
                                 .padding(12.dp)
                                 .clickable(actionStartActivity(openTodayIntent)),
                             contentAlignment = Alignment.Center
@@ -352,13 +361,13 @@ class BoundTodayWidget : GlanceAppWidget() {
                                 val subjectColorParsed = try {
                                     Color(AndroidColor.parseColor(session.subjectColor))
                                 } catch (e: Exception) {
-                                    Color(0xFF3D, 0xDC, 0x84)
+                                    emerald
                                 }
 
                                 val statusColorParsed = try {
                                     Color(AndroidColor.parseColor(session.statusColor))
                                 } catch (e: Exception) {
-                                    Color(0xFF3D, 0xDC, 0x84)
+                                    emerald
                                 }
 
                                 val isPresent = session.status == "present"
@@ -448,8 +457,8 @@ class BoundTodayWidget : GlanceAppWidget() {
                                             .size(34.dp)
                                             .cornerRadius(999.dp)
                                             .background(
-                                                if (isPresent) Color(0xFF00, 0xBF, 0x63)
-                                                else Color(0xFF25, 0x26, 0x2E)
+                                                if (isPresent) Color(0xFF00BF63)
+                                                else Color(0xFF25262E)
                                             )
                                             .clickable(
                                                 actionRunCallback<MarkSessionAction>(
@@ -476,8 +485,8 @@ class BoundTodayWidget : GlanceAppWidget() {
                                             .size(34.dp)
                                             .cornerRadius(999.dp)
                                             .background(
-                                                if (isAbsent) Color(0xFFD6, 0x33, 0x6C)
-                                                else Color(0xFF25, 0x26, 0x2E)
+                                                if (isAbsent) Color(0xFFD6336C)
+                                                else Color(0xFF25262E)
                                             )
                                             .clickable(
                                                 actionRunCallback<MarkSessionAction>(
