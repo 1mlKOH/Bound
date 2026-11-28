@@ -300,3 +300,23 @@ export function getClassReminderCandidates(
 
   return candidates;
 }
+
+/**
+ * Formats the in-place silent confirmation notification when an attendance action is taken.
+ * Strips action buttons and reports updated attendance statistics.
+ */
+export function generateAttendanceConfirmationCopy(
+  subjectName: string,
+  isPresent: boolean,
+  stats?: { percentage: number; statusLabel: string }
+): { title: string; body: string } {
+  const title = isPresent
+    ? `${subjectName} · Marked Present ✓`
+    : `${subjectName} · Marked Absent`;
+
+  const body = stats
+    ? `Updated: ${stats.percentage}% attendance · ${stats.statusLabel}`
+    : `Attendance updated for today's session`;
+
+  return { title, body };
+}

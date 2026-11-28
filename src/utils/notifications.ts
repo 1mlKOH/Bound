@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import * as TaskManager from 'expo-task-manager';
+import { AppState, Platform } from 'react-native';
 import { Settings, ScheduleSlot, Subject, Session, Holiday, SubjectStats } from '../types';
 import { computeSubjectStats, computePooledStats, getTodayDateString, formatTime12h } from '../domain/attendance';
 import {
@@ -8,6 +9,7 @@ import {
   getUnmarkedCountForDate,
   getClassReminderCandidates,
   isDateHoliday,
+  generateAttendanceConfirmationCopy,
   ClassReminderCandidate,
 } from '../domain/notifications';
 import { Haptics } from './haptics';
@@ -19,6 +21,7 @@ export {
   getUnmarkedCountForDate,
   getClassReminderCandidates,
   isDateHoliday,
+  generateAttendanceConfirmationCopy,
 };
 export type { ClassReminderCandidate };
 
@@ -59,6 +62,7 @@ export const NOTIFICATION_CHANNELS = {
   CLASS_REMINDERS: 'class-reminders',
   DAILY_CHECK: 'daily-check',
   WEEKLY_DIGEST: 'weekly-digest',
+  CONFIRMATION: 'attendance-confirmation',
 } as const;
 
 export const NOTIFICATION_CATEGORIES = {
@@ -70,6 +74,19 @@ export const NOTIFICATION_ACTIONS = {
   MARK_ABSENT: 'MARK_ABSENT',
   VIEW_TIMETABLE: 'VIEW_TIMETABLE',
 } as const;
+
+export const BACKGROUND_NOTIFICATION_TASK = 'BOUND_NOTIFICATION_RESPONSE_TASK';
+
+// Register background task handler for handling silent notification action taps
+if (!TaskManager.isTaskDefined(BACKGROUND_NOTIFICATION_TASK)) {
+  TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
+    if (error || !data) return;
+    const isResponse = typeof data === 'object' && 'actionIdentifier' in data;
+    if (isResponse) {
+      await handleNotificationResponse(data as Notifications.NotificationResponse);
+    }
+  });
+}
 
 // Lazy store accessor to avoid circular dependency at module bundle evaluation
 function getStore() {
@@ -120,6 +137,25 @@ export async function setupNotificationCategoriesAndChannels(): Promise<void> {
         enableVibrate: true,
         showBadge: true,
       });
+
+      // Silent channel for in-place 5-second confirmation receipts
+      await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNELS.CONFIRMATION, {
+        name: 'Attendance Confirmations',
+        description: 'Silent confirmation receipts when marking attendance from notifications',
+        importance: Notifications.AndroidImportance.LOW,
+        sound: null,
+        enableLights: false,
+        enableVibrate: false,
+        showBadge: false,
+      });
+
+      // Register background headless task for action button handling
+      const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => false);
+      if (!isRegistered) {
+        await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch((err) => {
+          console.warn('Failed to register background notification task:', err);
+        });
+      }
     }
 
     // Register interactive quick actions for class alerts (streamlined 2-button row, silent background actions)
@@ -418,7 +454,7 @@ export async function dismissPresentedNotificationsForDate(dateStr: string): Pro
   }
 }
 
-let lastHandledResponseId = '';
+const handledResponses = new Map<string, number>();
 
 /**
  * Handles user interactions with notifications (action button taps and notification body taps).
@@ -428,18 +464,28 @@ export async function handleNotificationResponse(
   router?: any
 ): Promise<void> {
   try {
-    const responseId = `${response.notification.request.identifier}-${response.actionIdentifier}`;
-    if (responseId === lastHandledResponseId) return;
-    lastHandledResponseId = responseId;
-
     const { actionIdentifier, notification } = response;
+    const notifId = notification?.request?.identifier;
+    const responseKey = `${notifId}-${actionIdentifier}`;
 
-    // Immediately dismiss the notification from the tray so it doesn't linger or allow double entries
-    if (notification?.request?.identifier) {
-      await Notifications.dismissNotificationAsync(notification.request.identifier).catch(() => {});
+    // Prevent duplicate processing if triggered concurrently by background task and foreground listener
+    const now = Date.now();
+    const lastHandledTime = handledResponses.get(responseKey);
+    if (lastHandledTime && now - lastHandledTime < 10000) {
+      return;
+    }
+    handledResponses.set(responseKey, now);
+
+    // Prune stale entries
+    if (handledResponses.size > 50) {
+      for (const [key, timestamp] of handledResponses.entries()) {
+        if (now - timestamp > 60000) {
+          handledResponses.delete(key);
+        }
+      }
     }
 
-    const data = (notification.request.content.data || {}) as {
+    const data = (notification?.request?.content?.data || {}) as {
       type?: string;
       isExtra?: boolean;
       sessionId?: string;
@@ -471,30 +517,97 @@ export async function handleNotificationResponse(
         date: targetDate,
       });
 
-      if (success) {
-        if (isPresent) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          toast.success(`Marked ${displaySubject} as Present`, {
-            description: `Logged for ${data.startTime ? formatTime12h(data.startTime) : 'session'}`,
-          });
+      // Show in-app haptics and toast only when running in active foreground
+      if (AppState.currentState === 'active') {
+        if (success) {
+          if (isPresent) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            toast.success(`Marked ${displaySubject} as Present`, {
+              description: `Logged for ${data.startTime ? formatTime12h(data.startTime) : 'session'}`,
+            });
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            toast.error(`Marked ${displaySubject} as Absent`, {
+              description: `Logged for ${data.startTime ? formatTime12h(data.startTime) : 'session'}`,
+            });
+          }
         } else {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          toast.error(`Marked ${displaySubject} as Absent`, {
-            description: `Logged for ${data.startTime ? formatTime12h(data.startTime) : 'session'}`,
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+          toast.error('Could not log attendance', {
+            description: `No matching class found for ${displaySubject}.`,
           });
         }
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        toast.error('Could not log attendance', {
-          description: `No matching class found for ${displaySubject}.`,
+      }
+
+      // Compute fresh attendance statistics for the subject
+      let statsSummary: { percentage: number; statusLabel: string } | undefined;
+      if (data.subjectId) {
+        const freshStore = getStore().getState();
+        const subject = freshStore.subjects.find((s: Subject) => s.id === data.subjectId);
+        if (subject) {
+          const holidaysSet = new Set<string>(freshStore.holidays.map((h: Holiday) => h.date));
+          const stats = computeSubjectStats(
+            subject,
+            freshStore.sessions,
+            holidaysSet,
+            freshStore.settings.globalTargetPct
+          );
+          statsSummary = {
+            percentage: stats.percentage,
+            statusLabel: stats.statusLabel,
+          };
+        }
+      }
+
+      const { title: confirmTitle, body: confirmBody } = generateAttendanceConfirmationCopy(
+        displaySubject,
+        isPresent,
+        statsSummary
+      );
+
+      // 1. Immediately dismiss the previous interactive notification (with action buttons)
+      if (notifId) {
+        await Notifications.dismissNotificationAsync(notifId).catch(() => {});
+      }
+
+      // 2. Post silent confirmation notification (no action buttons, no sound, no vibration)
+      let confirmNotifId: string | null = null;
+      try {
+        confirmNotifId = await Notifications.scheduleNotificationAsync({
+          identifier: notifId ? `${notifId}-confirm` : undefined,
+          content: {
+            title: confirmTitle,
+            body: confirmBody,
+            sound: false,
+            color: isPresent ? '#3DDC84' : '#FF453A',
+            data: {
+              type: 'ATTENDANCE_CONFIRMATION',
+              date: targetDate,
+            },
+          },
+          trigger: {
+            channelId: NOTIFICATION_CHANNELS.CONFIRMATION,
+          },
         });
+      } catch (err) {
+        console.warn('Failed to post confirmation notification:', err);
       }
 
       store.resetToToday();
+
+      // 3. Auto-dismiss after 5 seconds
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      const targetDismissId = confirmNotifId || (notifId ? `${notifId}-confirm` : null);
+      if (targetDismissId) {
+        await Notifications.dismissNotificationAsync(targetDismissId).catch(() => {});
+      }
       return;
     }
 
-    // Default action (tap on banner) or View Timetable button
+    // Default action (tap on banner body) or View Timetable button
+    if (notifId) {
+      await Notifications.dismissNotificationAsync(notifId).catch(() => {});
+    }
     if (data?.type === 'SUNDAY_DIGEST') {
       if (router) {
         router.push('/(tabs)/stats');
