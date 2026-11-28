@@ -38,6 +38,29 @@ jobs:
       - name: 📥 Check out repository
         uses: actions/checkout@v4
 
+      - name: 🏷️ Resolve Distinctive APK Name
+        id: resolve_naming
+        run: |
+          REF="${{ github.ref }}"
+          if [[ "$REF" == refs/heads/main || "$REF" == refs/tags/* ]]; then
+            SUFFIX=""
+          elif [[ "$REF" == refs/heads/feat/* || "$REF" == refs/heads/feature/* ]]; then
+            SUFFIX="-feat"
+          elif [[ "$REF" == refs/heads/dev || "$REF" == refs/heads/development ]]; then
+            SUFFIX="-dev"
+          else
+            CLEAN_REF=$(echo "$REF" | sed -e 's|^refs/heads/||' -e 's|/|-|g' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-_')
+            SUFFIX="-${CLEAN_REF}"
+          fi
+
+          APK_BASENAME="bound${SUFFIX}"
+          APK_FILENAME="${APK_BASENAME}.apk"
+
+          echo "apk_basename=${APK_BASENAME}" >> "$GITHUB_OUTPUT"
+          echo "apk_filename=${APK_FILENAME}" >> "$GITHUB_OUTPUT"
+          echo "Branch/Ref: ${REF}"
+          echo "Resolved APK: ${APK_FILENAME} (Artifact: ${APK_BASENAME})"
+
       - name: ⚙️ Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -99,7 +122,9 @@ jobs:
 
           echo "### 🚀 Expo EAS Cloud Build Completed!" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Platform**: Android (APK)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch/Ref**: \`${{ github.ref }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Profile**: $PROFILE" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Output APK**: \`${{ steps.resolve_naming.outputs.apk_filename }}\`" >> "$GITHUB_STEP_SUMMARY"
           if [ -n "$BUILD_ID" ]; then
             echo "- **Build ID**: \`$BUILD_ID\`" >> "$GITHUB_STEP_SUMMARY"
             echo "- **Expo Direct Link**: [Install / Download APK](https://expo.dev/accounts/w0lfgang/projects/bound/builds/$BUILD_ID)" >> "$GITHUB_STEP_SUMMARY"
@@ -112,15 +137,17 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           BUILD_ID="${{ steps.eas_build.outputs.build_id }}"
+          TARGET_APK="${{ steps.resolve_naming.outputs.apk_filename }}"
+
           if [ -z "$BUILD_ID" ] && [ -f eas-build.log ]; then
             BUILD_ID=$(grep -oE '/builds/[a-f0-9-]{36}' eas-build.log | cut -d/ -f3 | head -n 1)
           fi
           echo "Target EAS Build ID: $BUILD_ID"
 
-          rm -f ./bound-testing.apk
+          rm -f ./*.apk
           if [ -n "$BUILD_ID" ]; then
-            echo "Downloading APK for build $BUILD_ID..."
-            eas build:download --build-id "$BUILD_ID" --output ./bound-testing.apk --non-interactive || \
+            echo "Downloading APK for build $BUILD_ID to $TARGET_APK..."
+            eas build:download --build-id "$BUILD_ID" --output "./$TARGET_APK" --non-interactive || \
             eas build:download --build-id "$BUILD_ID" --non-interactive || \
             echo "::warning::eas build:download encountered an issue. Build is accessible directly at https://expo.dev/accounts/w0lfgang/projects/bound/builds/$BUILD_ID"
           else
@@ -128,16 +155,16 @@ jobs:
             eas build:download --platform android --non-interactive || true
           fi
 
-          # Find downloaded APK and stage for upload
+          # Find downloaded APK and ensure it has the distinctive name
           APK_FILE=$(ls -t *.apk 2>/dev/null | head -n 1)
           if [ -n "$APK_FILE" ]; then
             echo "Downloaded APK file: $APK_FILE"
-            if [ "$APK_FILE" != "bound-testing.apk" ]; then
-              cp "$APK_FILE" bound-testing.apk
+            if [ "$APK_FILE" != "$TARGET_APK" ]; then
+              cp "$APK_FILE" "$TARGET_APK"
             fi
-            echo "APK ready at ./bound-testing.apk ($(du -h bound-testing.apk | cut -f1))"
+            echo "APK ready at ./$TARGET_APK ($(du -h "$TARGET_APK" | cut -f1))"
             echo "apk_exists=true" >> "$GITHUB_OUTPUT"
-            echo "- **Artifact**: \`bound-testing.apk\` ready for download" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Artifact**: \`$TARGET_APK\` ready for download" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Warning: No .apk file found in root directory after download."
             echo "apk_exists=false" >> "$GITHUB_OUTPUT"
@@ -147,8 +174,8 @@ jobs:
         if: ${{ (github.event_name != 'workflow_dispatch' || github.event.inputs.download_artifact) }}
         uses: actions/upload-artifact@v4
         with:
-          name: bound-android-apk
-          path: ./bound-testing.apk
+          name: ${{ steps.resolve_naming.outputs.apk_basename }}
+          path: ./${{ steps.resolve_naming.outputs.apk_filename }}
           if-no-files-found: warn
           retention-days: 14
 
